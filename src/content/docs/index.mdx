@@ -1,0 +1,42 @@
+---
+title: Arcantry
+description: Repository foundations for spec-driven delivery.
+template: splash
+hero:
+  title: Arcantry
+  tagline: Keep intent, delivery and releases in the same history.
+  actions:
+    - text: Adopt Arcantry
+      link: /arcantry/adoption/
+      icon: right-arrow
+      variant: primary
+    - text: Release model
+      link: /arcantry/lifecycle/releases/
+      icon: open-book
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid>
+  <Card title="OpenSpec is the history" icon="document">
+    A delivered change is the unit of release history. Commits remain implementation detail.
+  </Card>
+  <Card title="One command surface" icon="terminal">
+    Humans and CI call `just`. Tool versions come from `mise`.
+  </Card>
+  <Card title="Release from meaning" icon="rocket">
+    SemVer impact and changelog copy live with the change that introduced the behavior.
+  </Card>
+</CardGrid>
+
+## Repository contract
+
+```text
+intent        OpenSpec change
+implementation Git commits
+verification  just check
+completion    OpenSpec archive
+release       archived changes → SemVer + CHANGELOG.md
+```
+
+Arcantry does not infer product history from commit messages. A commit can explain a refactor precisely and still be irrelevant to a user-facing release. The archived OpenSpec change keeps the proposal, specs, design, tasks and release note together after delivery.
