@@ -2,6 +2,7 @@
   "name": "arcantry",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.34.5",
   "scripts": {
     "build": "astro build",
     "check": "pnpm run check:types && pnpm run test && pnpm run docs:check",
@@ -14,13 +15,19 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "@astrojs/check": "latest",
-    "@astrojs/starlight": "latest",
-    "@fission-ai/openspec": "latest",
-    "astro": "latest",
-    "tsx": "latest",
-    "typescript": "latest",
-    "vitest": "latest",
-    "yaml": "latest"
+    "@astrojs/check": "0.9.10",
+    "@astrojs/starlight": "0.41.7",
+    "@fission-ai/openspec": "1.9.0",
+    "astro": "7.2.2",
+    "tsx": "4.23.12",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10",
+    "yaml": "2.9.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@fission-ai/openspec",
+      "esbuild"
+    ]
   }
 }
