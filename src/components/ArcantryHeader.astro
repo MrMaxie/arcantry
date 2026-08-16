@@ -1,6 +1,7 @@
 ---
 import Search from '@astrojs/starlight/components/Search.astro';
 import ThemeSelect from '@astrojs/starlight/components/ThemeSelect.astro';
+import mark from '../assets/arcantry-mark.svg';
 ---
 
 <div class="header-shell">
@@ -8,6 +9,9 @@ import ThemeSelect from '@astrojs/starlight/components/ThemeSelect.astro';
   <div class="header-actions">
     <a class="github-link" href="https://github.com/MrMaxie/arcantry" aria-label="Arcantry on GitHub">GitHub</a>
     <ThemeSelect />
+    <a class="brand-mark" href="/arcantry/" aria-label="Arcantry home">
+      <img src={mark.src} alt="" />
+    </a>
   </div>
 </div>
 
@@ -21,7 +25,7 @@ import ThemeSelect from '@astrojs/starlight/components/ThemeSelect.astro';
       padding: 0 1.25rem;
     }
     .header-search { flex: 1; max-width: 44rem; }
-    .header-actions { margin-left: auto; display: flex; align-items: center; gap: .75rem; }
+    .header-actions { margin-left: auto; display: flex; align-items: center; gap: .9rem; }
     .github-link {
       color: var(--sl-color-gray-2);
       font-size: .82rem;
@@ -30,6 +34,15 @@ import ThemeSelect from '@astrojs/starlight/components/ThemeSelect.astro';
       letter-spacing: -.01em;
     }
     .github-link:hover { color: var(--sl-color-white); }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 2rem;
+      height: 2rem;
+      color: #232426;
+      text-decoration: none;
+    }
+    .brand-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
 
     :global(site-search button[data-open-modal]) {
       max-width: none !important;
@@ -38,7 +51,7 @@ import ThemeSelect from '@astrojs/starlight/components/ThemeSelect.astro';
       border-radius: .7rem !important;
       border-color: var(--ar-border) !important;
       background: var(--ar-surface) !important;
-      box-shadow: inset 0 1px 0 color-mix(in srgb, white 4%, transparent);
+      box-shadow: inset 0 1px 0 color-mix(in srgb, white 55%, transparent);
     }
   }
 </style>
