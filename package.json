@@ -5,11 +5,13 @@
   "packageManager": "pnpm@10.34.5",
   "scripts": {
     "build": "astro build",
-    "check": "pnpm run check:types && pnpm run test && pnpm run docs:check",
+    "check": "pnpm run check:types && pnpm run test && pnpm run release:check && pnpm run docs:check",
     "check:types": "astro sync && tsc --noEmit",
     "dev": "astro dev",
     "docs:check": "astro check",
     "preview": "astro preview",
+    "release:check": "tsx tooling/release.ts check",
+    "release:cut": "tsx tooling/release.ts cut",
     "release:plan": "tsx tooling/release.ts plan",
     "release:render": "tsx tooling/release.ts render",
     "test": "vitest run"
