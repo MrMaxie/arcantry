@@ -1,51 +1,63 @@
-:root {
-  --sl-color-accent-low: #23133f;
-  --sl-color-accent: #9b78ff;
-  --sl-color-accent-high: #e5ddff;
-  --sl-color-white: #f8f7fb;
-  --sl-color-gray-1: #e8e4ef;
-  --sl-color-gray-2: #c6bfce;
-  --sl-color-gray-3: #91899d;
-  --sl-color-gray-4: #5d5667;
-  --sl-color-gray-5: #342f3b;
-  --sl-color-gray-6: #211d27;
-  --sl-color-black: #131017;
-  --sl-font-system: Inter, ui-sans-serif, system-ui, sans-serif;
-}
+@import '@fontsource-variable/manrope';
+@import '@fontsource/instrument-serif/400.css';
 
+:root,
+:root[data-theme='dark'],
 :root[data-theme='light'] {
-  --sl-color-accent-low: #eee9ff;
-  --sl-color-accent: #6944d7;
-  --sl-color-accent-high: #27134e;
-  --sl-color-white: #17131d;
-  --sl-color-gray-1: #2b2633;
-  --sl-color-gray-2: #4d4658;
-  --sl-color-gray-3: #756d80;
-  --sl-color-gray-4: #aaa3b2;
-  --sl-color-gray-5: #d8d3de;
-  --sl-color-gray-6: #eeeaf2;
-  --sl-color-gray-7: #f7f5f9;
-  --sl-color-black: #ffffff;
+  color-scheme: light;
+  --sl-color-accent-low: #f0efee;
+  --sl-color-accent: #232426;
+  --sl-color-accent-high: #111214;
+  --sl-color-white: #232426;
+  --sl-color-gray-1: #3f4042;
+  --sl-color-gray-2: #5d5e60;
+  --sl-color-gray-3: #77787a;
+  --sl-color-gray-4: #a1a2a3;
+  --sl-color-gray-5: #d0cfcf;
+  --sl-color-gray-6: #f0efee;
+  --sl-color-gray-7: #f7f6f5;
+  --sl-color-black: #faf9f8;
+  --sl-color-bg: #faf9f8;
+  --sl-color-bg-nav: #faf9f8;
+  --sl-color-bg-sidebar: #f7f6f5;
+  --sl-color-hairline-light: #dedddb;
+  --sl-color-hairline: #d0cfcf;
+  --sl-color-hairline-shade: #d0cfcf;
+  --sl-color-text-accent: #232426;
+  --sl-color-text-invert: #faf9f8;
+  --sl-font-system: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif;
+  --__sl-font: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif;
 }
 
-.site-title {
-  font-weight: 720;
-  letter-spacing: -0.035em;
+html,
+body {
+  background: #faf9f8;
 }
 
-.hero h1 {
-  letter-spacing: -0.055em;
+body {
+  font-family: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif;
+  color: #232426;
+  letter-spacing: -0.012em;
 }
 
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.sl-markdown-content h1,
 .sl-markdown-content h2,
 .sl-markdown-content h3 {
-  letter-spacing: -0.025em;
+  color: #232426;
 }
 
 .sl-markdown-content code:not(:where(.not-content *)) {
-  border: 1px solid color-mix(in srgb, var(--sl-color-accent) 18%, transparent);
+  border: 1px solid #d0cfcf;
+  background: #f4f3f2;
 }
 
-.card {
-  border-color: color-mix(in srgb, var(--sl-color-gray-5) 74%, var(--sl-color-accent));
+:focus-visible {
+  outline-color: #232426;
 }
