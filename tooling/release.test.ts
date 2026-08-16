@@ -1,8 +1,17 @@
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { bumpVersion, highestImpact, parseReleaseArtifact, planRelease, renderChangelog } from './release.js';
+import {
+  bumpVersion,
+  checkChangelog,
+  cutRelease,
+  highestImpact,
+  parseReleaseArtifact,
+  planRelease,
+  renderChangelog,
+  validateReleaseState,
+} from './release.js';
 
 const release = (impact = 'minor', visibility = 'public') => `---
 category: changed
@@ -23,6 +32,14 @@ function fixture(): string {
   return root;
 }
 
+function manifest(root: string, version = '0.1.0', changes = ['release-history']): void {
+  mkdirSync(join(root, 'releases'), { recursive: true });
+  writeFileSync(
+    join(root, 'releases', `${version}.yaml`),
+    `version: ${version}\ndate: 2026-08-16\nchanges:\n${changes.map((change) => `  - ${change}`).join('\n')}\n`,
+  );
+}
+
 describe('release artifact', () => {
   it('parses machine metadata and human release copy', () => {
     expect(parseReleaseArtifact(release())).toEqual({
@@ -30,7 +47,7 @@ describe('release artifact', () => {
       impact: 'minor',
       visibility: 'public',
       title: 'Better release history',
-      body: 'Release notes come from delivered changes rather than commit messages.'
+      body: 'Release notes come from delivered changes rather than commit messages.',
     });
   });
 
@@ -55,19 +72,48 @@ describe('SemVer planning', () => {
       current: '0.0.0',
       next: '0.1.0',
       impact: 'minor',
-      changes: ['release-history']
+      changes: ['release-history'],
     });
+  });
+
+  it('cuts the computed release manifest', () => {
+    const root = fixture();
+    expect(cutRelease(root, '2026-08-16')).toEqual({
+      version: '0.1.0',
+      date: '2026-08-16',
+      changes: ['release-history'],
+    });
+    expect(readFileSync(join(root, 'releases', '0.1.0.yaml'), 'utf8')).toContain('release-history');
+  });
+});
+
+describe('release state validation', () => {
+  it('rejects unknown archived changes', () => {
+    const root = fixture();
+    manifest(root, '0.1.0', ['missing-change']);
+    expect(() => validateReleaseState(root)).toThrow('references unknown archived change');
+  });
+
+  it('rejects changes assigned to multiple releases', () => {
+    const root = fixture();
+    manifest(root);
+    writeFileSync(
+      join(root, 'releases', '0.1.1.yaml'),
+      'version: 0.1.1\ndate: 2026-08-17\nchanges:\n  - release-history\n',
+    );
+    expect(() => validateReleaseState(root)).toThrow('assigned more than once');
   });
 });
 
 describe('changelog rendering', () => {
-  it('renders public archived changes referenced by a manifest', () => {
+  it('renders dated public entries with OpenSpec provenance', () => {
     const root = fixture();
-    mkdirSync(join(root, 'releases'));
-    writeFileSync(join(root, 'releases', '0.1.0.yaml'), 'version: 0.1.0\nchanges:\n  - release-history\n');
+    manifest(root);
+    const changelog = renderChangelog(root);
 
-    expect(renderChangelog(root)).toContain('## 0.1.0');
-    expect(renderChangelog(root)).toContain('#### Better release history');
+    expect(changelog).toContain('## 0.1.0 - 2026-08-16');
+    expect(changelog).toContain('<!-- openspec: release-history -->');
+    expect(changelog).toContain('#### Better release history');
   });
 
   it('omits internal release prose', () => {
@@ -75,9 +121,18 @@ describe('changelog rendering', () => {
     const change = join(root, 'openspec', 'changes', 'archive', '2026-08-17-internal-cleanup');
     mkdirSync(change, { recursive: true });
     writeFileSync(join(change, 'release.md'), release('patch', 'internal'));
-    mkdirSync(join(root, 'releases'));
-    writeFileSync(join(root, 'releases', '0.1.0.yaml'), 'version: 0.1.0\nchanges:\n  - release-history\n  - internal-cleanup\n');
+    manifest(root, '0.1.0', ['release-history', 'internal-cleanup']);
 
     expect(renderChangelog(root).match(/Better release history/g)).toHaveLength(1);
+  });
+
+  it('detects a stale committed changelog', () => {
+    const root = fixture();
+    manifest(root);
+    writeFileSync(join(root, 'CHANGELOG.md'), '# Changelog\n');
+    expect(() => checkChangelog(root)).toThrow('CHANGELOG.md is stale');
+
+    writeFileSync(join(root, 'CHANGELOG.md'), renderChangelog(root));
+    expect(() => checkChangelog(root)).not.toThrow();
   });
 });
