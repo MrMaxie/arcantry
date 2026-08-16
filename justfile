@@ -18,8 +18,14 @@ docs:
 release-plan:
     pnpm run release:plan
 
+release-cut:
+    pnpm run release:cut
+
 release-render:
     pnpm run release:render
+
+release-check:
+    pnpm run release:check
 
 openspec-validate:
     pnpm exec openspec schema validate arcantry
