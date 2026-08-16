@@ -9,7 +9,12 @@ export default defineConfig({
       title: 'Arcantry',
       description: 'Repository foundations for spec-driven delivery.',
       customCss: ['./src/styles/arcantry.css'],
-      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/MrMaxie/arcantry' }],
+      components: {
+        PageFrame: './src/components/ArcantryPageFrame.astro',
+        Header: './src/components/ArcantryHeader.astro',
+        Sidebar: './src/components/ArcantrySidebar.astro',
+        Hero: './src/components/ArcantryHero.astro'
+      },
       sidebar: [
         { label: 'Start', items: [{ label: 'Overview', slug: 'index' }, { label: 'Adoption', slug: 'adoption' }] },
         { label: 'Lifecycle', items: [{ label: 'Changes', slug: 'lifecycle/changes' }, { label: 'Releases', slug: 'lifecycle/releases' }] },
