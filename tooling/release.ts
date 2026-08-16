@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { parse as parseYaml } from 'yaml';
 
 export type Impact = 'none' | 'patch' | 'minor' | 'major';
@@ -58,7 +59,9 @@ export function bumpVersion(version: string, impact: Impact): string {
   const match = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
   if (!match) throw new Error(`invalid SemVer version: ${version}`);
 
-  let [, major, minor, patch] = match.map(Number);
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  const patch = Number(match[3]);
   if (impact === 'major') return `${major + 1}.0.0`;
   if (impact === 'minor') return `${major}.${minor + 1}.0`;
   if (impact === 'patch') return `${major}.${minor}.${patch + 1}`;
@@ -151,8 +154,7 @@ export function renderChangelog(root = process.cwd()): string {
 function main(): void {
   const command = process.argv[2];
   if (command === 'plan') {
-    const plan = planRelease();
-    process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(planRelease(), null, 2)}\n`);
     return;
   }
   if (command === 'render') {
@@ -162,4 +164,4 @@ function main(): void {
   throw new Error('usage: release.ts <plan|render>');
 }
 
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1].replaceAll('\\', '/')}`).href) main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
