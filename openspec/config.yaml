@@ -1,0 +1,6 @@
+schema: arcantry
+
+context: |
+  Arcantry treats an OpenSpec change as the unit of product and engineering intent.
+  Commits are implementation history and must not be used to derive changelog entries.
+  Keep artifacts concise; do not restate information that already exists in another artifact.
