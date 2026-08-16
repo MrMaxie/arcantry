@@ -20,6 +20,7 @@
     "astro": "latest",
     "tsx": "latest",
     "typescript": "latest",
-    "vitest": "latest"
+    "vitest": "latest",
+    "yaml": "latest"
   }
 }
