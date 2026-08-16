@@ -6,7 +6,7 @@
   "scripts": {
     "build": "astro build",
     "check": "pnpm run check:types && pnpm run test && pnpm run docs:check",
-    "check:types": "tsc --noEmit",
+    "check:types": "astro sync && tsc --noEmit",
     "dev": "astro dev",
     "docs:check": "astro check",
     "preview": "astro preview",
