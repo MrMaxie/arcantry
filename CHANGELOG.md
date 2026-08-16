@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.2 - 2026-08-16
+
+### Fixed
+
+<!-- openspec: fix-brand-fidelity -->
+#### Documentation branding fidelity
+
+The documentation now uses the approved Arcantry logo assets, neutral concept palette and intended Manrope / Instrument Serif typography, with the compact mark carried through the header and favicon.
+
 ## 0.2.1 - 2026-08-16
 
 ### Changed
