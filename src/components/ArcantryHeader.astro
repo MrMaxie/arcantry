@@ -1,0 +1,44 @@
+---
+import Search from 'virtual:starlight/components/Search';
+import ThemeSelect from 'virtual:starlight/components/ThemeSelect';
+---
+
+<div class="header-shell">
+  <div class="header-search"><Search /></div>
+  <div class="header-actions">
+    <a class="github-link" href="https://github.com/MrMaxie/arcantry" aria-label="Arcantry on GitHub">GitHub</a>
+    <ThemeSelect />
+  </div>
+</div>
+
+<style>
+  @layer starlight.core {
+    .header-shell {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0 1.25rem;
+    }
+    .header-search { flex: 1; max-width: 44rem; }
+    .header-actions { margin-left: auto; display: flex; align-items: center; gap: .75rem; }
+    .github-link {
+      color: var(--sl-color-gray-2);
+      font-size: .82rem;
+      font-weight: 650;
+      text-decoration: none;
+      letter-spacing: -.01em;
+    }
+    .github-link:hover { color: var(--sl-color-white); }
+
+    :global(site-search button[data-open-modal]) {
+      max-width: none !important;
+      width: 100% !important;
+      height: 2.55rem !important;
+      border-radius: .7rem !important;
+      border-color: var(--ar-border) !important;
+      background: var(--ar-surface) !important;
+      box-shadow: inset 0 1px 0 color-mix(in srgb, white 4%, transparent);
+    }
+  }
+</style>
