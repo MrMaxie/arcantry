@@ -18,15 +18,14 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 
 <style>
   @layer starlight.core {
-    .arcantry-page { min-height: 100vh; }
+    .arcantry-page { min-height: 100vh; background: var(--ar-bg); }
     .arcantry-header {
       position: fixed;
       z-index: var(--sl-z-index-navbar);
       inset: 0 0 auto 0;
       height: var(--sl-nav-height);
       border-bottom: 1px solid var(--ar-border);
-      background: color-mix(in srgb, var(--sl-color-black) 92%, transparent);
-      backdrop-filter: blur(14px);
+      background: var(--ar-bg);
     }
     .arcantry-sidebar-pane {
       visibility: var(--sl-sidebar-visibility, hidden);
@@ -34,7 +33,7 @@ const { hasSidebar } = Astro.locals.starlightRoute;
       z-index: var(--sl-z-index-menu);
       inset: var(--sl-nav-height) 0 0 0;
       overflow-y: auto;
-      background: var(--sl-color-black);
+      background: var(--ar-bg-subtle);
       border-right: 1px solid var(--ar-border);
     }
     :global([aria-expanded='true']) ~ .arcantry-sidebar-pane { --sl-sidebar-visibility: visible; }
