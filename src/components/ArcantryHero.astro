@@ -1,0 +1,56 @@
+---
+const hero = Astro.locals.starlightRoute.entry.data.hero;
+if (!hero) throw new Error('ArcantryHero requires hero frontmatter');
+---
+
+<section class="hero-shell">
+  <div class="hero-copy">
+    <p class="hero-kicker">Repository foundations</p>
+    <h1>{hero.title}</h1>
+    {hero.tagline && <p class="hero-tagline">{hero.tagline}</p>}
+    {hero.actions?.length && (
+      <div class="hero-actions">
+        {hero.actions.map((action) => (
+          <a class:list={['hero-action', action.variant === 'primary' ? 'primary' : 'secondary']} href={action.link}>
+            {action.text}
+          </a>
+        ))}
+      </div>
+    )}
+  </div>
+  <div class="hero-mark" aria-hidden="true">
+    <svg viewBox="0 0 128 128">
+      <path fill="currentColor" fill-rule="evenodd" d="M64 12c-28.72 0-52 23.28-52 52s23.28 52 52 52c16.66 0 31.5-7.84 41.02-20.03V116H116V64c0-28.72-23.28-52-52-52Zm0 20c17.67 0 32 14.33 32 32S81.67 96 64 96 32 81.67 32 64s14.33-32 32-32Z" clip-rule="evenodd"/>
+      <path fill="currentColor" d="M65 45c2.2 9.18 7.82 14.8 17 17-9.18 2.2-14.8 7.82-17 17-2.2-9.18-7.82-14.8-17-17 9.18-2.2 14.8-7.82 17-17Z"/>
+      <path fill="currentColor" d="M83.5 77.5c12.5-1.9 25.7.7 35.5 8.4V104c-10.3-8.8-23.2-12.2-37.8-9.2L83.5 77.5Z"/>
+    </svg>
+  </div>
+</section>
+
+<style>
+  @layer starlight.core {
+    .hero-shell {
+      min-height: 24rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(15rem, .9fr);
+      align-items: center;
+      gap: 4rem;
+      padding: 4.8rem 0 4.2rem;
+    }
+    .hero-kicker { margin: 0 0 1rem; color: var(--ar-accent-ink); font-size: .72rem; font-weight: 760; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 0; max-width: 11ch; font-family: var(--ar-font-display); font-size: clamp(3.5rem, 6.2vw, 6.5rem); font-weight: 480; line-height: .9; letter-spacing: -.065em; color: var(--sl-color-white); }
+    .hero-tagline { max-width: 35rem; margin: 1.6rem 0 0; color: var(--sl-color-gray-2); font-size: 1.08rem; line-height: 1.65; letter-spacing: -.015em; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 2rem; }
+    .hero-action { padding: .68rem 1rem; border-radius: .65rem; border: 1px solid var(--ar-border); font-size: .82rem; font-weight: 680; text-decoration: none; }
+    .hero-action.primary { color: #17121d; background: var(--ar-accent); border-color: transparent; }
+    .hero-action.secondary { color: var(--sl-color-white); background: var(--ar-surface); }
+    .hero-mark { justify-self: end; width: min(28vw, 20rem); color: color-mix(in srgb, var(--ar-accent) 44%, var(--sl-color-gray-5)); opacity: .52; transform: rotate(-4deg); }
+    .hero-mark svg { display: block; width: 100%; }
+
+    @media (max-width: 49.99rem) {
+      .hero-shell { grid-template-columns: 1fr; min-height: auto; padding: 3.5rem 0 3rem; gap: 2rem; }
+      .hero-mark { width: 10rem; justify-self: start; order: -1; opacity: .35; }
+      h1 { font-size: clamp(3.2rem, 17vw, 5rem); }
+    }
+  }
+</style>
