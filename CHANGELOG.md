@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.3 - 2026-08-16
+
+### Fixed
+
+<!-- openspec: fix-theme-and-visual-restraint -->
+#### Theme switching now works and the docs chrome is more restrained
+
+Arcantry documentation now applies distinct light and dark palettes correctly, keeps brand assets readable in both modes, and removes glassy, pill-heavy visual treatments that were not part of the approved design direction.
+
 ## 0.2.2 - 2026-08-16
 
 ### Fixed
