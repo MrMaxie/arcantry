@@ -1,0 +1,18 @@
+name: arcantry
+description: Spec-driven delivery with release metadata attached to each change.
+artifacts:
+  - id: proposal
+    generates: proposal.md
+    requires: []
+  - id: specs
+    generates: specs/**/*.md
+    requires: [proposal]
+  - id: design
+    generates: design.md
+    requires: [proposal]
+  - id: tasks
+    generates: tasks.md
+    requires: [specs, design]
+  - id: release
+    generates: release.md
+    requires: [proposal]
