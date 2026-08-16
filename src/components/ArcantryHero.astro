@@ -36,12 +36,12 @@ if (!hero) throw new Error('ArcantryHero requires hero frontmatter');
       font-weight: 400;
       line-height: .92;
       letter-spacing: -.045em;
-      color: #232426;
+      color: var(--ar-text);
     }
     .hero-tagline {
       max-width: 39rem;
       margin: 1.7rem 0 0;
-      color: #5d5e60;
+      color: var(--ar-text-muted);
       font-size: 1.02rem;
       line-height: 1.65;
       letter-spacing: -.015em;
@@ -49,15 +49,15 @@ if (!hero) throw new Error('ArcantryHero requires hero frontmatter');
     .hero-actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 2rem; }
     .hero-action {
       padding: .72rem 1rem;
-      border-radius: .35rem;
-      border: 1px solid #232426;
+      border: 1px solid var(--ar-border);
+      border-radius: .2rem;
       font-size: .8rem;
       font-weight: 650;
       text-decoration: none;
     }
-    .hero-action.primary { color: #faf9f8; background: #232426; }
-    .hero-action.secondary { color: #232426; background: transparent; border-color: #d0cfcf; }
-    .hero-action.secondary:hover { border-color: #232426; }
+    .hero-action.primary { color: var(--ar-invert); background: var(--ar-text); border-color: var(--ar-text); }
+    .hero-action.secondary { color: var(--ar-text); background: transparent; }
+    .hero-action.secondary:hover { border-color: var(--ar-text-soft); }
 
     @media (max-width: 49.99rem) {
       .hero-shell { min-height: auto; padding: 3.5rem 0 3rem; }
