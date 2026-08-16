@@ -1,0 +1,53 @@
+---
+import MobileMenuToggle from 'virtual:starlight/components/MobileMenuToggle';
+const { hasSidebar } = Astro.locals.starlightRoute;
+---
+
+<div class="arcantry-page">
+  <header class="arcantry-header"><slot name="header" /></header>
+  {hasSidebar && (
+    <nav class="arcantry-sidebar print:hidden" aria-label={Astro.locals.t('sidebarNav.accessibleLabel')}>
+      <MobileMenuToggle />
+      <div id="starlight__sidebar" class="arcantry-sidebar-pane">
+        <slot name="sidebar" />
+      </div>
+    </nav>
+  )}
+  <div class="arcantry-main-frame"><slot /></div>
+</div>
+
+<style>
+  @layer starlight.core {
+    .arcantry-page { min-height: 100vh; }
+    .arcantry-header {
+      position: fixed;
+      z-index: var(--sl-z-index-navbar);
+      inset: 0 0 auto 0;
+      height: var(--sl-nav-height);
+      border-bottom: 1px solid var(--ar-border);
+      background: color-mix(in srgb, var(--sl-color-black) 92%, transparent);
+      backdrop-filter: blur(14px);
+    }
+    .arcantry-sidebar-pane {
+      visibility: var(--sl-sidebar-visibility, hidden);
+      position: fixed;
+      z-index: var(--sl-z-index-menu);
+      inset: var(--sl-nav-height) 0 0 0;
+      overflow-y: auto;
+      background: var(--sl-color-black);
+      border-right: 1px solid var(--ar-border);
+    }
+    :global([aria-expanded='true']) ~ .arcantry-sidebar-pane { --sl-sidebar-visibility: visible; }
+    .arcantry-main-frame { padding-top: calc(var(--sl-nav-height) + var(--sl-mobile-toc-height)); }
+
+    @media (min-width: 50rem) {
+      .arcantry-header { inset-inline-start: var(--sl-sidebar-width); }
+      .arcantry-sidebar-pane {
+        --sl-sidebar-visibility: visible;
+        inset: 0 auto 0 0;
+        width: var(--sl-sidebar-width);
+      }
+      .arcantry-main-frame { padding-inline-start: var(--sl-sidebar-width); }
+    }
+  }
+</style>
