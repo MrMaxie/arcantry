@@ -1,0 +1,4 @@
+version: 0.2.2
+date: 2026-08-16
+changes:
+  - fix-brand-fidelity
