@@ -1,0 +1,25 @@
+{
+  "name": "arcantry",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "astro build",
+    "check": "pnpm run check:types && pnpm run test && pnpm run docs:check",
+    "check:types": "tsc --noEmit",
+    "dev": "astro dev",
+    "docs:check": "astro check",
+    "preview": "astro preview",
+    "release:plan": "tsx tooling/release.ts plan",
+    "release:render": "tsx tooling/release.ts render",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@astrojs/check": "latest",
+    "@astrojs/starlight": "latest",
+    "@fission-ai/openspec": "latest",
+    "astro": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}
