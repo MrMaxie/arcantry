@@ -8,7 +8,7 @@ export default defineConfig({
     starlight({
       title: 'Arcantry',
       description: 'Repository foundations for spec-driven delivery.',
-      customCss: ['./src/styles/arcantry.css'],
+      customCss: ['./src/styles/arcantry.css', './src/styles/arcantry-concept.css'],
       components: {
         PageFrame: './src/components/ArcantryPageFrame.astro',
         Header: './src/components/ArcantryHeader.astro',
