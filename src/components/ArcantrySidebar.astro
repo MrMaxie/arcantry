@@ -35,24 +35,24 @@ const { sidebar } = Astro.locals.starlightRoute;
   @layer starlight.core {
     :global(.arcantry-sidebar-pane) { padding: 0; display: flex; flex-direction: column; }
     .brand { height: var(--sl-nav-height); display: flex; align-items: center; padding: 0 1.35rem; border-bottom: 1px solid var(--ar-border); }
-    .brand-link { display: flex; align-items: center; color: var(--sl-color-white); text-decoration: none; }
-    .brand-link img { display: block; width: 8.7rem; height: auto; }
+    .brand-link { display: flex; align-items: center; text-decoration: none; }
+    .brand-link img { display: block; width: 8.7rem; height: auto; filter: var(--ar-logo-filter); }
     .navigation { flex: 1; padding: 1.5rem .9rem 2rem; }
     .nav-group + .nav-group, .nav-link + .nav-group { margin-top: 1.7rem; }
-    .nav-label { padding: 0 .7rem .5rem; color: var(--sl-color-gray-3); font-size: .68rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+    .nav-label { padding: 0 .7rem .5rem; color: var(--ar-text-soft); font-size: .68rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
     .nav-items { display: grid; gap: .1rem; }
     .nav-link {
       display: block;
-      padding: .52rem .7rem;
-      border-radius: .35rem;
-      color: var(--sl-color-gray-2);
+      padding: .5rem .7rem;
+      border-left: 2px solid transparent;
+      color: var(--ar-text-muted);
       text-decoration: none;
       font-size: .83rem;
       font-weight: 560;
       letter-spacing: -.015em;
     }
-    .nav-link:hover { color: var(--sl-color-white); background: var(--ar-surface); }
-    .nav-link.active { color: var(--sl-color-white); background: var(--ar-accent-soft); }
-    .sidebar-foot { display: flex; justify-content: space-between; gap: .5rem; padding: 1rem 1.35rem; border-top: 1px solid var(--ar-border); color: var(--sl-color-gray-4); font-size: .63rem; }
+    .nav-link:hover { color: var(--ar-text); background: var(--ar-surface); }
+    .nav-link.active { color: var(--ar-text); border-left-color: var(--ar-text); background: transparent; }
+    .sidebar-foot { display: flex; justify-content: space-between; gap: .5rem; padding: 1rem 1.35rem; border-top: 1px solid var(--ar-border); color: var(--ar-text-soft); font-size: .63rem; }
   }
 </style>
