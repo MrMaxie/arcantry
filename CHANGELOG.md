@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.1 - 2026-08-16
+
+### Changed
+
+<!-- openspec: match-docs-concept -->
+#### Documentation now follows the Arcantry concept
+
+The documentation shell and overview now use the approved Arcantry layout, typography hierarchy and navigation treatment instead of presenting the default Starlight visual language.
+
 ## 0.2.0 - 2026-08-16
 
 ### Changed
