@@ -1,15 +1,11 @@
 ---
+import wordmark from '../assets/arcantry-wordmark-approved.svg';
 const { sidebar } = Astro.locals.starlightRoute;
 ---
 
 <div class="brand">
   <a href="/arcantry/" class="brand-link" aria-label="Arcantry home">
-    <svg viewBox="0 0 128 128" aria-hidden="true">
-      <path fill="currentColor" fill-rule="evenodd" d="M64 12c-28.72 0-52 23.28-52 52s23.28 52 52 52c16.66 0 31.5-7.84 41.02-20.03V116H116V64c0-28.72-23.28-52-52-52Zm0 20c17.67 0 32 14.33 32 32S81.67 96 64 96 32 81.67 32 64s14.33-32 32-32Z" clip-rule="evenodd"/>
-      <path fill="currentColor" d="M65 45c2.2 9.18 7.82 14.8 17 17-9.18 2.2-14.8 7.82-17 17-2.2-9.18-7.82-14.8-17-17 9.18-2.2 14.8-7.82 17-17Z"/>
-      <path fill="currentColor" d="M83.5 77.5c12.5-1.9 25.7.7 35.5 8.4V104c-10.3-8.8-23.2-12.2-37.8-9.2L83.5 77.5Z"/>
-    </svg>
-    <span>arcantry</span>
+    <img src={wordmark.src} alt="Arcantry" />
   </a>
 </div>
 
@@ -39,17 +35,16 @@ const { sidebar } = Astro.locals.starlightRoute;
   @layer starlight.core {
     :global(.arcantry-sidebar-pane) { padding: 0; display: flex; flex-direction: column; }
     .brand { height: var(--sl-nav-height); display: flex; align-items: center; padding: 0 1.35rem; border-bottom: 1px solid var(--ar-border); }
-    .brand-link { display: flex; align-items: center; gap: .65rem; color: var(--sl-color-white); text-decoration: none; }
-    .brand-link svg { width: 1.7rem; height: 1.7rem; flex: none; }
-    .brand-link span { font-size: 1.24rem; font-weight: 780; letter-spacing: -.055em; }
+    .brand-link { display: flex; align-items: center; color: var(--sl-color-white); text-decoration: none; }
+    .brand-link img { display: block; width: 8.7rem; height: auto; }
     .navigation { flex: 1; padding: 1.5rem .9rem 2rem; }
     .nav-group + .nav-group, .nav-link + .nav-group { margin-top: 1.7rem; }
-    .nav-label { padding: 0 .7rem .5rem; color: var(--sl-color-gray-3); font-size: .68rem; font-weight: 720; letter-spacing: .11em; text-transform: uppercase; }
+    .nav-label { padding: 0 .7rem .5rem; color: var(--sl-color-gray-3); font-size: .68rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
     .nav-items { display: grid; gap: .1rem; }
     .nav-link {
       display: block;
       padding: .52rem .7rem;
-      border-radius: .55rem;
+      border-radius: .35rem;
       color: var(--sl-color-gray-2);
       text-decoration: none;
       font-size: .83rem;
@@ -57,7 +52,7 @@ const { sidebar } = Astro.locals.starlightRoute;
       letter-spacing: -.015em;
     }
     .nav-link:hover { color: var(--sl-color-white); background: var(--ar-surface); }
-    .nav-link.active { color: var(--ar-accent-ink); background: var(--ar-accent-soft); }
+    .nav-link.active { color: var(--sl-color-white); background: var(--ar-accent-soft); }
     .sidebar-foot { display: flex; justify-content: space-between; gap: .5rem; padding: 1rem 1.35rem; border-top: 1px solid var(--ar-border); color: var(--sl-color-gray-4); font-size: .63rem; }
   }
 </style>
