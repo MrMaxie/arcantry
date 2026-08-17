@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.2 - 2026-08-17
+
+### Fixed
+
+<!-- openspec: initialize-ci-adoption -->
+#### Clean CI checkouts initialize private adoption state
+
+Arcantry CI now initializes ephemeral repository adoption through the public CLI before running strict read-only self-validation, without committing private `.local` configuration.
+
 ## 0.3.1 - 2026-08-17
 
 ### Fixed

@@ -47,4 +47,4 @@ Issues, pull requests, design tools and project trackers may supply task context
 
 ## Arcantry uses this workflow
 
-The Arcantry repository is a consumer of its own contract. It validates repository adoption, skill packages, catalog projections and release state through the same public commands and schemas available to other repositories. Every completed Arcantry change is archived, versioned and represented in the generated changelog before final CI can pass.
+The Arcantry repository is a consumer of its own contract. A clean CI checkout initializes ephemeral private adoption state through the public CLI before running the same read-only repository validation available to other repositories. It also validates skill packages, catalog projections and release state through public commands and schemas. Every completed Arcantry change is archived, versioned and represented in the generated changelog before final CI can pass.

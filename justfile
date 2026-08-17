@@ -30,6 +30,9 @@ package-check:
 arcantry-build:
     pnpm --filter @maxiedev/arcantry run build
 
+arcantry-init: arcantry-build
+    node packages/arcantry/dist/cli.js --cwd . repo init --docs none
+
 arcantry-doctor: arcantry-build
     node packages/arcantry/dist/cli.js --cwd . repo doctor
 
@@ -55,4 +58,4 @@ openspec-validate:
     pnpm exec openspec schema validate arcantry
     pnpm exec openspec validate --all --strict --no-interactive
 
-ci: openspec-validate check build package-check arcantry-validate arcantry-skills-doctor
+ci: openspec-validate check build package-check arcantry-init arcantry-validate arcantry-skills-doctor

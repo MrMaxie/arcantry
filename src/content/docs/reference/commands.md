@@ -12,6 +12,7 @@ The Arcantry repository uses `justfile` as its contributor command surface. Thes
 | `just build` | Produce the normal build output. |
 | `just ci` | Validate OpenSpec, release sealing, tests, generated state, builds and public self-checks. |
 | `just docs` | Start the documentation site locally. |
+| `just arcantry-init` | Initialize this checkout's private adoption state through the public CLI. |
 | `just arcantry-doctor` | Diagnose this checkout through the public repository command. |
 | `just arcantry-validate` | Validate this checkout through the public repository command. |
 | `just arcantry-skills-doctor` | Validate this checkout's canonical skill catalog through the public CLI. |
@@ -20,6 +21,6 @@ The Arcantry repository uses `justfile` as its contributor command surface. Thes
 | `just release-render` | Regenerate `CHANGELOG.md` from release manifests and archived changes. |
 | `just release-check` | Fail when OpenSpec, version, changelog or Git release sealing is incomplete. |
 
-CI calls the repository commands instead of reimplementing their logic in workflow YAML.
+CI initializes ephemeral private adoption state and then calls the repository commands instead of reimplementing their logic in workflow YAML. The generated `.local` state remains excluded from Git.
 
 Arcantry's checks call the same repository and skill validation contracts exposed through the `arcantry` CLI. The wrapper coordinates project-specific checks; it does not define a second product contract.
