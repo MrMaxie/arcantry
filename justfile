@@ -50,5 +50,6 @@ release-check:
 
 openspec-validate:
     pnpm exec openspec schema validate arcantry
+    pnpm exec openspec validate --all --strict --no-interactive
 
 ci: openspec-validate check build package-check

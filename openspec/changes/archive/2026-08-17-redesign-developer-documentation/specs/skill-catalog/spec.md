@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Public catalog is an audience-facing projection
 
@@ -17,4 +17,3 @@ A generated skill page MUST derive its release state from archived OpenSpec chan
 
 - **WHEN** documentation generation runs
 - **THEN** its page shows `Unreleased` instead of borrowing the current package version
-

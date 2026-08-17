@@ -1,6 +1,6 @@
 {
   "name": "@maxiedev/arcantry",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Arcantry repository adoption, skill catalog, and agent integration CLI.",
   "type": "module",
   "bin": {

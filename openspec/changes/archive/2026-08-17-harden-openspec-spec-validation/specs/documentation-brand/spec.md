@@ -1,8 +1,4 @@
-## Purpose
-
-Define how the Arcantry brand is expressed structurally in the documentation interface while Starlight remains the underlying documentation engine.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Documentation shell matches the approved Arcantry concept
 
@@ -15,7 +11,7 @@ The desktop documentation shell MUST present a full-height left navigation rail,
 
 ### Requirement: Brand assets are structural UI
 
-The documentation shell MUST show exactly one Arcantry brand lockup at a time. The desktop lockup MUST use the wordmark and the narrow layout MUST use the compact mark. The wordmark's first glyph MUST reuse the compact mark geometry rather than a similar alternate drawing.
+The Arcantry mark and wordmark MUST be used as primary navigation branding rather than decorative content inside the page body.
 
 #### Scenario: A reader moves between viewport sizes
 
@@ -78,7 +74,7 @@ The canonical Arcantry mark and wordmark MUST remain visually legible in light a
 
 ### Requirement: Visual language remains restrained
 
-The documentation MUST prefer flat surfaces, hairline separators, meaningful icons, and square-to-subtle corner treatment. Marketing motion MAY appear on the overview when it explains product behavior and respects reduced-motion preferences. Reference and skill pages MUST NOT use decorative canvas effects, glow, glass blur, oversized pills, gratuitous shadows, or filler containers.
+The documentation MUST prefer flat surfaces, hairline separators and square-to-subtle corner treatment. Glass blur, glow, decorative gradients, oversized pill controls, gratuitous shadows and bento-style filler containers MUST NOT be introduced unless an approved concept explicitly calls for them.
 
 #### Scenario: A reader opens a reference page
 

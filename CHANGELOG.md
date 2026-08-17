@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.0 - 2026-08-17
+
+### Added
+
+<!-- openspec: unify-arcantry-capabilities -->
+#### Unified Arcantry capabilities
+
+Arcantry now combines its OpenSpec lifecycle with reusable skills, a complete Codex plugin, a versioned catalog, and one CLI for safe repository adoption and skill management.
+
+### Changed
+
+<!-- openspec: redesign-developer-documentation -->
+#### Developer-first documentation
+
+Arcantry now opens with a concrete repository adoption path, keeps one brand lockup in the shell, and routes developers through the skill catalog by the work they need to do.
+
 ## 0.2.3 - 2026-08-16
 
 ### Fixed

@@ -1,3 +1,8 @@
+## RENAMED Requirements
+
+- FROM: `### Requirement: Overview page preserves the approved composition`
+- TO: `### Requirement: Overview page presents the developer path`
+
 ## MODIFIED Requirements
 
 ### Requirement: Documentation shell matches the approved Arcantry concept
@@ -26,4 +31,3 @@ Search, responsive navigation, accessible content navigation, and system/light/d
 
 - **WHEN** they activate the theme control and follow an internal link
 - **THEN** focus remains visible, the selected theme persists, and navigation completes without a full-page flash
-

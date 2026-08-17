@@ -17,4 +17,3 @@ The documentation MUST prefer flat surfaces, hairline separators, meaningful ico
 
 - **WHEN** the page is not the overview
 - **THEN** product content remains static, legible, and visually quieter than the landing surface
-

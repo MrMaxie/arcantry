@@ -1,0 +1,6 @@
+version: 0.3.0
+date: 2026-08-17
+changes:
+  - harden-openspec-spec-validation
+  - redesign-developer-documentation
+  - unify-arcantry-capabilities

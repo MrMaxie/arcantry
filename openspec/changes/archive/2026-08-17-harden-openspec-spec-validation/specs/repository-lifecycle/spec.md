@@ -1,8 +1,4 @@
-## Purpose
-
-Define the repository-level contract that keeps intent, implementation and release history distinct while making delivery reproducible.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: OpenSpec is the source of release history
 
