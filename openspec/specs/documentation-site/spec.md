@@ -1,7 +1,7 @@
 # documentation-site Specification
 
 ## Purpose
-TBD - created by archiving change unify-arcantry-capabilities. Update Purpose after archive.
+Define the documentation content contract for developers adopting and verifying Arcantry.
 
 ## Requirements
 

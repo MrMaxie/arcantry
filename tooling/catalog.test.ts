@@ -8,7 +8,7 @@ function fixture(name = 'example-skill'): string {
   const root = mkdtempSync(join(tmpdir(), 'arcantry-catalog-'));
   const skill = join(root, 'skills', name);
   mkdirSync(join(skill, 'agents'), { recursive: true });
-  writeFileSync(join(root, 'catalog.json'), `${JSON.stringify({ skills: [{ name, tags: ['example'] }] })}\n`);
+  writeFileSync(join(root, 'catalog.json'), `${JSON.stringify({ $schema: './schemas/catalog.schema.json', skills: [{ name, tags: ['example'] }] })}\n`);
   writeFileSync(
     join(skill, 'SKILL.md'),
     `---\nname: ${name}\ndescription: Use this example skill for a concrete catalog validation task.\n---\n\n# Example\n`,
@@ -16,6 +16,7 @@ function fixture(name = 'example-skill'): string {
   writeFileSync(
     join(skill, 'arcantry.json'),
     `${JSON.stringify({
+      $schema: '../../schemas/skill-metadata.schema.json',
       summary: 'Validate one complete skill package in the Arcantry catalog.',
       scenarios: [
         { title: 'First case', prompt: 'Use the example skill for the first task.', outcome: 'The first task is complete.' },
@@ -59,5 +60,17 @@ describe('skill catalog validation', () => {
     );
 
     expect(validateCatalog(root).some((error) => error.includes('references missing references/missing.md'))).toBe(true);
+  });
+
+  it('enforces the published JSON schema constraints', () => {
+    const root = fixture();
+    writeFileSync(join(root, 'catalog.json'), `${JSON.stringify({ skills: [{ name: 'example-skill', tags: ['invalid tag'] }] })}\n`);
+
+    expect(validateCatalog(root)).toEqual(
+      expect.arrayContaining([
+        'catalog.json $schema must be ./schemas/catalog.schema.json',
+        'skills/example-skill must have unique tags',
+      ]),
+    );
   });
 });

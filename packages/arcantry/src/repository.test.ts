@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { initRepository, planRepositoryInit, removeRepository, updateRepository, validateRepository } from './repository.js';
+import { doctorRepository, initRepository, planRepositoryInit, removeRepository, updateRepository, validateRepository } from './repository.js';
 import { createFixtureRepository, removeFixtures } from './testHelpers.js';
 
 afterEach(removeFixtures);
@@ -69,6 +69,19 @@ describe('repository adoption', () => {
 
     expect(await readFile(join(root, '.local/arcantry.json'), 'utf8')).toBe(originalConfig);
     expect(await readFile(agentsPath, 'utf8')).toContain('## Arcantry');
+  });
+
+  it('reports an outdated managed section and gives doctor a repair path', async () => {
+    const root = await createFixtureRepository();
+    await initRepository(root, { docs: 'none', agents: ['codex'] });
+    const agentsPath = join(root, 'AGENTS.md');
+    await writeFile(agentsPath, (await readFile(agentsPath, 'utf8')).replace('Use `openspec/`', 'Do not use OpenSpec'));
+
+    expect((await validateRepository(root)).valid).toBe(false);
+    const report = await doctorRepository(root);
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({ path: 'AGENTS.md', message: 'Arcantry managed section is missing or outdated.', repair: 'Run `arcantry repo update`.' }),
+    );
   });
 
   it('removes only verified generated content and managed sections', async () => {

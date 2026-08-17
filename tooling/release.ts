@@ -44,13 +44,17 @@ export function parseReleaseArtifact(source: string): ReleaseArtifact {
   const category = metadata.category as Category;
   const impact = metadata.impact as Impact;
   const visibility = metadata.visibility as Visibility;
-  const components = metadata.components ?? [];
+  const components = metadata.components;
 
   if (!categories.includes(category)) throw new Error(`invalid release category: ${String(category)}`);
   if (!impacts.includes(impact)) throw new Error(`invalid release impact: ${String(impact)}`);
   if (!visibilities.includes(visibility)) throw new Error(`invalid release visibility: ${String(visibility)}`);
-  if (!Array.isArray(components) || !components.every((component) => typeof component === 'string' && componentPattern.test(component))) {
-    throw new Error('release components must be an array of component identifiers');
+  if (
+    !Array.isArray(components) ||
+    components.length === 0 ||
+    !components.every((component) => typeof component === 'string' && componentPattern.test(component))
+  ) {
+    throw new Error('release components must be a non-empty array of component identifiers');
   }
   if (new Set(components).size !== components.length) throw new Error('release components must be unique');
 

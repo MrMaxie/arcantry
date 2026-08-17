@@ -1,7 +1,7 @@
 # skill-packages Specification
 
 ## Purpose
-TBD - created by archiving change unify-arcantry-capabilities. Update Purpose after archive.
+Define the structure, focus and authorization boundaries of published skill packages.
 
 ## Requirements
 

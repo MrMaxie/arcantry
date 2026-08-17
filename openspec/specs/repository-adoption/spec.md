@@ -1,7 +1,7 @@
 # repository-adoption Specification
 
 ## Purpose
-TBD - created by archiving change unify-arcantry-capabilities. Update Purpose after archive.
+Define safe repository adoption, diagnostics and removal while preserving project ownership.
 
 ## Requirements
 

@@ -2,6 +2,8 @@
 category: changed
 impact: minor
 visibility: public
+components:
+  - repository-lifecycle
 ---
 
 # Release state is now self-checking

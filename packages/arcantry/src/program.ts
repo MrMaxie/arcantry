@@ -202,6 +202,7 @@ const renderRepositoryReport = (program: Command, context: CliContext, report: R
   for (const diagnostic of report.diagnostics) {
     const write = diagnostic.severity === 'error' ? context.stderr : context.stdout;
     write(`${diagnostic.severity.toUpperCase()}: ${diagnostic.path}: ${diagnostic.message}\n`);
+    if (diagnostic.repair !== undefined) write(`Repair: ${diagnostic.repair}\n`);
   }
   if (report.valid) context.stdout('Repository adoption is valid.\n');
   else exitCodes.set(program, 1);

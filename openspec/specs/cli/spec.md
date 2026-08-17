@@ -1,7 +1,7 @@
 # cli Specification
 
 ## Purpose
-TBD - created by archiving change unify-arcantry-capabilities. Update Purpose after archive.
+Define the stable public command surface for repository adoption and skill discovery.
 
 ## Requirements
 

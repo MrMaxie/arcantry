@@ -64,6 +64,15 @@ describe('release artifact', () => {
       'release components',
     );
   });
+
+  it('requires every release artifact to identify an affected component', () => {
+    expect(() => parseReleaseArtifact(release().replace('components:\n  - repository-lifecycle\n', ''))).toThrow(
+      'non-empty array of component identifiers',
+    );
+    expect(() => parseReleaseArtifact(release().replace('  - repository-lifecycle', ''))).toThrow(
+      'non-empty array of component identifiers',
+    );
+  });
 });
 
 describe('SemVer planning', () => {

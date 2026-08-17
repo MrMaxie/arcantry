@@ -68,12 +68,20 @@ describe('CLI', () => {
     expect(result.stderr).toContain('Arcantry configuration is missing.');
   });
 
+  it('gives doctor an explicit repair action', async () => {
+    const root = await createFixtureRepository();
+    const result = await run(root, ['repo', 'doctor']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Repair: Run `arcantry repo init --docs <shared|local|none>` after choosing the documentation mode.');
+  });
+
   it('lists, inspects, links, diagnoses, and unlinks skills', async () => {
     const root = await createFixtureDirectory('arcantry-cli-catalog-');
     const skill = join(root, 'skills', 'example-skill');
     const links = await createFixtureDirectory('arcantry-cli-links-');
     await mkdir(join(skill, 'agents'), { recursive: true });
-    await writeFile(join(root, 'catalog.json'), '{"skills":[{"name":"example-skill","tags":["quality"]}]}\n');
+    await writeFile(join(root, 'catalog.json'), '{"$schema":"./schemas/catalog.schema.json","skills":[{"name":"example-skill","tags":["quality"]}]}\n');
     await writeFile(
       join(skill, 'SKILL.md'),
       '---\nname: example-skill\ndescription: Execute one concrete task with safe and fully verifiable behavior.\n---\n',
@@ -81,6 +89,7 @@ describe('CLI', () => {
     await writeFile(
       join(skill, 'arcantry.json'),
       JSON.stringify({
+        $schema: '../../schemas/skill-metadata.schema.json',
         summary: 'Execute one concrete task with safe and fully verifiable behavior.',
         scenarios: [
           { title: 'First case', prompt: 'Use $example-skill once.', outcome: 'The first result is ready.' },

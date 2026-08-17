@@ -31,6 +31,8 @@ export interface SkillAgent {
 }
 
 const skillNamePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const catalogSchemaPath = './schemas/catalog.schema.json';
+const skillMetadataSchemaPath = '../../schemas/skill-metadata.schema.json';
 
 export function readCatalog(root = process.cwd()): Catalog {
   return JSON.parse(readFileSync(join(root, 'catalog.json'), 'utf8')) as Catalog;
@@ -69,6 +71,10 @@ export function validateCatalog(root = process.cwd()): string[] {
   const errors: string[] = [];
   const catalog = readCatalog(root);
   if (!Array.isArray(catalog.skills)) return ['catalog.json must contain a skills array'];
+  if (catalog.$schema !== catalogSchemaPath) errors.push(`catalog.json $schema must be ${catalogSchemaPath}`);
+  if (Object.keys(catalog).some((key) => key !== '$schema' && key !== 'skills')) {
+    errors.push('catalog.json must not contain unsupported fields');
+  }
 
   const names = catalog.skills.map((entry) => entry.name);
   const sortedNames = [...names].sort((a, b) => a.localeCompare(b));
@@ -87,9 +93,17 @@ export function validateCatalog(root = process.cwd()): string[] {
   }
 
   for (const entry of catalog.skills) {
-    if (!skillNamePattern.test(entry.name)) errors.push(`invalid skill name: ${entry.name}`);
-    if (!Array.isArray(entry.tags) || entry.tags.length === 0 || new Set(entry.tags).size !== entry.tags.length) {
+    if (!skillNamePattern.test(entry.name) || entry.name.length > 63) errors.push(`invalid skill name: ${entry.name}`);
+    if (
+      !Array.isArray(entry.tags) ||
+      entry.tags.length === 0 ||
+      new Set(entry.tags).size !== entry.tags.length ||
+      !entry.tags.every((tag) => typeof tag === 'string' && skillNamePattern.test(tag))
+    ) {
       errors.push(`skills/${entry.name} must have unique tags`);
+    }
+    if (Object.keys(entry).some((key) => key !== 'name' && key !== 'tags')) {
+      errors.push(`skills/${entry.name} must not contain unsupported fields`);
     }
 
     const directory = join(skillsRoot, entry.name);
@@ -107,6 +121,12 @@ export function validateCatalog(root = process.cwd()): string[] {
     }
 
     const metadata = readSkillMetadata(root, entry.name);
+    if (metadata.$schema !== skillMetadataSchemaPath) {
+      errors.push(`skills/${entry.name} metadata $schema must be ${skillMetadataSchemaPath}`);
+    }
+    if (Object.keys(metadata).some((key) => key !== '$schema' && key !== 'summary' && key !== 'scenarios')) {
+      errors.push(`skills/${entry.name} metadata must not contain unsupported fields`);
+    }
     if (typeof metadata.summary !== 'string' || metadata.summary.length < 30 || metadata.summary.length > 180) {
       errors.push(`skills/${entry.name} summary must contain 30-180 characters`);
     }
@@ -114,8 +134,21 @@ export function validateCatalog(root = process.cwd()): string[] {
       errors.push(`skills/${entry.name} must define exactly two scenarios`);
     } else {
       for (const [index, scenario] of metadata.scenarios.entries()) {
-        if (!scenario.title || !scenario.prompt || !scenario.outcome) {
-          errors.push(`skills/${entry.name} scenario ${index + 1} is incomplete`);
+        if (
+          !scenario.title ||
+          !scenario.prompt ||
+          !scenario.outcome ||
+          scenario.title.trim().length < 5 ||
+          scenario.title.trim().length > 60 ||
+          scenario.prompt.trim().length < 15 ||
+          scenario.prompt.trim().length > 280 ||
+          scenario.outcome.trim().length < 15 ||
+          scenario.outcome.trim().length > 220
+        ) {
+          errors.push(`skills/${entry.name} scenario ${index + 1} is incomplete or outside the supported length`);
+        }
+        if (Object.keys(scenario).some((key) => key !== 'title' && key !== 'prompt' && key !== 'outcome')) {
+          errors.push(`skills/${entry.name} scenario ${index + 1} must not contain unsupported fields`);
         }
       }
     }

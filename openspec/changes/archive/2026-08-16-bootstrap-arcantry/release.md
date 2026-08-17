@@ -2,6 +2,9 @@
 category: added
 impact: minor
 visibility: public
+components:
+  - repository-lifecycle
+  - docs
 ---
 
 # Initial Arcantry repository lifecycle

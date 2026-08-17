@@ -14,6 +14,7 @@ The Arcantry repository uses `justfile` as its contributor command surface. Thes
 | `just docs` | Start the documentation site locally. |
 | `just arcantry-doctor` | Diagnose this checkout through the public repository command. |
 | `just arcantry-validate` | Validate this checkout through the public repository command. |
+| `just arcantry-skills-doctor` | Validate this checkout's canonical skill catalog through the public CLI. |
 | `just release-plan` | Show unassigned archived changes and the resulting SemVer bump. |
 | `just release-cut` | Create the next release manifest from that plan. |
 | `just release-render` | Regenerate `CHANGELOG.md` from release manifests and archived changes. |

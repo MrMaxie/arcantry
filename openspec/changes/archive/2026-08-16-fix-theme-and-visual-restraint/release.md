@@ -2,6 +2,8 @@
 category: fixed
 impact: patch
 visibility: public
+components:
+  - docs
 ---
 
 # Theme switching now works and the docs chrome is more restrained

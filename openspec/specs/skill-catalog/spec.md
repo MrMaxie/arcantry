@@ -1,7 +1,7 @@
 # skill-catalog Specification
 
 ## Purpose
-TBD - created by archiving change unify-arcantry-capabilities. Update Purpose after archive.
+Define the canonical skill catalog, its generated public projections and distribution boundaries.
 
 ## Requirements
 

@@ -36,6 +36,9 @@ arcantry-doctor: arcantry-build
 arcantry-validate: arcantry-build
     node packages/arcantry/dist/cli.js --cwd . repo validate
 
+arcantry-skills-doctor: arcantry-build
+    node packages/arcantry/dist/cli.js --cwd . skills doctor
+
 release-plan:
     pnpm run release:plan
 
@@ -52,4 +55,4 @@ openspec-validate:
     pnpm exec openspec schema validate arcantry
     pnpm exec openspec validate --all --strict --no-interactive
 
-ci: openspec-validate check build package-check
+ci: openspec-validate check build package-check arcantry-validate arcantry-skills-doctor

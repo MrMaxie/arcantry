@@ -7,26 +7,26 @@ import { z } from 'zod';
 const skillNamePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export const catalogEntrySchema = z.object({
-  name: z.string().regex(skillNamePattern),
-  tags: z.array(z.string().trim().min(1)).min(1),
-});
+  name: z.string().regex(skillNamePattern).max(63),
+  tags: z.array(z.string().regex(skillNamePattern)).min(1),
+}).strict();
 
 export const catalogSchema = z.object({
-  $schema: z.string().optional(),
+  $schema: z.literal('./schemas/catalog.schema.json'),
   skills: z.array(catalogEntrySchema),
-});
+}).strict();
 
 export const skillScenarioSchema = z.object({
   title: z.string().trim().min(5).max(60),
   prompt: z.string().trim().min(15).max(280),
   outcome: z.string().trim().min(15).max(220),
-});
+}).strict();
 
 export const skillMetadataSchema = z.object({
-  $schema: z.string().optional(),
+  $schema: z.literal('../../schemas/skill-metadata.schema.json'),
   summary: z.string().trim().min(30).max(180),
   scenarios: z.array(skillScenarioSchema).length(2),
-});
+}).strict();
 
 export type CatalogEntry = z.infer<typeof catalogEntrySchema>;
 export type Catalog = z.infer<typeof catalogSchema>;

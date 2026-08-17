@@ -2,6 +2,8 @@
 category: changed
 impact: patch
 visibility: public
+components:
+  - docs
 ---
 
 # Documentation now follows the Arcantry concept

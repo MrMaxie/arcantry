@@ -11,7 +11,10 @@ const createCatalogFixture = async (): Promise<string> => {
   const root = await createFixtureDirectory('arcantry-catalog-');
   const skillRoot = join(root, 'skills', 'example-skill');
   await mkdir(join(skillRoot, 'agents'), { recursive: true });
-  await writeFile(join(root, 'catalog.json'), `${JSON.stringify({ skills: [{ name: 'example-skill', tags: ['quality'] }] }, null, 2)}\n`);
+  await writeFile(
+    join(root, 'catalog.json'),
+    `${JSON.stringify({ $schema: './schemas/catalog.schema.json', skills: [{ name: 'example-skill', tags: ['quality'] }] }, null, 2)}\n`,
+  );
   await writeFile(
     join(skillRoot, 'SKILL.md'),
     '---\nname: example-skill\ndescription: Perform a concrete example task with a sufficiently precise public description.\n---\n\n# Example\n',
@@ -19,6 +22,7 @@ const createCatalogFixture = async (): Promise<string> => {
   await writeFile(
     join(skillRoot, 'arcantry.json'),
     `${JSON.stringify({
+      $schema: '../../schemas/skill-metadata.schema.json',
       summary: 'Perform a concrete example task with predictable and verifiable results.',
       scenarios: [
         { title: 'First case', prompt: 'Use $example-skill for the first case.', outcome: 'The first case is handled.' },
@@ -67,5 +71,15 @@ describe('skill catalog', () => {
     await symlink(other, join(targetRoot, 'example-skill'), process.platform === 'win32' ? 'junction' : 'dir');
 
     await expect(unlinkSkill({ catalogRoot: root, name: 'example-skill', targetRoot })).rejects.toThrow('nothing was removed');
+  });
+
+  it('enforces the published catalog and metadata schema markers', async () => {
+    const root = await createCatalogFixture();
+    await writeFile(join(root, 'catalog.json'), JSON.stringify({ skills: [{ name: 'example-skill', tags: ['invalid tag'] }] }));
+
+    const validation = await validateCatalog(root);
+    expect(validation.valid).toBe(false);
+    expect(validation.errors.join('\n')).toContain('$schema');
+    expect(validation.errors.join('\n')).toContain('Invalid string');
   });
 });

@@ -37,6 +37,7 @@ export type RepositoryDiagnostic = {
   severity: 'error' | 'warning';
   path: string;
   message: string;
+  repair?: string;
 };
 
 export type RepositoryReport = {
@@ -298,12 +299,12 @@ export const validateRepository = async (cwd: string): Promise<RepositoryReport>
   }
 
   if (config !== null) {
-    await validateSection(root, '.local/AGENTS.md', diagnostics);
+    await validateSection(root, '.local/AGENTS.md', localGuidanceBody, diagnostics);
     for (const agent of config.agents) {
-      await validateSection(root, getAgentArtifact(agent).path, diagnostics);
+      await validateSection(root, getAgentArtifact(agent).path, sharedGuidanceBody, diagnostics);
     }
     if (config.docs !== 'none') {
-      await validateSection(root, '.docs/AGENTS.md', diagnostics);
+      await validateSection(root, '.docs/AGENTS.md', sharedGuidanceBody, diagnostics);
     }
     await validateGitExcludes(root, config, diagnostics);
   }
@@ -315,7 +316,16 @@ export const validateRepository = async (cwd: string): Promise<RepositoryReport>
   return { root, valid: diagnostics.every((diagnostic) => diagnostic.severity !== 'error'), diagnostics, config };
 };
 
-export const doctorRepository = validateRepository;
+export const doctorRepository = async (cwd: string): Promise<RepositoryReport> => {
+  const report = await validateRepository(cwd);
+  return {
+    ...report,
+    diagnostics: report.diagnostics.map((diagnostic) => ({
+      ...diagnostic,
+      repair: repairForDiagnostic(diagnostic),
+    })),
+  };
+};
 
 const planExactFile = async (plan: RepositoryPlan, path: string, desired: string, conflictReason: string): Promise<void> => {
   const existing = await readText(join(plan.root, path));
@@ -420,10 +430,15 @@ const planGitExcludes = async (plan: RepositoryPlan, config: ArcantryConfig): Pr
   });
 };
 
-const validateSection = async (root: string, path: string, diagnostics: RepositoryDiagnostic[]): Promise<void> => {
+const validateSection = async (
+  root: string,
+  path: string,
+  body: string,
+  diagnostics: RepositoryDiagnostic[],
+): Promise<void> => {
   const content = await readText(join(root, path));
-  if (content === null || !containsManagedSection(content)) {
-    diagnostics.push({ severity: 'error', path, message: 'Arcantry managed section is missing.' });
+  if (content === null || upsertManagedSection(content, body).status !== 'unchanged') {
+    diagnostics.push({ severity: 'error', path, message: 'Arcantry managed section is missing or outdated.' });
   }
 };
 
@@ -435,6 +450,22 @@ const validateGitExcludes = async (root: string, config: ArcantryConfig, diagnos
       diagnostics.push({ severity: 'error', path: '.git/info/exclude', message: `${pattern} must be excluded locally.` });
     }
   }
+};
+
+const repairForDiagnostic = (diagnostic: RepositoryDiagnostic): string => {
+  if (diagnostic.path === configPath) {
+    return 'Run `arcantry repo init --docs <shared|local|none>` after choosing the documentation mode.';
+  }
+  if (diagnostic.path === '.docs/spec') {
+    return 'Move specifications to `openspec/` and remove `.docs/spec`.';
+  }
+  if (diagnostic.message.includes('missing or outdated') || diagnostic.message.includes('excluded locally')) {
+    return 'Run `arcantry repo update`.';
+  }
+  if (diagnostic.message.includes('incompatible')) {
+    return 'Resolve the project-owned conflict, then run `arcantry repo update`.';
+  }
+  return 'Restore the required artifact, then run `arcantry repo validate`.';
 };
 
 const resolveGitPath = async (root: string, gitPath: string): Promise<string> => {

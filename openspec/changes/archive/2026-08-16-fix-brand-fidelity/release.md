@@ -2,6 +2,8 @@
 category: fixed
 impact: patch
 visibility: public
+components:
+  - docs
 ---
 
 # Documentation branding fidelity

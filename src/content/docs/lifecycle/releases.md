@@ -14,6 +14,8 @@ Each change carries the release-facing outcome and its version impact:
 category: changed
 impact: minor
 visibility: public
+components:
+  - repository-lifecycle
 ---
 
 # Configurable farm layout
@@ -28,6 +30,8 @@ The body describes the delivered outcome. It is not an implementation summary.
 `impact` is `none`, `patch`, `minor` or `major`. Planning uses the highest impact among unassigned archived changes.
 
 `visibility: public` publishes the entry in `CHANGELOG.md`. `internal` keeps the change in release state without publishing its prose.
+
+`components` lists one or more stable affected surfaces, such as `cli`, `catalog`, `repository-adoption` or `skill:<name>`.
 
 ## Manifest
 
