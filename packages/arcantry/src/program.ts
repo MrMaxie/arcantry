@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Command } from 'commander';
 import { ZodError } from 'zod';
@@ -13,7 +14,11 @@ import {
   type RepositoryResult,
 } from './repository.js';
 
-export const arcantryVersion = '0.2.3';
+const packageManifest = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+) as { version: string };
+
+export const arcantryVersion = packageManifest.version;
 
 export type OutputWriter = (message: string) => void;
 export type CliContext = { cwd: string; stdout: OutputWriter; stderr: OutputWriter };

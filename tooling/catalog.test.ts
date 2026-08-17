@@ -45,7 +45,7 @@ describe('skill catalog validation', () => {
     const root = fixture();
     writeFileSync(
       join(root, 'skills', 'example-skill', 'agents', 'openai.yaml'),
-      'interface:\n  default_prompt: "Validate this example."\n',
+      'interface:\n  display_name: "Example"\n  short_description: "Validate an example package"\n  default_prompt: "Validate this example."\n',
     );
     expect(validateCatalog(root)).toContain('skills/example-skill default_prompt must mention $example-skill');
   });

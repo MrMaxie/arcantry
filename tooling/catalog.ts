@@ -25,6 +25,8 @@ export interface SkillMetadata {
 }
 
 export interface SkillAgent {
+  displayName: string;
+  shortDescription: string;
   defaultPrompt: string;
 }
 
@@ -52,13 +54,15 @@ export function readSkillFrontmatter(root: string, name: string): { name: string
 
 export function readSkillAgent(root: string, name: string): SkillAgent {
   const source = parseYaml(readFileSync(join(root, 'skills', name, 'agents', 'openai.yaml'), 'utf8')) as {
-    interface?: { default_prompt?: unknown };
+    interface?: { display_name?: unknown; short_description?: unknown; default_prompt?: unknown };
   };
+  const displayName = source.interface?.display_name;
+  const shortDescription = source.interface?.short_description;
   const defaultPrompt = source.interface?.default_prompt;
-  if (typeof defaultPrompt !== 'string') {
-    throw new Error(`skills/${name} agents/openai.yaml must declare interface.default_prompt`);
+  if (typeof displayName !== 'string' || typeof shortDescription !== 'string' || typeof defaultPrompt !== 'string') {
+    throw new Error(`skills/${name} agents/openai.yaml must declare interface display_name, short_description, and default_prompt`);
   }
-  return { defaultPrompt };
+  return { displayName, shortDescription, defaultPrompt };
 }
 
 export function validateCatalog(root = process.cwd()): string[] {
@@ -120,6 +124,12 @@ export function validateCatalog(root = process.cwd()): string[] {
     if (existsSync(agentPath)) {
       try {
         const agent = readSkillAgent(root, entry.name);
+        if (agent.displayName.trim().length < 3) {
+          errors.push(`skills/${entry.name} display_name is too short`);
+        }
+        if (agent.shortDescription.trim().length < 15 || agent.shortDescription.length > 80) {
+          errors.push(`skills/${entry.name} short_description must contain 15-80 characters`);
+        }
         if (!agent.defaultPrompt.includes(`$${entry.name}`)) {
           errors.push(`skills/${entry.name} default_prompt must mention $${entry.name}`);
         }

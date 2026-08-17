@@ -6,8 +6,21 @@ components:
   - catalog
   - cli
   - repository-adoption
-  - skills
   - docs
+  - skill:adopt-arcantry
+  - skill:agent-self-improve
+  - skill:audience-scope-discipline
+  - skill:audit-skill-portfolio
+  - skill:capture-repeatable-work
+  - skill:design-terminal-ux
+  - skill:evaluate-skill-change
+  - skill:forge-skill-from-conversations
+  - skill:intake-linear-work
+  - skill:intake-repository-work
+  - skill:productize-repeatable-work
+  - skill:promote-meeting-notes
+  - skill:select-task-skills
+  - skill:stage-code-review-findings
 ---
 
 # Unified Arcantry capabilities

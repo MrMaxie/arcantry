@@ -1,13 +1,14 @@
 ---
 import Search from '@astrojs/starlight/components/Search.astro';
-import ThemeSelect from '@astrojs/starlight/components/ThemeSelect.astro';
 import { Icon } from '@astrojs/starlight/components';
 import mark from '../assets/arcantry-mark.svg';
+import wordmark from '../assets/arcantry-wordmark-approved.svg';
 ---
 
 <div class="header-shell">
-  <a class="brand-mark" href="/arcantry/" aria-label="Arcantry home">
-    <img src={mark.src} alt="" />
+  <a class="brand-lockup" href="/arcantry/" aria-label="Arcantry home">
+    <img class="brand-symbol" src={mark.src} alt="" />
+    <span class="brand-tail" aria-hidden="true"><img src={wordmark.src} alt="" /></span>
   </a>
   <div class="header-search"><Search /></div>
   <div class="header-actions">
@@ -19,16 +20,70 @@ import mark from '../assets/arcantry-mark.svg';
     >
       <Icon name="github" />
     </a>
-    <div class="theme-control" title="Color theme">
-      <ThemeSelect />
-    </div>
+    <arcantry-theme-control>
+      <button class="theme-button" type="button" aria-label="Theme: System" title="Theme: System">
+        <span class="theme-icon theme-system"><Icon name="laptop" /></span>
+        <span class="theme-icon theme-light"><Icon name="sun" /></span>
+        <span class="theme-icon theme-dark"><Icon name="moon" /></span>
+      </button>
+    </arcantry-theme-control>
   </div>
 </div>
 
-<script is:inline>
-  document.querySelectorAll('starlight-theme-select option[value="auto"]').forEach((option) => {
-    option.textContent = 'System';
-  });
+<script>
+  type ThemeMode = 'auto' | 'light' | 'dark';
+
+  const storageKey = 'starlight-theme';
+  const modes: ThemeMode[] = ['auto', 'light', 'dark'];
+  const labels: Record<ThemeMode, string> = { auto: 'System', light: 'Light', dark: 'Dark' };
+
+  function readMode(): ThemeMode {
+    const stored = localStorage.getItem(storageKey);
+    return stored === 'light' || stored === 'dark' ? stored : 'auto';
+  }
+
+  function systemTheme(): 'light' | 'dark' {
+    return matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+
+  function applyMode(mode: ThemeMode): void {
+    document.documentElement.dataset.theme = mode === 'auto' ? systemTheme() : mode;
+    if (mode === 'auto') localStorage.removeItem(storageKey);
+    else localStorage.setItem(storageKey, mode);
+  }
+
+  class ArcantryThemeControl extends HTMLElement {
+    private mode: ThemeMode = 'auto';
+
+    connectedCallback(): void {
+      this.mode = readMode();
+      this.render();
+      this.querySelector('button')?.addEventListener('click', this.onClick);
+    }
+
+    disconnectedCallback(): void {
+      this.querySelector('button')?.removeEventListener('click', this.onClick);
+    }
+
+    private onClick = (): void => {
+      this.mode = modes[(modes.indexOf(this.mode) + 1) % modes.length];
+      applyMode(this.mode);
+      this.render();
+    };
+
+    private render(): void {
+      const button = this.querySelector('button');
+      if (!button) return;
+      const label = `Theme: ${labels[this.mode]}`;
+      button.setAttribute('aria-label', `${label}. Change theme`);
+      button.setAttribute('title', label);
+      button.dataset.mode = this.mode;
+    }
+  }
+
+  if (!customElements.get('arcantry-theme-control')) {
+    customElements.define('arcantry-theme-control', ArcantryThemeControl);
+  }
 </script>
 
 <style>
@@ -37,18 +92,21 @@ import mark from '../assets/arcantry-mark.svg';
       height: 100%;
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 1.25rem;
       padding: 0 1.25rem;
     }
-    .brand-mark {
-      display: grid;
-      place-items: center;
-      width: 2rem;
-      height: 2rem;
-      flex: 0 0 auto;
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      width: calc(var(--sl-sidebar-width) - 1.25rem);
+      min-width: calc(var(--sl-sidebar-width) - 1.25rem);
+      height: 2.15rem;
       text-decoration: none;
-      border-radius: 999px;
+      color: var(--ar-text);
     }
+    .brand-symbol { width: 2rem; height: 1.9rem; flex: 0 0 auto; object-fit: contain; }
+    .brand-tail { position: relative; width: 6.75rem; height: 1.9rem; overflow: hidden; flex: 0 0 auto; }
+    .brand-tail img { position: absolute; width: 9rem; max-width: none; height: 1.92rem; inset: 0 auto auto -2.2rem; }
     .header-search { flex: 1 1 auto; min-width: 0; max-width: 44rem; }
     .header-actions { margin-left: auto; display: flex; align-items: center; gap: .5rem; }
     .github-link {
@@ -59,8 +117,9 @@ import mark from '../assets/arcantry-mark.svg';
       justify-content: center;
       flex: 0 0 auto;
       border: 1px solid transparent;
-      border-radius: 999px;
+      border-radius: .2rem;
       color: var(--ar-text-muted);
+      transition: color 150ms ease, border-color 150ms ease, background-color 150ms ease;
     }
     .github-link { font-size: 1rem; text-decoration: none; }
     .github-link:hover {
@@ -68,56 +127,38 @@ import mark from '../assets/arcantry-mark.svg';
       border-color: var(--ar-border);
       background: var(--ar-bg-subtle);
     }
-    .theme-control {
-      color: var(--ar-text-muted);
-    }
-    .theme-control :global(starlight-theme-select label) {
+    arcantry-theme-control { display: block; color: var(--ar-text-muted); }
+    .theme-button {
+      display: grid;
+      place-items: center;
+      width: 2rem;
       height: 2rem;
       border: 1px solid var(--ar-border);
-      border-radius: 999px;
+      border-radius: .2rem;
       color: inherit;
+      background: transparent;
+      cursor: pointer;
+      transition: color 150ms ease, border-color 150ms ease, background-color 150ms ease;
     }
-    .theme-control :global(starlight-theme-select label:hover) {
-      color: var(--ar-text);
-      border-color: var(--ar-text-soft);
-      background: var(--ar-bg-subtle);
+    .theme-button:hover { color: var(--ar-text); border-color: var(--ar-text-soft); background: var(--ar-bg-subtle); }
+    .theme-icon { display: none; }
+    .theme-button[data-mode='auto'] .theme-system,
+    .theme-button[data-mode='light'] .theme-light,
+    .theme-button[data-mode='dark'] .theme-dark { display: block; }
+    .brand-lockup:hover .brand-symbol,
+    .brand-lockup:hover .brand-tail { opacity: .72; }
+    .brand-symbol,
+    .brand-tail {
+      filter: var(--ar-logo-filter);
+      transition: opacity 150ms ease;
     }
-    .theme-control :global(starlight-theme-select select) {
-      width: 5.85rem !important;
-      height: 100%;
-      margin: 0 !important;
-      padding-block: 0 !important;
-      padding-inline: 1.55rem 1.45rem !important;
-      font-size: .76rem;
-      font-weight: 650;
-      letter-spacing: -.01em;
-    }
-    .theme-control :global(starlight-theme-select .label-icon) {
-      inset-inline-start: .55rem;
-      font-size: .85rem;
-    }
-    .theme-control :global(starlight-theme-select .caret) {
-      inset-inline-end: .45rem;
-      font-size: .8rem;
-    }
-    .brand-mark:hover {
-      background: var(--ar-bg-subtle);
-    }
-    .brand-mark:focus-visible,
+    .brand-lockup:focus-visible,
     .github-link:focus-visible,
-    .theme-control:has(select:focus-visible),
+    .theme-button:focus-visible,
     :global(site-search button[data-open-modal]:focus-visible) {
       outline: 2px solid var(--ar-text);
       outline-offset: 2px;
     }
-    .brand-mark img {
-      display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      filter: var(--ar-logo-filter);
-    }
-
     :global(site-search button[data-open-modal]) {
       max-width: none !important;
       width: 100% !important;
@@ -139,6 +180,9 @@ import mark from '../assets/arcantry-mark.svg';
         padding-inline: .8rem;
       }
       .header-actions { gap: .35rem; }
+      :global(.arcantry-page.has-sidebar) .header-actions { margin-inline-end: 2.45rem; }
+      .brand-lockup { width: 2rem; min-width: 2rem; }
+      .brand-tail { display: none; }
     }
 
   }

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -40,9 +40,13 @@ try {
   await execa('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--prefix', installRoot, join(smokeRoot, filename)]);
   const cli = join(installRoot, 'node_modules', '@maxiedev', 'arcantry', 'dist', 'cli.js');
   const runCli = (args, cwd = smokeRoot) => execa(process.execPath, [cli, ...args], { cwd });
+  const packageManifest = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'));
 
   await execa('git', ['init', '--quiet'], { cwd: repositoryRoot });
-  await runCli(['--version']);
+  const versionResult = await runCli(['--version']);
+  if (versionResult.stdout.trim() !== packageManifest.version) {
+    throw new Error(`Packed CLI version ${versionResult.stdout.trim()} does not match package ${packageManifest.version}.`);
+  }
   await runCli(['--cwd', repositoryRoot, 'repo', 'init', '--docs', 'none']);
   await runCli(['--cwd', repositoryRoot, 'repo', 'update']);
   await runCli(['--cwd', repositoryRoot, 'repo', 'doctor']);

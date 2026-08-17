@@ -3,43 +3,17 @@ title: Arcantry
 description: Skills, repository guidance and spec-driven delivery under one explicit contract.
 template: splash
 hero:
-  title: Build around intent.
-  tagline: Connect reusable skills, repository guidance, specification and release history without turning private context or commits into product truth.
+  title: Give agent work a repository contract.
+  tagline: Arcantry adds one CLI, a versioned skill catalog, and OpenSpec-backed release history. Private task context stays local.
   actions:
-    - text: Adopt Arcantry
-      link: /arcantry/adoption/
+    - text: See the adoption path
+      link: '#quickstart'
       variant: primary
-    - text: Release model
-      link: /arcantry/lifecycle/releases/
+    - text: Browse skills
+      link: /arcantry/skills/catalog/
       variant: secondary
 ---
 
-<div class="arcantry-links">
-  <a href="/arcantry/adoption/"><span>01</span><strong>Adoption</strong><small>Bring the contract into an existing repository.</small></a>
-  <a href="/arcantry/skills/"><span>02</span><strong>Skills</strong><small>Adopt one focused capability or the complete catalog.</small></a>
-  <a href="/arcantry/reference/repository-workflow/"><span>03</span><strong>Workflow</strong><small>Keep private context, durable guidance and change intent distinct.</small></a>
-  <a href="/arcantry/reference/cli/"><span>04</span><strong>CLI</strong><small>Manage repository adoption and local skills through one binary.</small></a>
-  <a href="/arcantry/lifecycle/changes/"><span>05</span><strong>Changes</strong><small>Intent, specification and delivery in OpenSpec.</small></a>
-  <a href="/arcantry/lifecycle/releases/"><span>06</span><strong>Releases</strong><small>SemVer and changelog from archived changes.</small></a>
-</div>
+import ArcantryJourney from '../../components/ArcantryJourney.astro';
 
-<section class="lifecycle-section">
-  <div class="section-intro">
-    <p>Repository lifecycle</p>
-    <h2>Two histories. One delivery model.</h2>
-  </div>
-  <div class="lifecycle-columns">
-    <article>
-      <span class="lifecycle-index">01 — Intent</span>
-      <h3>OpenSpec records the change.</h3>
-      <p>Proposal, behavior, design decisions, tasks and release-facing outcome stay together as one unit of work.</p>
-      <code>change → implement → verify → archive</code>
-    </article>
-    <article>
-      <span class="lifecycle-index">02 — Delivery</span>
-      <h3>Release consumes what was delivered.</h3>
-      <p>Archived changes determine SemVer impact and changelog content. Git remains the technical implementation history.</p>
-      <code>archive → plan → cut → changelog</code>
-    </article>
-  </div>
-</section>
+<ArcantryJourney />

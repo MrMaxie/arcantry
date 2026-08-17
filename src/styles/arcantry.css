@@ -103,8 +103,16 @@ textarea {
   background: var(--ar-surface);
 }
 
-.skill-catalog-page {
-  margin-block: 1rem 4rem;
+.skill-catalog-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1rem;
+  margin-bottom: .85rem;
+  color: var(--ar-text-soft);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
 }
 
 .skill-catalog-lead {
@@ -115,51 +123,31 @@ textarea {
   line-height: 1.7;
 }
 
-.skill-catalog-section + .skill-catalog-section {
-  margin-top: 3.5rem;
-  padding-top: 3rem;
+.skill-catalog-lead + h2,
+.skill-catalog-grid + h2 {
+  padding-top: 2.8rem;
   border-top: 1px solid var(--ar-border);
 }
 
-.skill-catalog-section-intro {
-  display: grid;
-  grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
-  gap: 1.5rem 2rem;
-  align-items: start;
+.skill-catalog-lead + h2 {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.sl-markdown-content h2:has(+ .skill-catalog-grid) {
   margin-bottom: 1.4rem;
-}
-
-.skill-catalog-section-intro > p:first-child {
-  margin: .2rem 0 0;
-  color: var(--ar-text-soft);
-  font-size: .68rem;
-  font-weight: 700;
-  letter-spacing: .11em;
-  text-transform: uppercase;
-}
-
-.skill-catalog-section-intro > h2 {
-  margin: 0;
-  max-width: 14ch;
+  max-width: 22ch;
   color: var(--ar-text);
   font-family: var(--ar-font-display, 'Instrument Serif', Georgia, serif);
-  font-size: clamp(2rem, 3.3vw, 3.2rem);
+  font-size: clamp(1.8rem, 3vw, 2.7rem);
   font-weight: 400;
-  line-height: .98;
-  letter-spacing: -.045em;
-}
-
-.skill-catalog-section-copy {
-  max-width: 36rem;
-  margin: .2rem 0 0;
-  color: var(--ar-text-muted);
-  font-size: .92rem;
-  line-height: 1.7;
+  line-height: 1;
+  letter-spacing: -.04em;
 }
 
 .skill-catalog-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
   gap: 1px;
   overflow: hidden;
   border: 1px solid var(--ar-border);
@@ -169,12 +157,14 @@ textarea {
 
 .skill-catalog-card {
   display: grid;
+  margin: 0 !important;
   min-width: 0;
-  min-height: 12.5rem;
+  min-height: 10.5rem;
   align-content: start;
   gap: .85rem;
   padding: 1.3rem 1.3rem 1.35rem;
   background: var(--ar-bg);
+  transition: background-color 150ms ease;
 }
 
 .skill-catalog-card:hover {
@@ -188,15 +178,15 @@ textarea {
   outline-offset: -2px;
 }
 
-.skill-catalog-kicker {
+.skill-catalog-version {
   margin: 0;
   color: var(--ar-text-soft);
-  font-size: .72rem;
+  font-size: .68rem;
   font-weight: 700;
-  letter-spacing: .04em;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
-.skill-catalog-kicker code,
 .skill-reference-meta code {
   font-size: .78rem;
 }
@@ -228,24 +218,15 @@ textarea {
   line-height: 1.65;
 }
 
-.skill-catalog-link {
+.skill-catalog-command {
   margin: auto 0 0;
   padding-top: .95rem;
   border-top: 1px solid var(--ar-border-soft);
 }
 
-.skill-catalog-link a {
-  color: var(--ar-text);
-  font-size: .83rem;
-  font-weight: 700;
-  letter-spacing: -.01em;
-  text-decoration: none;
-}
-
-.skill-catalog-link a:hover {
-  text-decoration: underline;
-  text-decoration-thickness: .08em;
-  text-underline-offset: .16em;
+.skill-catalog-command code {
+  color: var(--ar-text-soft);
+  font-size: .72rem;
 }
 
 .skill-reference-meta {
@@ -265,17 +246,6 @@ textarea {
 }
 
 @media (max-width: 44rem) {
-  .skill-catalog-section + .skill-catalog-section {
-    margin-top: 2.6rem;
-    padding-top: 2.25rem;
-  }
-
-  .skill-catalog-section-intro {
-    grid-template-columns: 1fr;
-    gap: .7rem;
-    margin-bottom: 1rem;
-  }
-
   .skill-catalog-lead {
     margin-bottom: 2rem;
   }

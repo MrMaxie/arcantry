@@ -1,14 +1,27 @@
 ---
 import type {} from '@astrojs/starlight';
+import { Icon } from '@astrojs/starlight/components';
+import { buildVersionModel } from '../../tooling/version.js';
 
 const hero = Astro.locals.starlightRoute.entry.data.hero;
 if (!hero) throw new Error('ArcantryHero requires hero frontmatter');
+const { currentRelease } = buildVersionModel();
+const sourceCommand = 'pnpm exec tsx packages/arcantry/src/cli.ts repo init --docs none';
 ---
 
 <section class="hero-shell">
   <div class="hero-copy">
+    <p class="hero-version"><span>Arcantry {currentRelease}</span><span>Catalog preview</span></p>
     <h1>{hero.title}</h1>
     {hero.tagline && <p class="hero-tagline">{hero.tagline}</p>}
+    <arcantry-copy-command class="hero-command">
+      <span class="command-label">Run from this checkout</span>
+      <code>{sourceCommand}</code>
+      <button type="button" data-copy={sourceCommand} aria-label="Copy adoption command">
+        <span class="copy-idle"><Icon name="document" /> Copy</span>
+        <span class="copy-done"><Icon name="approve-check" /> Copied</span>
+      </button>
+    </arcantry-copy-command>
     {hero.actions?.length && (
       <div class="hero-actions">
         {hero.actions.map((action) => (
@@ -21,6 +34,30 @@ if (!hero) throw new Error('ArcantryHero requires hero frontmatter');
   </div>
 </section>
 
+<script>
+  class ArcantryCopyCommand extends HTMLElement {
+    connectedCallback(): void {
+      this.querySelector('button')?.addEventListener('click', this.copy);
+    }
+
+    disconnectedCallback(): void {
+      this.querySelector('button')?.removeEventListener('click', this.copy);
+    }
+
+    private copy = async (event: Event): Promise<void> => {
+      const button = event.currentTarget;
+      if (!(button instanceof HTMLButtonElement)) return;
+      await navigator.clipboard.writeText(button.dataset.copy ?? '');
+      button.dataset.copied = 'true';
+      window.setTimeout(() => delete button.dataset.copied, 1600);
+    };
+  }
+
+  if (!customElements.get('arcantry-copy-command')) {
+    customElements.define('arcantry-copy-command', ArcantryCopyCommand);
+  }
+</script>
+
 <style>
   @layer starlight.core {
     .hero-shell {
@@ -30,6 +67,17 @@ if (!hero) throw new Error('ArcantryHero requires hero frontmatter');
       padding: 4.8rem 0 4.2rem;
     }
     .hero-copy { max-width: 52rem; }
+    .hero-version {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .55rem 1rem;
+      margin: 0 0 1.35rem;
+      color: var(--ar-text-soft);
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
     h1 {
       margin: 0;
       max-width: 12ch;
@@ -56,14 +104,65 @@ if (!hero) throw new Error('ArcantryHero requires hero frontmatter');
       font-size: .8rem;
       font-weight: 650;
       text-decoration: none;
+      transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
     }
     .hero-action.primary { color: var(--ar-invert); background: var(--ar-text); border-color: var(--ar-text); }
     .hero-action.secondary { color: var(--ar-text); background: transparent; }
-    .hero-action.secondary:hover { border-color: var(--ar-text-soft); }
+    .hero-action:hover { transform: translateY(-1px); }
+    .hero-action.secondary:hover { border-color: var(--ar-text-soft); background: var(--ar-bg-subtle); }
+    .hero-command {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      max-width: 45rem;
+      margin-top: 2rem;
+      border: 1px solid var(--ar-border);
+      border-radius: .25rem;
+      background: var(--ar-bg-subtle);
+    }
+    .command-label {
+      grid-column: 1 / -1;
+      padding: .6rem .8rem 0;
+      color: var(--ar-text-soft);
+      font-size: .65rem;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .hero-command code {
+      min-width: 0;
+      overflow-x: auto;
+      padding: .75rem .8rem .85rem;
+      border: 0;
+      background: transparent;
+      color: var(--ar-text);
+      font-size: .76rem;
+      white-space: nowrap;
+    }
+    .hero-command button {
+      align-self: stretch;
+      min-width: 5.5rem;
+      padding: 0 .8rem;
+      border: 0;
+      border-left: 1px solid var(--ar-border);
+      background: transparent;
+      color: var(--ar-text-muted);
+      cursor: pointer;
+      font-size: .72rem;
+      font-weight: 700;
+      transition: color 150ms ease, background-color 150ms ease;
+    }
+    .hero-command button:hover { color: var(--ar-text); background: var(--ar-surface); }
+    .hero-command button span { align-items: center; gap: .35rem; }
+    .hero-command button .copy-idle { display: inline-flex; }
+    .hero-command button .copy-done { display: none; }
+    .hero-command button[data-copied='true'] .copy-idle { display: none; }
+    .hero-command button[data-copied='true'] .copy-done { display: inline-flex; }
 
     @media (max-width: 49.99rem) {
       .hero-shell { min-height: auto; padding: 3.5rem 0 3rem; }
       h1 { font-size: clamp(3.2rem, 17vw, 5rem); }
+      .hero-command { grid-template-columns: 1fr; }
+      .hero-command button { min-height: 2.65rem; border-top: 1px solid var(--ar-border); border-left: 0; }
     }
   }
 </style>

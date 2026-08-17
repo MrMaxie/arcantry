@@ -1,0 +1,58 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+---
+
+<section class="journey" id="quickstart" aria-labelledby="quickstart-title">
+  <div class="journey-heading">
+    <p>Shortest path</p>
+    <div>
+      <h2 id="quickstart-title">From checkout to a verified repository.</h2>
+      <p>Arcantry stops on project-owned conflicts and creates only recognized managed files.</p>
+    </div>
+  </div>
+  <ol class="journey-steps">
+    <li>
+      <span class="step-icon"><Icon name="approve-check-circle" /></span>
+      <div><span>01</span><h3>Adopt the repository</h3><code>arcantry repo init --docs none</code></div>
+    </li>
+    <li>
+      <span class="step-icon"><Icon name="puzzle" /></span>
+      <div><span>02</span><h3>Link one skill</h3><code>arcantry skills link &lt;name&gt;</code></div>
+    </li>
+    <li>
+      <span class="step-icon"><Icon name="approve-check" /></span>
+      <div><span>03</span><h3>Check the result</h3><code>arcantry repo validate</code></div>
+    </li>
+  </ol>
+</section>
+
+<section class="contract-map" aria-labelledby="contract-title">
+  <div class="contract-heading">
+    <p>Repository contract</p>
+    <h2 id="contract-title">Release history starts with an archived OpenSpec change.</h2>
+  </div>
+  <div class="contract-lanes">
+    <article class="local-lane">
+      <div class="lane-title"><Icon name="database" /><span>Local lane</span></div>
+      <h3><code>.local/</code> holds the current task.</h3>
+      <p>Credentials, scratch notes, and operational state do not become product documentation.</p>
+    </article>
+    <ol class="product-lane">
+      <li><Icon name="puzzle" /><span><strong>Skill package</strong><small>Reusable behavior</small></span></li>
+      <li><Icon name="document" /><span><strong>OpenSpec change</strong><small>Agreed intent</small></span></li>
+      <li><Icon name="star" /><span><strong>Release manifest</strong><small>Public version</small></span></li>
+    </ol>
+  </div>
+</section>
+
+<section class="proof" aria-labelledby="proof-title">
+  <div class="proof-heading">
+    <p>Dogfooding</p>
+    <h2 id="proof-title">Arcantry runs its public checks against this repository.</h2>
+  </div>
+  <div class="proof-list">
+    <article><Icon name="approve-check" /><div><h3>Project files survive adoption.</h3><p>Arcantry stops before replacing a different <code>justfile</code>, <code>mise.toml</code>, or OpenSpec setup.</p></div></article>
+    <article><Icon name="database" /><div><h3>Private state has one boundary.</h3><p><code>.local/</code> stays operational. Shared guidance and specifications use explicit public locations.</p></div></article>
+    <article><Icon name="code-branch" /><div><h3>One release versions every surface.</h3><p>Git records implementation. Archived OpenSpec changes determine the CLI, plugin, catalog, and skill history.</p></div></article>
+  </div>
+</section>

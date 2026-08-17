@@ -1,26 +1,38 @@
 ---
 import type {} from '@astrojs/starlight';
-import wordmark from '../assets/arcantry-wordmark-approved.svg';
+import { Icon } from '@astrojs/starlight/components';
 
 const { sidebar } = Astro.locals.starlightRoute;
+const icons = {
+  Overview: 'rocket',
+  Adoption: 'approve-check',
+  Skills: 'puzzle',
+  'Skill catalog': 'list-format',
+  CLI: 'setting',
+  'Repository workflow': 'code-branch',
+  Changes: 'document',
+  Releases: 'star',
+  'Contributor commands': 'open-book',
+  'Repository contract': 'document',
+} as const;
 ---
-
-<div class="brand">
-  <a href="/arcantry/" class="brand-link" aria-label="Arcantry home">
-    <img src={wordmark.src} alt="Arcantry" />
-  </a>
-</div>
 
 <div class="navigation">
   {sidebar.map((entry) => (
     entry.type === 'link' ? (
-      <a class:list={['nav-link', { active: entry.isCurrent }]} href={entry.href}>{entry.label}</a>
+      <a class:list={['nav-link', { active: entry.isCurrent }]} href={entry.href}>
+        {entry.label in icons && <Icon name={icons[entry.label as keyof typeof icons]} />}
+        <span>{entry.label}</span>
+      </a>
     ) : (
       <section class="nav-group">
         <div class="nav-label">{entry.label}</div>
         <div class="nav-items">
           {entry.entries.map((item) => item.type === 'link' && (
-            <a class:list={['nav-link', { active: item.isCurrent }]} href={item.href}>{item.label}</a>
+            <a class:list={['nav-link', { active: item.isCurrent }]} href={item.href}>
+              {item.label in icons && <Icon name={icons[item.label as keyof typeof icons]} />}
+              <span>{item.label}</span>
+            </a>
           ))}
         </div>
       </section>
@@ -36,15 +48,14 @@ const { sidebar } = Astro.locals.starlightRoute;
 <style>
   @layer starlight.core {
     :global(.arcantry-sidebar-pane) { padding: 0; display: flex; flex-direction: column; }
-    .brand { height: var(--sl-nav-height); display: flex; align-items: center; padding: 0 1.35rem; border-bottom: 1px solid var(--ar-border); }
-    .brand-link { display: flex; align-items: center; text-decoration: none; }
-    .brand-link img { display: block; width: 8.7rem; height: auto; filter: var(--ar-logo-filter); }
     .navigation { flex: 1; padding: 1.5rem .9rem 2rem; }
     .nav-group + .nav-group, .nav-link + .nav-group { margin-top: 1.7rem; }
     .nav-label { padding: 0 .7rem .5rem; color: var(--ar-text-soft); font-size: .68rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
     .nav-items { display: grid; gap: .1rem; }
     .nav-link {
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: .65rem;
       padding: .5rem .7rem;
       border-left: 2px solid transparent;
       color: var(--ar-text-muted);
@@ -52,8 +63,11 @@ const { sidebar } = Astro.locals.starlightRoute;
       font-size: .83rem;
       font-weight: 560;
       letter-spacing: -.015em;
+      transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
     }
+    .nav-link :global(svg) { flex: 0 0 auto; color: var(--ar-text-soft); font-size: .9rem; transition: color 150ms ease; }
     .nav-link:hover { color: var(--ar-text); background: var(--ar-surface); }
+    .nav-link:hover :global(svg), .nav-link.active :global(svg) { color: var(--ar-text); }
     .nav-link.active { color: var(--ar-text); border-left-color: var(--ar-text); background: transparent; }
     .sidebar-foot { display: flex; justify-content: space-between; gap: .5rem; padding: 1rem 1.35rem; border-top: 1px solid var(--ar-border); color: var(--ar-text-soft); font-size: .63rem; }
   }

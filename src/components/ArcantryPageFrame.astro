@@ -42,10 +42,9 @@ const { hasSidebar } = Astro.locals.starlightRoute;
     .arcantry-main-frame { padding-top: calc(var(--sl-nav-height) + var(--sl-mobile-toc-height)); }
 
     @media (min-width: 50rem) {
-      .arcantry-page.has-sidebar .arcantry-header { inset-inline-start: var(--sl-sidebar-width); }
       .arcantry-page.has-sidebar .arcantry-sidebar-pane {
         --sl-sidebar-visibility: visible;
-        inset: 0 auto 0 0;
+        inset: var(--sl-nav-height) auto 0 0;
         width: var(--sl-sidebar-width);
       }
       .arcantry-page.has-sidebar .arcantry-main-frame { padding-inline-start: var(--sl-sidebar-width); }

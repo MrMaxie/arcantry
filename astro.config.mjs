@@ -10,6 +10,7 @@ export default defineConfig({
       description: 'Repository foundations for spec-driven delivery.',
       customCss: ['./src/styles/arcantry.css', './src/styles/arcantry-concept.css'],
       components: {
+        Head: './src/components/ArcantryHead.astro',
         PageFrame: './src/components/ArcantryPageFrame.astro',
         Header: './src/components/ArcantryHeader.astro',
         Sidebar: './src/components/ArcantrySidebar.astro',
