@@ -10,7 +10,8 @@ Keep review judgment separate from external publication. Treat every finding as 
 ## Review and stage
 
 1. Confirm the requested review scope and evidence source. Honor constraints such as static-only, no tests, or a named diff.
-2. Inspect the change without editing code or publishing review feedback. Use read-only provider access and local static inspection unless the user authorizes more.
+   - When the requested scope is an entire repository or another complete surface, derive a coverage list from its tree, manifests, and source-of-truth documentation. Mark each material component and contract as reviewed or explicitly unreviewed before claiming complete coverage.
+2. Inspect the selected scope without editing code or publishing review feedback. Use read-only provider access and local static inspection unless the user authorizes more.
 3. Report only actionable findings. Do not invent a finding to fill the format or elevate a preference without a concrete impact.
 4. Anchor each finding to the narrowest useful changed line or line range. Split unrelated problems into separate findings.
 5. Assign IDs `F1`, `F2`, and so on. Preserve them throughout the conversation; never renumber after rejection or acceptance.
