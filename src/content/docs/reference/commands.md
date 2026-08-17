@@ -10,7 +10,7 @@ The Arcantry repository uses `justfile` as its contributor command surface. Thes
 | `just setup` | Install project dependencies after `mise install`. |
 | `just check` | Run type, test, release-integrity and docs checks. |
 | `just build` | Produce the normal build output. |
-| `just ci` | Validate OpenSpec, run checks and build. |
+| `just ci` | Validate OpenSpec, release sealing, tests, generated state, builds and public self-checks. |
 | `just docs` | Start the documentation site locally. |
 | `just arcantry-doctor` | Diagnose this checkout through the public repository command. |
 | `just arcantry-validate` | Validate this checkout through the public repository command. |
@@ -18,7 +18,7 @@ The Arcantry repository uses `justfile` as its contributor command surface. Thes
 | `just release-plan` | Show unassigned archived changes and the resulting SemVer bump. |
 | `just release-cut` | Create the next release manifest from that plan. |
 | `just release-render` | Regenerate `CHANGELOG.md` from release manifests and archived changes. |
-| `just release-check` | Fail when release state is invalid or the committed changelog is stale. |
+| `just release-check` | Fail when OpenSpec, version, changelog or Git release sealing is incomplete. |
 
 CI calls the repository commands instead of reimplementing their logic in workflow YAML.
 

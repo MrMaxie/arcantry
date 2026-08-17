@@ -27,7 +27,7 @@ Use `.docs/` for durable, non-specification guidance that explains how the proje
 
 ### OpenSpec
 
-Use OpenSpec for a coherent proposed change and its delivery record. Proposal, observable requirements, design decisions, implementation tasks and `release.md` stay together. Archive marks delivery; release manifests group archived changes without copying their prose.
+Use OpenSpec for every coherent product or engineering change and its delivery record. Proposal, observable requirements, design decisions, implementation tasks and `release.md` stay together. The record may precede implementation or be recovered postfactum, but archive and version assignment are required before the repository state is complete. Release manifests group archived changes without copying their prose.
 
 ## Adoption and updates
 
@@ -47,4 +47,4 @@ Issues, pull requests, design tools and project trackers may supply task context
 
 ## Arcantry uses this workflow
 
-The Arcantry repository is a consumer of its own contract. It validates repository adoption, skill packages, catalog projections and release state through the same public commands and schemas available to other repositories.
+The Arcantry repository is a consumer of its own contract. It validates repository adoption, skill packages, catalog projections and release state through the same public commands and schemas available to other repositories. Every completed Arcantry change is archived, versioned and represented in the generated changelog before final CI can pass.

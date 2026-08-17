@@ -67,7 +67,7 @@ Install the Arcantry Codex plugin when you want the complete versioned catalog. 
 
 ## Continue with OpenSpec
 
-Significant behavior, public command, skill, distribution or policy changes should begin as an OpenSpec change. Archive is the delivery boundary, and each delivered change carries its own `release.md` outcome and SemVer impact.
+Every completed product or engineering change requires an OpenSpec change. Intent may be recorded before implementation or recovered postfactum, but archive and version assignment are the delivery boundary. Each delivered change carries its own `release.md` outcome and SemVer impact.
 
 ## Do not migrate commit history into release history
 

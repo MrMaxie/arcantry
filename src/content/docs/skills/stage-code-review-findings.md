@@ -39,4 +39,5 @@ Only the accepted findings advance in concise reviewer-facing English after thei
 
 ## Release history
 
+- **0.3.1** — Complete code reviews account for the full requested surface
 - **0.3.0** — Unified Arcantry capabilities

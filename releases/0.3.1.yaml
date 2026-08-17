@@ -1,0 +1,6 @@
+version: 0.3.1
+date: 2026-08-17
+changes:
+  - enforce-release-dogfooding
+  - harden-repository-validation
+  - require-complete-review-coverage

@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -5,12 +6,14 @@ import { describe, expect, it } from 'vitest';
 import {
   bumpVersion,
   checkChangelog,
+  checkRelease,
   cutRelease,
   highestImpact,
   parseReleaseArtifact,
   planRelease,
   renderChangelog,
   validateDistributionVersions,
+  validateReleaseSeal,
   validateReleaseState,
 } from './release.js';
 
@@ -41,6 +44,22 @@ function manifest(root: string, version = '0.1.0', changes = ['release-history']
     join(root, 'releases', `${version}.yaml`),
     `version: ${version}\ndate: 2026-08-16\nchanges:\n${changes.map((change) => `  - ${change}`).join('\n')}\n`,
   );
+}
+
+function git(root: string, args: string[]): string {
+  return execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+}
+
+function commitAll(root: string, message: string): void {
+  try {
+    git(root, ['rev-parse', '--git-dir']);
+  } catch {
+    git(root, ['init']);
+    git(root, ['config', 'user.name', 'Arcantry Tests']);
+    git(root, ['config', 'user.email', 'tests@arcantry.invalid']);
+  }
+  git(root, ['add', '.']);
+  git(root, ['commit', '-m', message]);
 }
 
 describe('release artifact', () => {
@@ -93,6 +112,14 @@ describe('SemVer planning', () => {
       impact: 'minor',
       changes: ['release-history'],
     });
+  });
+
+  it('rejects completed changes without a SemVer impact', () => {
+    const root = fixture();
+    const path = join(root, 'openspec', 'changes', 'archive', '2026-08-16-release-history', 'release.md');
+    writeFileSync(path, release('none'));
+
+    expect(() => planRelease(root)).toThrow('completed changes must declare a SemVer impact: release-history');
   });
 
   it('cuts the computed release manifest', () => {
@@ -165,5 +192,76 @@ describe('changelog rendering', () => {
 
     writeFileSync(join(root, 'CHANGELOG.md'), renderChangelog(root));
     expect(() => checkChangelog(root)).not.toThrow();
+  });
+});
+
+describe('release completion', () => {
+  it('rejects active and unassigned OpenSpec changes', () => {
+    const root = fixture();
+    expect(() => checkRelease(root)).toThrow('archived OpenSpec changes are not assigned to a release');
+
+    manifest(root);
+    writeFileSync(join(root, 'CHANGELOG.md'), renderChangelog(root));
+    commitAll(root, 'release: cut 0.1.0');
+    const active = join(root, 'openspec', 'changes', 'in-progress');
+    mkdirSync(active, { recursive: true });
+    writeFileSync(join(active, 'proposal.md'), '# Why\n');
+
+    expect(() => checkRelease(root)).toThrow('active OpenSpec changes are not release-complete: in-progress');
+  });
+
+  it('accepts a clean repository sealed by its latest release manifest', () => {
+    const root = fixture();
+    manifest(root);
+    writeFileSync(join(root, 'CHANGELOG.md'), renderChangelog(root));
+    commitAll(root, 'release: cut 0.1.0');
+
+    expect(() => validateReleaseSeal(root)).not.toThrow();
+    expect(() => checkRelease(root)).not.toThrow();
+  });
+
+  it('rejects a commit after the latest release seal', () => {
+    const root = fixture();
+    manifest(root);
+    writeFileSync(join(root, 'CHANGELOG.md'), renderChangelog(root));
+    commitAll(root, 'release: cut 0.1.0');
+    writeFileSync(join(root, 'implementation.txt'), 'unreleased behavior\n');
+    commitAll(root, 'fix: change behavior');
+
+    expect(() => validateReleaseSeal(root)).toThrow('repository HEAD is not sealed by release 0.1.0');
+  });
+
+  it('does not let a later edit to the same manifest create a new seal', () => {
+    const root = fixture();
+    manifest(root);
+    writeFileSync(join(root, 'CHANGELOG.md'), renderChangelog(root));
+    commitAll(root, 'release: cut 0.1.0');
+    writeFileSync(
+      join(root, 'releases', '0.1.0.yaml'),
+      'version: 0.1.0\ndate: 2026-08-17\nchanges:\n  - release-history\n',
+    );
+    writeFileSync(join(root, 'CHANGELOG.md'), renderChangelog(root));
+    commitAll(root, 'release: rewrite 0.1.0');
+
+    expect(() => validateReleaseSeal(root)).toThrow('repository HEAD is not sealed by release 0.1.0');
+  });
+
+  it('accepts postfactum OpenSpec recovery in a newer internal release', () => {
+    const root = fixture();
+    manifest(root);
+    writeFileSync(join(root, 'CHANGELOG.md'), renderChangelog(root));
+    commitAll(root, 'release: cut 0.1.0');
+    writeFileSync(join(root, 'implementation.txt'), 'recovered behavior\n');
+    commitAll(root, 'fix: change behavior');
+    expect(() => checkRelease(root)).toThrow('repository HEAD is not sealed by release 0.1.0');
+
+    const recovered = join(root, 'openspec', 'changes', 'archive', '2026-08-17-recovered-change');
+    mkdirSync(recovered, { recursive: true });
+    writeFileSync(join(recovered, 'release.md'), release('patch').replace('Better release history', 'Recovered behavior'));
+    manifest(root, '0.1.1', ['recovered-change']);
+    writeFileSync(join(root, 'CHANGELOG.md'), renderChangelog(root));
+    commitAll(root, 'release: cut 0.1.1');
+
+    expect(() => checkRelease(root)).not.toThrow();
   });
 });

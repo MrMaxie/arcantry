@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.1 - 2026-08-17
+
+### Fixed
+
+<!-- openspec: enforce-release-dogfooding -->
+#### Release governance covers every completed repository change
+
+Arcantry now requires each completed repository state to be backed by archived OpenSpec intent, an internal SemVer release and the generated changelog, even when no package, tag or GitHub release is published.
+
+<!-- openspec: harden-repository-validation -->
+#### Repository validation detects drift and schema violations
+
+Arcantry now detects outdated managed guidance, reports actionable doctor repairs, rejects unsupported catalog metadata and runs its public repository and skill validators in CI.
+
+<!-- openspec: require-complete-review-coverage -->
+#### Complete code reviews account for the full requested surface
+
+The staged code review skill now requires repository-wide reviews to account for every material component and contract before claiming complete coverage.
+
 ## 0.3.0 - 2026-08-17
 
 ### Added

@@ -25,6 +25,8 @@ description: Responsibilities and boundaries of an Arcantry repository.
 - A changelog entry must resolve to an archived OpenSpec change.
 - A public changelog must not be generated from Git commit messages.
 - A release manifest must not duplicate release prose.
+- Every completed product or engineering change must be archived and assigned to a new internal SemVer release, whether or not it is published externally.
+- The latest release manifest, distribution versions and generated changelog must seal the current Git state.
 - CI must use the same repository command surface as local development.
 - Project-native tooling remains free to vary behind that command surface.
 - Private `.local/` state must not enter commits, packages or public documentation.

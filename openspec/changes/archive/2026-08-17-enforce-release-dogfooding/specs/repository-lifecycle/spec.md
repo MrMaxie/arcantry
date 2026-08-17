@@ -1,8 +1,4 @@
-## Purpose
-
-Define the repository-level contract that keeps intent, implementation and release history distinct while making delivery reproducible.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: OpenSpec is the source of release history
 
@@ -32,15 +28,6 @@ A completed change MUST NOT pass final repository validation or appear in releas
 - **WHEN** final repository validation runs with an active change or an archived change that is not assigned to the newest release
 - **THEN** validation fails instead of treating the repository state as complete
 
-### Requirement: Release manifests only group changes
-
-A release manifest MUST contain a version, release date and explicit list of archived change ids. It MUST NOT duplicate change prose or specification deltas.
-
-#### Scenario: A release is cut
-
-- **WHEN** a release manifest is created
-- **THEN** it groups archived change ids without copying their prose or deltas
-
 ### Requirement: SemVer impact belongs to the change
 
 Every completed product or engineering change MUST declare `patch`, `minor` or `major` impact in its release artifact and be assigned to a new SemVer release. The release version MUST be computed from the highest impact in the release. Internal completion MUST NOT depend on external publication.
@@ -54,15 +41,6 @@ Every completed product or engineering change MUST declare `patch`, `minor` or `
 
 - **WHEN** completed changes are retained only in the repository
 - **THEN** they still produce a new SemVer manifest, aligned distribution versions and a changelog version section
-
-### Requirement: Release components identify affected product surfaces
-
-Every releasable change MUST list affected components in its release artifact using stable component ids such as `docs`, `schemas`, `tooling`, `cli`, `catalog`, `repository-adoption` or `skill:<name>`.
-
-#### Scenario: Component history is requested
-
-- **WHEN** history is generated for one product surface
-- **THEN** entries are selected by stable component ids from archived release artifacts
 
 ### Requirement: Generated changelog is reproducible
 
@@ -92,6 +70,8 @@ Repository validation MUST fail when a manifest references a missing or active c
 - **WHEN** strict release validation finds a commit after the commit introducing the newest release manifest
 - **THEN** validation fails and requires the work to be represented by archived OpenSpec intent and a newer internal release
 
+## ADDED Requirements
+
 ### Requirement: Git history is coverage evidence only
 
 Release validation MAY use Git history to prove that the current repository state is sealed by the newest release manifest. It MUST NOT derive release prose, category, SemVer impact, visibility or components from commits or file diffs.
@@ -100,12 +80,3 @@ Release validation MAY use Git history to prove that the current repository stat
 
 - **WHEN** validation reads Git history for the newest release manifest
 - **THEN** it reports only whether later repository changes exist and resolves all release meaning from OpenSpec artifacts
-
-### Requirement: Repository commands are stable
-
-The repository MUST expose stable commands for checking, building, serving, validating changes, planning releases, cutting releases and rendering the changelog.
-
-#### Scenario: A contributor inspects repository commands
-
-- **WHEN** they use the documented command interface
-- **THEN** check, build, serve, validation, release planning, release cutting, and changelog rendering remain available

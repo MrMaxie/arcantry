@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -174,6 +175,10 @@ export function validateReleaseState(root = process.cwd()): ReleaseState {
 export function planRelease(root = process.cwd()): { current: string; next: string; impact: Impact; changes: string[] } {
   const { archived, manifests, assigned } = validateReleaseState(root);
   const changes = [...archived.keys()].filter((id) => !assigned.has(id)).sort();
+  const unversioned = changes.filter((id) => archived.get(id)!.impact === 'none');
+  if (unversioned.length > 0) {
+    throw new Error(`completed changes must declare a SemVer impact: ${unversioned.join(', ')}`);
+  }
   const impact = highestImpact(changes.map((id) => archived.get(id)!.impact));
   const current = manifests.at(-1)?.version ?? '0.0.0';
   return { current, next: bumpVersion(current, impact), impact, changes };
@@ -232,6 +237,53 @@ export function checkChangelog(root = process.cwd()): void {
   if (actual !== expected) throw new Error('CHANGELOG.md is stale; run `just release-render`');
 }
 
+export function readActiveChangeIds(root = process.cwd()): string[] {
+  const directory = join(root, 'openspec', 'changes');
+  if (!existsSync(directory)) return [];
+  return readdirSync(directory, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name !== 'archive')
+    .map((entry) => entry.name)
+    .sort();
+}
+
+function gitOutput(root: string, args: string[]): string {
+  try {
+    return execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  } catch {
+    throw new Error('release sealing requires a readable Git repository');
+  }
+}
+
+export function validateReleaseSeal(root = process.cwd()): void {
+  const latest = readManifests(root).at(-1);
+  if (!latest) throw new Error('release sealing requires at least one release manifest');
+
+  if (gitOutput(root, ['status', '--porcelain=v1', '--untracked-files=all'])) {
+    throw new Error('repository contains unsealed working tree changes');
+  }
+
+  const manifestPath = `releases/${latest.version}.yaml`;
+  const manifestCommit = gitOutput(root, ['log', '--diff-filter=A', '-1', '--format=%H', '--', manifestPath]);
+  if (!manifestCommit) throw new Error(`latest release manifest is not committed: ${manifestPath}`);
+
+  const head = gitOutput(root, ['rev-parse', 'HEAD']);
+  if (head !== manifestCommit) {
+    throw new Error(`repository HEAD is not sealed by release ${latest.version}`);
+  }
+}
+
+export function checkRelease(root = process.cwd()): void {
+  const { archived, assigned } = validateReleaseState(root);
+  const active = readActiveChangeIds(root);
+  if (active.length > 0) throw new Error(`active OpenSpec changes are not release-complete: ${active.join(', ')}`);
+
+  const unassigned = [...archived.keys()].filter((id) => !assigned.has(id)).sort();
+  if (unassigned.length > 0) throw new Error(`archived OpenSpec changes are not assigned to a release: ${unassigned.join(', ')}`);
+
+  checkChangelog(root);
+  validateReleaseSeal(root);
+}
+
 export function validateDistributionVersions(root = process.cwd()): void {
   const manifests = readManifests(root);
   const expected = manifests.at(-1)?.version ?? '0.0.0';
@@ -264,7 +316,7 @@ function main(): void {
     return;
   }
   if (command === 'check') {
-    checkChangelog();
+    checkRelease();
     return;
   }
   throw new Error('usage: release.ts <plan|cut|render|check>');
