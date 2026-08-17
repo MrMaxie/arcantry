@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Keep code-review findings in chat until the user chooses exactly which items may be drafted or published.",
+  "scenarios": [
+    {
+      "title": "Review without publishing",
+      "prompt": "Use $stage-code-review-findings to review my uncommitted changes. Keep every finding in Polish and in chat only.",
+      "outcome": "Actionable findings with stable IDs, tight line anchors, and no source edits, browser drafts, or provider mutations."
+    },
+    {
+      "title": "Publish selected findings only",
+      "prompt": "Accept F1 and F3 from the staged review and prepare them for the named pull request. Leave every other finding unpublished.",
+      "outcome": "Only the accepted findings advance in concise reviewer-facing English after their anchors are revalidated."
+    }
+  ]
+}

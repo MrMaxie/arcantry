@@ -1,0 +1,5 @@
+interface:
+  display_name: "Adopt Arcantry"
+  short_description: "Adopt Arcantry in a repository"
+  default_prompt: "Use $adopt-arcantry to integrate Arcantry safely into this repository."
+

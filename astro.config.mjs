@@ -17,8 +17,23 @@ export default defineConfig({
       },
       sidebar: [
         { label: 'Start', items: [{ label: 'Overview', slug: 'index' }, { label: 'Adoption', slug: 'adoption' }] },
+        {
+          label: 'Use Arcantry',
+          items: [
+            { label: 'Skills', slug: 'skills' },
+            { label: 'Skill catalog', slug: 'skills/catalog' },
+            { label: 'CLI', slug: 'reference/cli' },
+            { label: 'Repository workflow', slug: 'reference/repository-workflow' }
+          ]
+        },
         { label: 'Lifecycle', items: [{ label: 'Changes', slug: 'lifecycle/changes' }, { label: 'Releases', slug: 'lifecycle/releases' }] },
-        { label: 'Reference', items: [{ label: 'Commands', slug: 'reference/commands' }, { label: 'Repository contract', slug: 'reference/repository-contract' }] }
+        {
+          label: 'Reference',
+          items: [
+            { label: 'Contributor commands', slug: 'reference/commands' },
+            { label: 'Repository contract', slug: 'reference/repository-contract' }
+          ]
+        }
       ]
     })
   ]

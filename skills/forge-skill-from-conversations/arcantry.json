@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Turn one recurring conversational workflow into a focused, evaluated skill candidate with explicit approval gates.",
+  "scenarios": [
+    {
+      "title": "Create a skill from recent work",
+      "prompt": "Use $forge-skill-from-conversations on these selected completed tasks and propose one reusable skill candidate.",
+      "outcome": "One evidence-backed candidate, a stop for approval, an isolated implementation, and held-out evaluation before adoption."
+    },
+    {
+      "title": "Use supplied conversation evidence",
+      "prompt": "Use $forge-skill-from-conversations on this transcript. Do not scan other tasks or install anything without asking.",
+      "outcome": "A privacy-scoped skill-forging flow that preserves separate approval for the candidate and its installation."
+    }
+  ]
+}

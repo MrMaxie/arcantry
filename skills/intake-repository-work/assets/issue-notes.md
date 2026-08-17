@@ -1,0 +1,19 @@
+# Issue Notes - <artifact-id>
+
+## Goal
+...
+
+## Context
+- ...
+
+## Progress
+- ...
+
+## Outputs
+- ...
+
+## Decisions And Assumptions
+- ...
+
+## Resume Point
+...

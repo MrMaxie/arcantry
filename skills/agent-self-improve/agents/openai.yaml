@@ -1,0 +1,8 @@
+interface:
+  display_name: "Agent Self Improve"
+  short_description: "Review conversations and improve agent guidance"
+  default_prompt: "Use $agent-self-improve to review the two previous conversations in the current project and propose minimal guidance improvements."
+
+policy:
+  allow_implicit_invocation: false
+

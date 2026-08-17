@@ -1,0 +1,8 @@
+interface:
+  display_name: "Capture Repeatable Work"
+  short_description: "Find durable automation candidates"
+  default_prompt: "Use $capture-repeatable-work to find repeatable work worth turning into durable guidance or automation."
+
+policy:
+  allow_implicit_invocation: false
+

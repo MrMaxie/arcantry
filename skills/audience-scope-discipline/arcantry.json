@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Keep product-facing work useful to its real audience while preventing scope creep and private-context leakage.",
+  "scenarios": [
+    {
+      "title": "Trim a technical product screen",
+      "prompt": "Use $audience-scope-discipline to review this settings screen. Keep only information customers need to decide or act.",
+      "outcome": "An audience-based content decision that moves operational and diagnostic detail out of the default view."
+    },
+    {
+      "title": "Guard a narrow implementation",
+      "prompt": "Apply $audience-scope-discipline while implementing this request. Do not absorb adjacent cleanup or local setup into the product.",
+      "outcome": "The smallest coherent change, with material risks challenged once and unrelated improvements left separate."
+    }
+  ]
+}

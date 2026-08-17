@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Choose the smallest useful set of installed or project-installable Codex skills for a complex task.",
+  "scenarios": [
+    {
+      "title": "Route a multi-domain task",
+      "prompt": "Use $select-task-skills for this repository task and choose no more than three skills that materially improve it.",
+      "outcome": "A short use-now or install-first selection based on actual triggers, with overlapping candidates omitted."
+    },
+    {
+      "title": "Discover project-local skills",
+      "prompt": "Use $select-task-skills to check whether this project declares a skill for the unfamiliar workflow I requested.",
+      "outcome": "A catalog-backed recommendation that does not install, enable, update, or remove any skill."
+    }
+  ]
+}

@@ -20,6 +20,10 @@ A release manifest MUST contain a valid SemVer version, release date and unique 
 
 Each `release.md` MUST declare `none`, `patch`, `minor` or `major`. Release planning MUST select the highest impact among unassigned archived changes. Cutting a release MUST create the next manifest from that plan rather than requiring the manifest to be authored by hand.
 
+## Release components identify affected product surfaces
+
+A `release.md` MAY declare unique component identifiers. Component identifiers MUST use lowercase kebab-case, with an optional namespaced value such as `skill:promote-meeting-notes`. Component history MUST be derived from archived release artifacts rather than maintained as a separate changelog.
+
 ## Generated changelog is reproducible
 
 `CHANGELOG.md` MUST be a deterministic projection of release manifests and archived `release.md` artifacts. Repository checks MUST fail when the committed changelog differs from the generated projection.

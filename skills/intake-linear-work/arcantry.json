@@ -1,0 +1,17 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Normalize operational work into Linear with exact source provenance and approval-gated external writes.",
+  "scenarios": [
+    {
+      "title": "Capture a remote ticket in Linear",
+      "prompt": "Use $intake-linear-work to clone this remote ticket into the configured Linear project after I approve the Linear issue creation.",
+      "outcome": "A concise Linear issue with exact source identity, freshness, scope, and acceptance criteria."
+    },
+    {
+      "title": "Prepare a progress update",
+      "prompt": "Use $intake-linear-work to draft a progress comment for this issue, but do not publish it until I authorize that exact comment.",
+      "outcome": "A reader-focused English update with one next action and no local or diagnostic context leakage."
+    }
+  ]
+}
+

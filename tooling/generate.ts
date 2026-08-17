@@ -1,0 +1,182 @@
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { parse as parseYaml } from 'yaml';
+import { readCatalog, readSkillFrontmatter, readSkillMetadata, validateCatalog } from './catalog.js';
+import { readArchivedChanges, readManifests } from './release.js';
+
+const root = process.cwd();
+const check = process.argv.includes('--check');
+let stale = false;
+
+function latestVersion(): string {
+  const releases = readdirSync(join(root, 'releases'))
+    .filter((file) => file.endsWith('.yaml'))
+    .map((file) => parseYaml(readFileSync(join(root, 'releases', file), 'utf8')) as { version: string })
+    .map((manifest) => manifest.version)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  return releases.at(-1) ?? '0.0.0';
+}
+
+function project(path: string, content: string): void {
+  const current = existsSync(path) ? readFileSync(path, 'utf8') : undefined;
+  if (current === content) return;
+  stale = true;
+  if (!check) {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, content, 'utf8');
+  }
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+const validationErrors = validateCatalog(root);
+if (validationErrors.length > 0) throw new Error(validationErrors.join('\n'));
+
+const catalog = readCatalog(root);
+const version = latestVersion();
+const archivedChanges = readArchivedChanges(root);
+const releaseManifests = readManifests(root);
+const plugin = {
+  name: 'arcantry',
+  version,
+  description: 'Repository lifecycle, adoption tooling, and focused agent skills.',
+  author: { name: 'Maxie', url: 'https://github.com/MrMaxie' },
+  homepage: 'https://maxie.dev/arcantry/',
+  repository: 'https://github.com/MrMaxie/arcantry',
+  license: 'Apache-2.0',
+  keywords: ['agent-skills', 'codex', 'repository-lifecycle'],
+  skills: './skills/',
+  interface: {
+    displayName: 'Arcantry',
+    shortDescription: 'Intent-led repositories and focused agent skills',
+    longDescription: 'Adopt a reproducible repository contract and install focused skills from one versioned Arcantry catalog.',
+    developerName: 'Maxie',
+    category: 'Developer Tools',
+    capabilities: ['Skills', 'Read', 'Write'],
+    websiteURL: 'https://maxie.dev/arcantry/',
+    brandColor: '#FB255F',
+    defaultPrompt: ['Use Arcantry to adopt this repository or choose the smallest focused skill for the task.'],
+  },
+};
+project(join(root, '.codex-plugin', 'plugin.json'), `${JSON.stringify(plugin, null, 2)}\n`);
+
+const detailsRoot = join(root, 'src', 'content', 'docs', 'skills');
+if (!check) mkdirSync(detailsRoot, { recursive: true });
+const expected = new Set<string>();
+const catalogCards = new Map<string, string>();
+const catalogSections = [
+  {
+    title: 'Start here',
+    skills: ['adopt-arcantry', 'select-task-skills'],
+  },
+  {
+    title: 'Build better skills',
+    skills: [
+      'agent-self-improve',
+      'audit-skill-portfolio',
+      'capture-repeatable-work',
+      'evaluate-skill-change',
+      'forge-skill-from-conversations',
+      'productize-repeatable-work',
+    ],
+  },
+  {
+    title: 'Design for people',
+    skills: ['audience-scope-discipline', 'design-terminal-ux'],
+  },
+  {
+    title: 'Coordinate work',
+    skills: [
+      'intake-linear-work',
+      'intake-repository-work',
+      'promote-meeting-notes',
+      'stage-code-review-findings',
+    ],
+  },
+] as const;
+
+for (const entry of catalog.skills) {
+  const metadata = readSkillMetadata(root, entry.name);
+  const frontmatter = readSkillFrontmatter(root, entry.name);
+  const filename = `${entry.name}.md`;
+  expected.add(filename);
+  catalogCards.set(
+    entry.name,
+    `<a class="skill-catalog-card" href="/arcantry/skills/${entry.name}/"><span class="skill-catalog-name">${escapeHtml(entry.name)}</span><span class="skill-catalog-summary">${escapeHtml(metadata.summary)}</span><span class="skill-catalog-arrow" aria-hidden="true">→</span></a>`,
+  );
+  const scenarios = metadata.scenarios
+    .map(
+      (scenario) =>
+        `### ${scenario.title}\n\n**Prompt**\n\n> ${scenario.prompt}\n\n**Expected outcome**\n\n${scenario.outcome}`,
+    )
+    .join('\n\n');
+  const history = releaseManifests
+    .flatMap((manifest) =>
+      manifest.changes.flatMap((changeId) => {
+        const artifact = archivedChanges.get(changeId);
+        return artifact?.components.includes(`skill:${entry.name}`)
+          ? [`- **${manifest.version}** — ${artifact.title}`]
+          : [];
+      }),
+    )
+    .reverse();
+  const historySection = history.length > 0 ? history.join('\n') : 'No released changes yet.';
+  const content = `---\ntitle: ${entry.name}\ndescription: ${JSON.stringify(metadata.summary)}\n---\n\n<!-- Generated by tooling/generate.ts. Do not edit directly. -->\n\n${frontmatter.description}\n\n## Use this skill\n\n\`\`\`text\narcantry skills link ${entry.name}\n\`\`\`\n\n## Examples\n\n${scenarios}\n\n## Release history\n\n${historySection}\n\n## Tags\n\n${entry.tags.map((tag) => `\`${tag}\``).join(' ')}\n`;
+  project(join(detailsRoot, filename), content);
+}
+
+const catalogSectionNames = catalogSections.flatMap((section) => [...section.skills]);
+const duplicateSectionNames = catalogSectionNames.filter(
+  (name, index) => catalogSectionNames.indexOf(name) !== index,
+);
+const missingSectionNames = catalog.skills
+  .map((entry) => entry.name)
+  .filter((name) => !catalogSectionNames.includes(name as (typeof catalogSectionNames)[number]));
+const unknownSectionNames = catalogSectionNames.filter((name) => !catalogCards.has(name));
+
+if (duplicateSectionNames.length > 0 || missingSectionNames.length > 0 || unknownSectionNames.length > 0) {
+  throw new Error(
+    [
+      duplicateSectionNames.length > 0 ? `Duplicate catalog section skills: ${duplicateSectionNames.join(', ')}` : '',
+      missingSectionNames.length > 0 ? `Skills missing from catalog sections: ${missingSectionNames.join(', ')}` : '',
+      unknownSectionNames.length > 0 ? `Unknown catalog section skills: ${unknownSectionNames.join(', ')}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  );
+}
+
+const catalogSectionsContent = catalogSections
+  .map((section) => {
+    const cards = section.skills.map((name) => catalogCards.get(name)).join('\n');
+    return `## ${section.title}\n\n<div class="skill-catalog-grid">\n${cards}\n</div>`;
+  })
+  .join('\n\n');
+
+expected.add('catalog.md');
+project(
+  join(detailsRoot, 'catalog.md'),
+  `---\ntitle: Skill catalog\ndescription: Browse every focused skill included in Arcantry.\n---\n\n<!-- Generated by tooling/generate.ts. Do not edit directly. -->\n\nChoose the outcome you need. Open a skill for guidance, examples and installation details.\n\n${catalogSectionsContent}\n`,
+);
+
+if (existsSync(detailsRoot)) {
+  for (const file of readdirSync(detailsRoot)) {
+    if (file === 'index.md' || expected.has(file) || !file.endsWith('.md')) continue;
+    stale = true;
+    if (!check) rmSync(join(detailsRoot, file));
+  }
+}
+
+if (stale && check) {
+  process.stderr.write('Generated projections are stale. Run `pnpm run generate`.\n');
+  process.exitCode = 1;
+} else if (!check) {
+  process.stdout.write('Generated Arcantry projections.\n');
+}

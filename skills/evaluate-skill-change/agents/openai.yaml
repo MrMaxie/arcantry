@@ -1,0 +1,8 @@
+interface:
+  display_name: "Evaluate Skill Change"
+  short_description: "Compare skill candidates safely"
+  default_prompt: "Use $evaluate-skill-change to compare a candidate skill with its baseline before adoption."
+
+policy:
+  allow_implicit_invocation: false
+

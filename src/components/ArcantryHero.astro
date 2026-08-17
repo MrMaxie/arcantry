@@ -1,4 +1,6 @@
 ---
+import type {} from '@astrojs/starlight';
+
 const hero = Astro.locals.starlightRoute.entry.data.hero;
 if (!hero) throw new Error('ArcantryHero requires hero frontmatter');
 ---

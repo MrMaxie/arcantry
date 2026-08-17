@@ -1,0 +1,62 @@
+{
+  "$schema": "./schemas/catalog.schema.json",
+  "skills": [
+    {
+      "name": "adopt-arcantry",
+      "tags": ["adoption", "cli", "repository"]
+    },
+    {
+      "name": "agent-self-improve",
+      "tags": ["agent-guidance", "conversations", "quality"]
+    },
+    {
+      "name": "audience-scope-discipline",
+      "tags": ["audience", "privacy", "scope"]
+    },
+    {
+      "name": "audit-skill-portfolio",
+      "tags": ["catalog", "quality", "skills"]
+    },
+    {
+      "name": "capture-repeatable-work",
+      "tags": ["automation", "conversations", "workflow"]
+    },
+    {
+      "name": "design-terminal-ux",
+      "tags": ["cli", "tui", "ux"]
+    },
+    {
+      "name": "evaluate-skill-change",
+      "tags": ["evaluation", "quality", "skills"]
+    },
+    {
+      "name": "forge-skill-from-conversations",
+      "tags": ["conversations", "creation", "skills"]
+    },
+    {
+      "name": "intake-linear-work",
+      "tags": ["intake", "linear", "operations"]
+    },
+    {
+      "name": "intake-repository-work",
+      "tags": ["intake", "local", "repository"]
+    },
+    {
+      "name": "productize-repeatable-work",
+      "tags": ["automation", "implementation", "workflow"]
+    },
+    {
+      "name": "promote-meeting-notes",
+      "tags": ["documentation", "meetings", "workflow"]
+    },
+    {
+      "name": "select-task-skills",
+      "tags": ["discovery", "routing", "skills"]
+    },
+    {
+      "name": "stage-code-review-findings",
+      "tags": ["approval", "code-review", "collaboration"]
+    }
+  ]
+}
+

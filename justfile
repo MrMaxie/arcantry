@@ -4,7 +4,7 @@ _default:
     @just --list
 
 setup:
-    pnpm install
+    pnpm install --frozen-lockfile
 
 check:
     pnpm run check
@@ -12,8 +12,29 @@ check:
 build:
     pnpm run build
 
-docs:
-    pnpm run dev
+docs port="4321":
+    pnpm exec astro dev --host 127.0.0.1 --port {{port}}
+
+generate:
+    pnpm run generate
+
+generate-check:
+    pnpm run generate:check
+
+catalog-validate:
+    pnpm run catalog:validate
+
+package-check:
+    pnpm run package:check
+
+arcantry-build:
+    pnpm --filter @maxiedev/arcantry run build
+
+arcantry-doctor: arcantry-build
+    node packages/arcantry/dist/cli.js --cwd . repo doctor
+
+arcantry-validate: arcantry-build
+    node packages/arcantry/dist/cli.js --cwd . repo validate
 
 release-plan:
     pnpm run release:plan
@@ -30,4 +51,4 @@ release-check:
 openspec-validate:
     pnpm exec openspec schema validate arcantry
 
-ci: openspec-validate check build
+ci: openspec-validate check build package-check

@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Implement one accepted repeatable-work candidate as the smallest durable artifact without reopening its scope.",
+  "scenarios": [
+    {
+      "title": "Implement an accepted candidate",
+      "prompt": "Use $productize-repeatable-work to implement accepted candidate R1 exactly as recorded in this conversation.",
+      "outcome": "One narrow instruction, script, skill, hook, automation, or plugin change with relevant validation and no rediscovery."
+    },
+    {
+      "title": "Reject a broader carrier",
+      "prompt": "Use $productize-repeatable-work for R2, but stop if the accepted target no longer fits the current repository state.",
+      "outcome": "Either a verified minimal artifact or a revised proposal explaining why the recorded target would now broaden scope."
+    }
+  ]
+}

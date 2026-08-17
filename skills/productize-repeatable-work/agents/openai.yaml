@@ -1,0 +1,8 @@
+interface:
+  display_name: "Productize Repeatable Work"
+  short_description: "Build an accepted durable workflow"
+  default_prompt: "Use $productize-repeatable-work to implement an accepted repeatable-work proposal."
+
+policy:
+  allow_implicit_invocation: false
+

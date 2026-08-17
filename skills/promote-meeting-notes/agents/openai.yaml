@@ -1,0 +1,4 @@
+interface:
+  display_name: "Promote Meeting Notes"
+  short_description: "Turn a meeting draft into a durable dated note"
+  default_prompt: "Use $promote-meeting-notes to archive the current meeting draft safely."

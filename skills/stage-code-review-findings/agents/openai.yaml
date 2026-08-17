@@ -1,0 +1,5 @@
+interface:
+  display_name: "Stage Code Review Findings"
+  short_description: "Stage review findings before publication"
+  default_prompt: "Use $stage-code-review-findings to review this change in Polish, keep findings in chat for approval, and publish only accepted items when I name a destination."
+

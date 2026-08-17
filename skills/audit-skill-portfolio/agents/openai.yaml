@@ -1,0 +1,8 @@
+interface:
+  display_name: "Audit Skill Portfolio"
+  short_description: "Audit skill catalog routing, scope, and overlap"
+  default_prompt: "Use $audit-skill-portfolio to audit my current Codex skill catalog and recommend a safer implicit, explicit, repo-local, or disabled tier for each skill."
+
+policy:
+  allow_implicit_invocation: false
+

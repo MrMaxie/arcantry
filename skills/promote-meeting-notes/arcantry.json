@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Turn a working meeting draft into a durable dated note while preserving the repository's established conventions.",
+  "scenarios": [
+    {
+      "title": "Archive the current meeting draft",
+      "prompt": "Use $promote-meeting-notes to finalize .docs/meetings/_draft.md using this repository's existing note format.",
+      "outcome": "One dated durable note with decisions and follow-ups preserved, followed by a safely reset working draft."
+    },
+    {
+      "title": "Resolve an ambiguous meeting date",
+      "prompt": "Use $promote-meeting-notes on this draft, but ask before writing if the date or destination cannot be derived safely.",
+      "outcome": "A focused clarification instead of a misfiled or overwritten note, with prior meeting records left unchanged."
+    }
+  ]
+}

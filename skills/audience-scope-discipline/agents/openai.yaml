@@ -1,0 +1,8 @@
+interface:
+  display_name: "Audience and Scope Discipline"
+  short_description: "Design for the audience and protect task scope"
+  default_prompt: "Use $audience-scope-discipline to review this change or handoff for audience fit, local-context leakage, and scope creep."
+
+policy:
+  allow_implicit_invocation: true
+

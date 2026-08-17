@@ -11,6 +11,7 @@ export interface ReleaseArtifact {
   category: Category;
   impact: Impact;
   visibility: Visibility;
+  components: string[];
   title: string;
   body: string;
 }
@@ -31,6 +32,7 @@ const impactRank: Record<Impact, number> = { none: 0, patch: 1, minor: 2, major:
 const categories: Category[] = ['added', 'changed', 'fixed', 'deprecated', 'removed', 'security'];
 const impacts: Impact[] = ['none', 'patch', 'minor', 'major'];
 const visibilities: Visibility[] = ['public', 'internal'];
+const componentPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*(?::[a-z0-9]+(?:-[a-z0-9]+)*)?$/;
 const semVerPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -42,10 +44,15 @@ export function parseReleaseArtifact(source: string): ReleaseArtifact {
   const category = metadata.category as Category;
   const impact = metadata.impact as Impact;
   const visibility = metadata.visibility as Visibility;
+  const components = metadata.components ?? [];
 
   if (!categories.includes(category)) throw new Error(`invalid release category: ${String(category)}`);
   if (!impacts.includes(impact)) throw new Error(`invalid release impact: ${String(impact)}`);
   if (!visibilities.includes(visibility)) throw new Error(`invalid release visibility: ${String(visibility)}`);
+  if (!Array.isArray(components) || !components.every((component) => typeof component === 'string' && componentPattern.test(component))) {
+    throw new Error('release components must be an array of component identifiers');
+  }
+  if (new Set(components).size !== components.length) throw new Error('release components must be unique');
 
   const content = match[2].trim();
   const heading = content.match(/^#\s+(.+)$/m);
@@ -55,7 +62,7 @@ export function parseReleaseArtifact(source: string): ReleaseArtifact {
   const body = content.replace(/^#\s+.+\r?\n?/, '').trim();
   if (!body) throw new Error('release.md must describe the delivered outcome');
 
-  return { category, impact, visibility, title, body };
+  return { category, impact, visibility, components, title, body };
 }
 
 export function highestImpact(values: Impact[]): Impact {
@@ -215,9 +222,27 @@ export function renderChangelog(root = process.cwd()): string {
 export function checkChangelog(root = process.cwd()): void {
   const path = join(root, 'CHANGELOG.md');
   if (!existsSync(path)) throw new Error('CHANGELOG.md is missing');
+  validateDistributionVersions(root);
   const expected = renderChangelog(root);
   const actual = readFileSync(path, 'utf8');
   if (actual !== expected) throw new Error('CHANGELOG.md is stale; run `just release-render`');
+}
+
+export function validateDistributionVersions(root = process.cwd()): void {
+  const manifests = readManifests(root);
+  const expected = manifests.at(-1)?.version ?? '0.0.0';
+  const distributions = [
+    join(root, 'packages', 'arcantry', 'package.json'),
+    join(root, '.codex-plugin', 'plugin.json'),
+  ];
+
+  for (const path of distributions) {
+    if (!existsSync(path)) continue;
+    const manifest = JSON.parse(readFileSync(path, 'utf8')) as { version?: unknown };
+    if (manifest.version !== expected) {
+      throw new Error(`distribution version must match release ${expected}: ${path}`);
+    }
+  }
 }
 
 function main(): void {

@@ -1,0 +1,8 @@
+interface:
+  display_name: "Select Task Skills"
+  short_description: "Choose the smallest useful skill set"
+  default_prompt: "Use $select-task-skills to choose up to three skills for this task."
+
+policy:
+  allow_implicit_invocation: true
+

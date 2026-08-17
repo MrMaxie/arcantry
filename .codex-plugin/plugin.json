@@ -1,0 +1,35 @@
+{
+  "name": "arcantry",
+  "version": "0.2.3",
+  "description": "Repository lifecycle, adoption tooling, and focused agent skills.",
+  "author": {
+    "name": "Maxie",
+    "url": "https://github.com/MrMaxie"
+  },
+  "homepage": "https://maxie.dev/arcantry/",
+  "repository": "https://github.com/MrMaxie/arcantry",
+  "license": "Apache-2.0",
+  "keywords": [
+    "agent-skills",
+    "codex",
+    "repository-lifecycle"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Arcantry",
+    "shortDescription": "Intent-led repositories and focused agent skills",
+    "longDescription": "Adopt a reproducible repository contract and install focused skills from one versioned Arcantry catalog.",
+    "developerName": "Maxie",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Skills",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://maxie.dev/arcantry/",
+    "brandColor": "#FB255F",
+    "defaultPrompt": [
+      "Use Arcantry to adopt this repository or choose the smallest focused skill for the task."
+    ]
+  }
+}

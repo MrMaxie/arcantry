@@ -103,6 +103,192 @@ textarea {
   background: var(--ar-surface);
 }
 
+.skill-catalog-page {
+  margin-block: 1rem 4rem;
+}
+
+.skill-catalog-lead {
+  max-width: 42rem;
+  margin: 0 0 2.5rem;
+  color: var(--ar-text-muted);
+  font-size: .98rem;
+  line-height: 1.7;
+}
+
+.skill-catalog-section + .skill-catalog-section {
+  margin-top: 3.5rem;
+  padding-top: 3rem;
+  border-top: 1px solid var(--ar-border);
+}
+
+.skill-catalog-section-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
+  gap: 1.5rem 2rem;
+  align-items: start;
+  margin-bottom: 1.4rem;
+}
+
+.skill-catalog-section-intro > p:first-child {
+  margin: .2rem 0 0;
+  color: var(--ar-text-soft);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.skill-catalog-section-intro > h2 {
+  margin: 0;
+  max-width: 14ch;
+  color: var(--ar-text);
+  font-family: var(--ar-font-display, 'Instrument Serif', Georgia, serif);
+  font-size: clamp(2rem, 3.3vw, 3.2rem);
+  font-weight: 400;
+  line-height: .98;
+  letter-spacing: -.045em;
+}
+
+.skill-catalog-section-copy {
+  max-width: 36rem;
+  margin: .2rem 0 0;
+  color: var(--ar-text-muted);
+  font-size: .92rem;
+  line-height: 1.7;
+}
+
+.skill-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--ar-border);
+  border-radius: .35rem;
+  background: var(--ar-border);
+}
+
+.skill-catalog-card {
+  display: grid;
+  min-width: 0;
+  min-height: 12.5rem;
+  align-content: start;
+  gap: .85rem;
+  padding: 1.3rem 1.3rem 1.35rem;
+  background: var(--ar-bg);
+}
+
+.skill-catalog-card:hover {
+  background: var(--ar-bg-subtle);
+}
+
+.skill-catalog-card:has(a:focus-visible) {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--ar-text);
+  outline-offset: -2px;
+}
+
+.skill-catalog-kicker {
+  margin: 0;
+  color: var(--ar-text-soft);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
+.skill-catalog-kicker code,
+.skill-reference-meta code {
+  font-size: .78rem;
+}
+
+.skill-catalog-card h3 {
+  margin: 0;
+}
+
+.skill-catalog-card h3 a {
+  color: var(--ar-text);
+  font-size: 1.18rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -.03em;
+  text-decoration: none;
+}
+
+.skill-catalog-card h3 a:hover {
+  color: var(--ar-text);
+  text-decoration: underline;
+  text-decoration-thickness: .08em;
+  text-underline-offset: .14em;
+}
+
+.skill-catalog-summary {
+  margin: 0;
+  color: var(--ar-text-muted);
+  font-size: .9rem;
+  line-height: 1.65;
+}
+
+.skill-catalog-link {
+  margin: auto 0 0;
+  padding-top: .95rem;
+  border-top: 1px solid var(--ar-border-soft);
+}
+
+.skill-catalog-link a {
+  color: var(--ar-text);
+  font-size: .83rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  text-decoration: none;
+}
+
+.skill-catalog-link a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: .08em;
+  text-underline-offset: .16em;
+}
+
+.skill-reference-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+  align-items: center;
+  margin: 1rem 0 0;
+  color: var(--ar-text-soft);
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+
+.skill-reference-meta span {
+  text-transform: uppercase;
+}
+
+@media (max-width: 44rem) {
+  .skill-catalog-section + .skill-catalog-section {
+    margin-top: 2.6rem;
+    padding-top: 2.25rem;
+  }
+
+  .skill-catalog-section-intro {
+    grid-template-columns: 1fr;
+    gap: .7rem;
+    margin-bottom: 1rem;
+  }
+
+  .skill-catalog-lead {
+    margin-bottom: 2rem;
+  }
+
+  .skill-catalog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .skill-catalog-card {
+    min-height: 0;
+  }
+}
+
 :focus-visible {
   outline-color: var(--ar-text);
 }

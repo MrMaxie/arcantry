@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Turn recurring work visible in conversations into decision-ready candidates for the smallest durable artifact.",
+  "scenarios": [
+    {
+      "title": "Find repeated manual work",
+      "prompt": "Use $capture-repeatable-work on my five recent completed project tasks and find recurring manual verification steps.",
+      "outcome": "A small set of evidence-backed candidates routed to the narrowest useful instruction, script, skill, or automation."
+    },
+    {
+      "title": "Assess one expensive workflow",
+      "prompt": "Use $capture-repeatable-work on this conversation and decide whether the workflow is stable enough to productize.",
+      "outcome": "A read-only candidate or a clear rejection when the evidence shows only an isolated lapse or transient incident."
+    }
+  ]
+}

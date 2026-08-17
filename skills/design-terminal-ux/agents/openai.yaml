@@ -1,0 +1,5 @@
+interface:
+  display_name: "Design Terminal UX"
+  short_description: "Design clear, user-centered terminal experiences"
+  default_prompt: "Use $design-terminal-ux to design or audit a clear, user-centered terminal experience."
+

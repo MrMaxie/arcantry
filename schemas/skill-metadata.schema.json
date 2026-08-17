@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maxie.dev/arcantry/schemas/skill-metadata.schema.json",
+  "title": "Arcantry skill metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "summary", "scenarios"],
+  "properties": {
+    "$schema": {
+      "const": "../../schemas/skill-metadata.schema.json"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 30,
+      "maxLength": 180
+    },
+    "scenarios": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "prompt", "outcome"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 60
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 15,
+            "maxLength": 280
+          },
+          "outcome": {
+            "type": "string",
+            "minLength": 15,
+            "maxLength": 220
+          }
+        }
+      }
+    }
+  }
+}

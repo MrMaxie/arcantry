@@ -1,0 +1,7 @@
+interface:
+  display_name: "Forge Skill from Conversations"
+  short_description: "Forge one evaluated skill from recurring work"
+  default_prompt: "Use $forge-skill-from-conversations to turn recurring work in these conversations into one evaluated skill candidate."
+policy:
+  allow_implicit_invocation: false
+

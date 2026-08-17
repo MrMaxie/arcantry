@@ -4,17 +4,21 @@
   "type": "module",
   "packageManager": "pnpm@10.34.5",
   "scripts": {
-    "build": "astro build",
-    "check": "pnpm run check:types && pnpm run test && pnpm run release:check && pnpm run docs:check",
-    "check:types": "astro sync && tsc --noEmit",
+    "build": "pnpm --filter @maxiedev/arcantry run build && astro build",
+    "catalog:validate": "tsx tooling/validate-catalog.ts",
+    "check": "pnpm run check:types && pnpm run test && pnpm run catalog:validate && pnpm run generate:check && pnpm run release:check && pnpm run docs:check",
+    "check:types": "astro sync && tsc --noEmit && pnpm --filter @maxiedev/arcantry run typecheck",
     "dev": "astro dev",
     "docs:check": "astro check",
+    "generate": "tsx tooling/generate.ts",
+    "generate:check": "tsx tooling/generate.ts --check",
+    "package:check": "pnpm --filter @maxiedev/arcantry run package:check",
     "preview": "astro preview",
     "release:check": "tsx tooling/release.ts check",
     "release:cut": "tsx tooling/release.ts cut",
     "release:plan": "tsx tooling/release.ts plan",
     "release:render": "tsx tooling/release.ts render",
-    "test": "vitest run"
+    "test": "vitest run tooling && pnpm --filter @maxiedev/arcantry run test"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",

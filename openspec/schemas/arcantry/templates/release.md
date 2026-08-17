@@ -2,6 +2,8 @@
 category: changed
 impact: patch
 visibility: public
+components:
+  - repository-lifecycle
 ---
 
 # Release title

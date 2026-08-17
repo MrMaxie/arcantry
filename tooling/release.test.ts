@@ -10,6 +10,7 @@ import {
   parseReleaseArtifact,
   planRelease,
   renderChangelog,
+  validateDistributionVersions,
   validateReleaseState,
 } from './release.js';
 
@@ -17,6 +18,8 @@ const release = (impact = 'minor', visibility = 'public') => `---
 category: changed
 impact: ${impact}
 visibility: ${visibility}
+components:
+  - repository-lifecycle
 ---
 
 # Better release history
@@ -46,6 +49,7 @@ describe('release artifact', () => {
       category: 'changed',
       impact: 'minor',
       visibility: 'public',
+      components: ['repository-lifecycle'],
       title: 'Better release history',
       body: 'Release notes come from delivered changes rather than commit messages.',
     });
@@ -53,6 +57,12 @@ describe('release artifact', () => {
 
   it('rejects unsupported metadata', () => {
     expect(() => parseReleaseArtifact(release('feature'))).toThrow('invalid release impact');
+  });
+
+  it('rejects malformed component identifiers', () => {
+    expect(() => parseReleaseArtifact(release().replace('repository-lifecycle', 'Repository Lifecycle'))).toThrow(
+      'release components',
+    );
   });
 });
 
@@ -102,6 +112,18 @@ describe('release state validation', () => {
       'version: 0.1.1\ndate: 2026-08-17\nchanges:\n  - release-history\n',
     );
     expect(() => validateReleaseState(root)).toThrow('assigned more than once');
+  });
+
+  it('requires distributable versions to match the latest release', () => {
+    const root = fixture();
+    manifest(root);
+    const packageRoot = join(root, 'packages', 'arcantry');
+    mkdirSync(packageRoot, { recursive: true });
+    writeFileSync(join(packageRoot, 'package.json'), '{"version":"0.2.0"}\n');
+
+    expect(() => validateDistributionVersions(root)).toThrow('distribution version must match release 0.1.0');
+    writeFileSync(join(packageRoot, 'package.json'), '{"version":"0.1.0"}\n');
+    expect(() => validateDistributionVersions(root)).not.toThrow();
   });
 });
 

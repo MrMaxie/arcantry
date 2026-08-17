@@ -1,0 +1,17 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Integrate Arcantry into a repository without overwriting project-owned tooling, specifications, or private operational state.",
+  "scenarios": [
+    {
+      "title": "Adopt Arcantry in a mature repository",
+      "prompt": "Use $adopt-arcantry to add Arcantry with local operational state and shared documentation while preserving existing tooling.",
+      "outcome": "A conflict-aware CLI adoption that creates only missing managed artifacts and leaves project-owned files unchanged."
+    },
+    {
+      "title": "Diagnose an existing adoption",
+      "prompt": "Use $adopt-arcantry to inspect and validate this repository without removing unknown files or changing external systems.",
+      "outcome": "A repository health report backed by Arcantry validation and doctor checks, with private state kept local."
+    }
+  ]
+}
+

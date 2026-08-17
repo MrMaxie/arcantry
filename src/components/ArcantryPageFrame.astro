@@ -1,9 +1,11 @@
 ---
+import type {} from '@astrojs/starlight';
 import MobileMenuToggle from '@astrojs/starlight/components/MobileMenuToggle.astro';
+
 const { hasSidebar } = Astro.locals.starlightRoute;
 ---
 
-<div class="arcantry-page">
+<div class:list={['arcantry-page', { 'has-sidebar': hasSidebar }]}>
   <header class="arcantry-header"><slot name="header" /></header>
   {hasSidebar && (
     <nav class="arcantry-sidebar print:hidden" aria-label={Astro.locals.t('sidebarNav.accessibleLabel')}>
@@ -40,13 +42,13 @@ const { hasSidebar } = Astro.locals.starlightRoute;
     .arcantry-main-frame { padding-top: calc(var(--sl-nav-height) + var(--sl-mobile-toc-height)); }
 
     @media (min-width: 50rem) {
-      .arcantry-header { inset-inline-start: var(--sl-sidebar-width); }
-      .arcantry-sidebar-pane {
+      .arcantry-page.has-sidebar .arcantry-header { inset-inline-start: var(--sl-sidebar-width); }
+      .arcantry-page.has-sidebar .arcantry-sidebar-pane {
         --sl-sidebar-visibility: visible;
         inset: 0 auto 0 0;
         width: var(--sl-sidebar-width);
       }
-      .arcantry-main-frame { padding-inline-start: var(--sl-sidebar-width); }
+      .arcantry-page.has-sidebar .arcantry-main-frame { padding-inline-start: var(--sl-sidebar-width); }
     }
   }
 </style>

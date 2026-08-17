@@ -3,6 +3,15 @@ dist/
 .astro/
 .DS_Store
 *.log
+*.tgz
+pack-dry-run.json
+package-smoke/
+packages/arcantry/assets/
+packages/arcantry/catalog.json
+packages/arcantry/LICENSE
+packages/arcantry/README.md
+packages/arcantry/schemas/
+packages/arcantry/skills/
 .env
 .env.*
 !.env.example
