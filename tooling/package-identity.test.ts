@@ -6,9 +6,14 @@ const root = process.cwd();
 const packageManifest = JSON.parse(readFileSync(join(root, 'packages', 'arcantry', 'package.json'), 'utf8')) as {
   name: string;
 };
+const workspaceManifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
+  name: string;
+  private: boolean;
+};
 
 const publicIdentitySurfaces = [
   'src/content/docs/getting-started.mdx',
+  'src/content/docs/lifecycle/releases.md',
   'src/components/ArcantryCommandPicker.astro',
   'src/components/ArcantryHero.astro',
   'src/components/ArcantryCopyCommands.astro',
@@ -16,13 +21,20 @@ const publicIdentitySurfaces = [
 ];
 
 describe('npm package identity', () => {
-  it('uses the Arcantry organization scope', () => {
-    expect(packageManifest.name).toBe('@arcantry/arcantry');
+  it('uses the concise public package name', () => {
+    expect(packageManifest.name).toBe('arcantry');
   });
 
-  it('does not retain the personal npm scope in public or package surfaces', () => {
+  it('keeps the private workspace identity distinct', () => {
+    expect(workspaceManifest).toMatchObject({ name: 'arcantry-workspace', private: true });
+    expect(workspaceManifest.name).not.toBe(packageManifest.name);
+  });
+
+  it('does not retain previous npm scopes in public or package surfaces', () => {
     for (const relativePath of publicIdentitySurfaces) {
-      expect(readFileSync(join(root, relativePath), 'utf8'), relativePath).not.toContain('@maxiedev/');
+      const source = readFileSync(join(root, relativePath), 'utf8');
+      expect(source, relativePath).not.toContain('@maxiedev/');
+      expect(source, relativePath).not.toContain('@arcantry/arcantry');
     }
   });
 

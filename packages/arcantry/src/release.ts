@@ -272,7 +272,7 @@ export function validateNpmPublication(
   const repositoryUrl = typeof packageManifest.repository === 'string'
     ? packageManifest.repository
     : packageManifest.repository?.url;
-  if (packageManifest.name !== '@arcantry/arcantry') throw new Error('npm package name must be @arcantry/arcantry');
+  if (packageManifest.name !== 'arcantry') throw new Error('npm package name must be arcantry');
   if (packageManifest.version !== version) throw new Error(`npm package version does not match tag ${tag}`);
   if (repositoryUrl !== 'https://github.com/MrMaxie/arcantry.git') {
     throw new Error('npm package repository must match https://github.com/MrMaxie/arcantry.git');

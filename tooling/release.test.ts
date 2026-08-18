@@ -47,7 +47,7 @@ function manifest(root: string, version = '0.1.0', changes = ['release-history']
   );
 }
 
-function npmPackage(root: string, name = '@arcantry/arcantry', version = '0.1.0'): void {
+function npmPackage(root: string, name = 'arcantry', version = '0.1.0'): void {
   const packageRoot = join(root, 'packages', 'arcantry');
   mkdirSync(packageRoot, { recursive: true });
   writeFileSync(
@@ -312,9 +312,9 @@ describe('npm publication', () => {
     return root;
   }
 
-  it('accepts the organization package at the matching sealed release tag', () => {
+  it('accepts the public package at the matching sealed release tag', () => {
     expect(validateNpmPublication('v0.1.0', sealedNpmRelease())).toEqual({
-      packageName: '@arcantry/arcantry',
+      packageName: 'arcantry',
       version: '0.1.0',
       tag: 'v0.1.0',
       repositoryUrl: 'https://github.com/MrMaxie/arcantry.git',
@@ -335,7 +335,7 @@ describe('npm publication', () => {
     commitAll(root, 'release: cut 0.1.0');
     git(root, ['tag', 'v0.1.0']);
 
-    expect(() => validateNpmPublication('v0.1.0', root)).toThrow('npm package name must be @arcantry/arcantry');
+    expect(() => validateNpmPublication('v0.1.0', root)).toThrow('npm package name must be arcantry');
   });
 
   it('rejects an unsealed commit after the release tag', () => {
