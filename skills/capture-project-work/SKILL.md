@@ -20,7 +20,8 @@ When both shared and private sources can accept the item, ask for the scope only
 ## Capture
 
 1. Restate the item in one concrete sentence without expanding its scope.
-2. Inspect the chosen source and preserve its format, ordering, line endings, and local conventions.
+2. Inspect the chosen source and preserve its ordering and line endings.
+   For todo.txt, follow an explicitly required project or source format when one exists; otherwise use the [official todo.txt format](https://github.com/todotxt/todo.txt) as the baseline. Treat priority, creation date, `+project`, and `@context` as optional, and do not infer stricter requirements from existing entries alone. Preserve local conventions that are compatible with the governing format.
 3. Preview the exact addition or specification delta.
 4. Apply only when the user requested the write or approves the preview.
 5. Re-read the bounded result and report the target and any unresolved routing decision.
