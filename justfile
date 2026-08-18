@@ -54,6 +54,9 @@ release-render:
 release-check:
     pnpm run release:check
 
+release-seal:
+    pnpm run release:seal
+
 publish-check tag:
     pnpm run publish:check -- --tag {{tag}}
 

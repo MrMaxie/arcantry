@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { checkRelease, cutRelease, planRelease, renderChangelog } from '../packages/arcantry/src/release.js';
+import { checkChangelog, checkRelease, cutRelease, planRelease, renderChangelog } from '../packages/arcantry/src/release.js';
 
 export * from '../packages/arcantry/src/release.js';
 
@@ -24,10 +24,14 @@ function main(): void {
     return;
   }
   if (command === 'check') {
+    checkChangelog(process.cwd());
+    return;
+  }
+  if (command === 'seal') {
     checkRelease(process.cwd(), {}, { pullRequestHead: pullRequestHead() });
     return;
   }
-  throw new Error('usage: release.ts <plan|cut|render|check>');
+  throw new Error('usage: release.ts <plan|cut|render|check|seal>');
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

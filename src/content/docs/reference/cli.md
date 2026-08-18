@@ -1,9 +1,9 @@
 ---
 title: CLI
-description: Command reference for repository adoption, project knowledge, todo.txt queues, and skills.
+description: Command reference for repository adoption, project knowledge, todo.txt queues, local releases, and skills.
 ---
 
-The executable is `arcantry`. Repository and source commands are under `repo`, queues under `todo`, and procedural capabilities under `skills`.
+The executable is `arcantry`. Repository and source commands are under `repo`, queues under `todo`, local release operations under `release`, and procedural capabilities under `skills`.
 
 ## Global options
 
@@ -72,6 +72,20 @@ Applies an unchanged plan. `-` reads standard input. Apply rejects conflicts, ch
 | `todo move <line> --from <id> --to <id> [--apply]` | Preview or move one line between queues. |
 
 Mutations preview unless `--apply` is present. When multiple queues exist, choose the source explicitly.
+
+## Release commands
+
+Release commands require a configured `[release]` block. They manage local files only and never commit, tag, push, publish, or change CI.
+
+| Command | Contract |
+| --- | --- |
+| `release baseline <version> --date <YYYY-MM-DD> [--apply] [--json]` | Preview or record an existing project version as the release baseline. |
+| `release plan [--json]` | Report the current version, next version, highest impact, and unassigned archived changes. |
+| `release cut [--date <YYYY-MM-DD>] [--apply] [--json]` | Preview or write the next manifest, configured versions, and managed changelog. |
+| `release render [--apply] [--json]` | Preview or write the deterministic managed changelog. |
+| `release check [--sealed]` | Check release consistency. `--sealed` also requires complete assignment and the existing Git seal. |
+
+`baseline`, `cut`, and `render` only print their drift-checked plan unless `--apply` is present. A normal check allows active and unassigned work; a sealed check is the final release gate.
 
 ## Skill commands
 

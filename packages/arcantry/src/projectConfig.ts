@@ -14,6 +14,7 @@ export const managementSchema = z.enum(['ignore', 'observe', 'validate', 'manage
 export const sourceKindSchema = z.enum(['openspec', 'changelog', 'todo-txt']);
 export const transitionSchema = z.enum(['preserve', 'adopt', 'rebind', 'cutover', 'migrate', 'relocate']);
 export const visibilitySchema = z.enum(['shared', 'private']);
+export const releaseVersionAdapterSchema = z.enum(['json-package@1', 'cargo-workspace@1']);
 
 const adapterPattern = /^([a-z][a-z0-9-]*)@([0-9]+)$/;
 const sourceIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
@@ -34,6 +35,18 @@ const sourceConfigSchema = z.object({
   scope: z.string().trim().min(1).default('.'),
 }).strict();
 
+const releaseConfigSchema = z.object({
+  adapter: z.literal('openspec-release@1'),
+  manifests_path: z.string().trim().min(1),
+  changelog_source: z.string().trim().min(1),
+  tag_prefix: z.string().min(1).default('v'),
+  repository_url: z.string().url().optional(),
+  version_sources: z.array(z.object({
+    path: z.string().trim().min(1),
+    adapter: releaseVersionAdapterSchema,
+  }).strict()).min(1),
+}).strict();
+
 const rawProjectConfigSchema = z
   .object({
     config_version: z.literal(projectConfigVersion),
@@ -45,6 +58,7 @@ const rawProjectConfigSchema = z
       .optional(),
     project: z.object({ root: z.string().trim().min(1) }).strict().optional(),
     sources: z.record(z.string(), sourceConfigSchema).default({}),
+    release: releaseConfigSchema.optional(),
   })
   .strict()
   .superRefine((config, context) => {
@@ -96,6 +110,23 @@ const rawProjectConfigSchema = z
     };
     for (const id of Object.keys(config.sources)) visit(id);
 
+    if (config.release !== undefined) {
+      const changelog = config.sources[config.release.changelog_source];
+      if (changelog === undefined) {
+        context.addIssue({
+          code: 'custom',
+          message: `unknown release changelog source: ${config.release.changelog_source}`,
+          path: ['release', 'changelog_source'],
+        });
+      } else if (changelog.kind !== 'changelog' || changelog.management !== 'manage') {
+        context.addIssue({
+          code: 'custom',
+          message: 'release changelog source must be a managed changelog source.',
+          path: ['release', 'changelog_source'],
+        });
+      }
+    }
+
     const managedOpenSpec = Object.entries(config.sources).filter(
       ([, source]) => source.kind === 'openspec' && source.management === 'manage',
     );
@@ -116,6 +147,7 @@ export type Management = z.infer<typeof managementSchema>;
 export type SourceKind = z.infer<typeof sourceKindSchema>;
 export type Transition = z.infer<typeof transitionSchema>;
 export type Visibility = z.infer<typeof visibilitySchema>;
+export type ReleaseVersionAdapter = z.infer<typeof releaseVersionAdapterSchema>;
 
 export type ProjectSourceConfig = {
   id: string;
@@ -135,6 +167,16 @@ export type ProjectConfig = {
   tool?: { requires: string };
   project?: { root: string };
   sources: Record<string, ProjectSourceConfig>;
+  release?: ProjectReleaseConfig;
+};
+
+export type ProjectReleaseConfig = {
+  adapter: 'openspec-release@1';
+  manifestsPath: string;
+  changelogSource: string;
+  tagPrefix: string;
+  repositoryUrl?: string;
+  versionSources: Array<{ path: string; adapter: ReleaseVersionAdapter }>;
 };
 
 export type ResolvedProject = {
@@ -187,12 +229,33 @@ export const parseProjectConfig = (
     }),
   );
 
+  if (parsed.release !== undefined) {
+    for (const [label, path] of [
+      ['release manifests', parsed.release.manifests_path],
+      ...parsed.release.version_sources.map((source) => ['release version source', source.path] as const),
+    ] as const) {
+      if (isAbsolute(path) && options.allowAbsolutePaths !== true) {
+        throw new Error(`Absolute ${label} path requires an explicit external configuration.`);
+      }
+    }
+  }
+
   return {
     configVersion: parsed.config_version,
     ...(parsed['toml-schema'] === undefined ? {} : { schemaReference: parsed['toml-schema'] }),
     ...(parsed.tool === undefined ? {} : { tool: parsed.tool }),
     ...(parsed.project === undefined ? {} : { project: parsed.project }),
     sources,
+    ...(parsed.release === undefined ? {} : {
+      release: {
+        adapter: parsed.release.adapter,
+        manifestsPath: parsed.release.manifests_path,
+        changelogSource: parsed.release.changelog_source,
+        tagPrefix: parsed.release.tag_prefix,
+        ...(parsed.release.repository_url === undefined ? {} : { repositoryUrl: parsed.release.repository_url }),
+        versionSources: parsed.release.version_sources,
+      },
+    }),
   };
 };
 
@@ -217,6 +280,16 @@ export const renderProjectConfig = (config: ProjectConfig): string =>
         },
       ]),
     ),
+    ...(config.release === undefined ? {} : {
+      release: {
+        adapter: config.release.adapter,
+        manifests_path: config.release.manifestsPath,
+        changelog_source: config.release.changelogSource,
+        tag_prefix: config.release.tagPrefix,
+        ...(config.release.repositoryUrl === undefined ? {} : { repository_url: config.release.repositoryUrl }),
+        version_sources: config.release.versionSources,
+      },
+    }),
   });
 
 type DiscoveredProjectConfig = { active: string | null; shadowed: string[] };

@@ -140,6 +140,48 @@ scope = "packages/app"
     });
   });
 
+  it('parses and renders an explicit local release story', () => {
+    const config = parseProjectConfig(`${configured()}
+[release]
+adapter = "openspec-release@1"
+manifests_path = "releases"
+changelog_source = "history"
+tag_prefix = "v"
+repository_url = "https://github.com/example/project"
+
+[[release.version_sources]]
+path = "Cargo.toml"
+adapter = "cargo-workspace@1"
+`);
+
+    expect(config.release).toEqual({
+      adapter: 'openspec-release@1',
+      manifestsPath: 'releases',
+      changelogSource: 'history',
+      tagPrefix: 'v',
+      repositoryUrl: 'https://github.com/example/project',
+      versionSources: [{ path: 'Cargo.toml', adapter: 'cargo-workspace@1' }],
+    });
+    expect(parseProjectConfig(renderProjectConfig(config))).toEqual({
+      ...config,
+      schemaReference: { location: projectConfigSchemaLocation, version: '1.0.0' },
+    });
+  });
+
+  it('rejects a release block without a managed changelog authority', () => {
+    expect(() => parseProjectConfig(`config_version = 1
+
+[release]
+adapter = "openspec-release@1"
+manifests_path = "releases"
+changelog_source = "missing"
+
+[[release.version_sources]]
+path = "package.json"
+adapter = "json-package@1"
+`)).toThrow('unknown release changelog source');
+  });
+
   it('publishes a TOML Schema 1.0.0 contract for dynamic source tables', async () => {
     const schema = parseToml(await readFile(new URL('../../../schemas/arcantry-config-v1.tosd', import.meta.url), 'utf8')) as Record<string, unknown>;
     const metadata = schema['toml-schema'] as { version: string };
