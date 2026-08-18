@@ -107,7 +107,7 @@ Projects using Arcantry can observe a changelog without OpenSpec. Only a changel
 
 ## npm publication
 
-The public package is `@arcantry/arcantry`. npm publication consumes an already sealed Arcantry release; it does not create or reinterpret one.
+The public package is `arcantry`. npm publication consumes an already sealed Arcantry release; it does not create or reinterpret one.
 
 For normal releases:
 
@@ -119,8 +119,9 @@ For normal releases:
 The first publication is a one-time bootstrap because npm requires a package to exist before it can trust a CI publisher:
 
 1. Build and verify the release archive from the exact seal commit.
-2. As an `@arcantry` organization maintainer with 2FA, run `npm publish <archive> --access public`.
-3. In the package settings on npmjs.com, add the GitHub Actions trusted publisher for repository `MrMaxie/arcantry`, workflow `publish-npm.yml`, environment `npm`, and the `npm publish` action.
-4. Require 2FA and disallow token-based publication after the trusted publisher has been verified.
+2. As an authorized npm maintainer with 2FA, run `npm publish <archive>`.
+3. Assign organization governance for the unscoped package when required.
+4. In the package settings on npmjs.com, add the GitHub Actions trusted publisher for repository `MrMaxie/arcantry`, workflow `publish-npm.yml`, environment `npm`, and the `npm publish` action.
+5. Require 2FA and disallow token-based publication after the trusted publisher has been verified.
 
 Do not create the first version tag before bootstrap is complete. Automated tag publication starts with the next sealed version.

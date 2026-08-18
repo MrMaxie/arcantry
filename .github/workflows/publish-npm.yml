@@ -55,4 +55,4 @@ jobs:
             exit 1
           fi
       - name: Publish verified archive
-        run: npm publish "${{ steps.archive.outputs.path }}" --access public
+        run: npm publish "${{ steps.archive.outputs.path }}"

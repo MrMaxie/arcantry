@@ -1,5 +1,5 @@
 {
-  "name": "@arcantry/arcantry",
+  "name": "arcantry",
   "version": "0.4.2",
   "description": "Arcantry repository adoption, skill catalog, and agent integration CLI.",
   "type": "module",
