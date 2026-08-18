@@ -2,10 +2,6 @@
 import EditLink from '@astrojs/starlight/components/EditLink.astro';
 import LastUpdated from '@astrojs/starlight/components/LastUpdated.astro';
 import Pagination from '@astrojs/starlight/components/Pagination.astro';
-import { Icon } from '@astrojs/starlight/components';
-import { faHeart } from '@fortawesome/free-solid-svg-icons';
-
-const [heartWidth, heartHeight, , , heartPath] = faHeart.icon;
 ---
 
 <footer class="page-footer">
@@ -15,15 +11,6 @@ const [heartWidth, heartHeight, , , heartPath] = faHeart.icon;
   </div>
   <div class="pagination-transition" transition:name="arcantry-next-action">
     <Pagination />
-  </div>
-  <div class="project-footer">
-    <div>
-      <span class="footer-credit">Created with <span class="sr-only">love</span><span class="footer-heart" aria-hidden="true"><svg viewBox={`0 0 ${heartWidth} ${heartHeight}`}><path d={heartPath as string} /></svg></span> by Maxie</span>
-    </div>
-    <a href="https://github.com/MrMaxie/arcantry" aria-label="Arcantry on GitHub">
-      <Icon name="github" />
-      <span>GitHub</span>
-    </a>
   </div>
 </footer>
 
@@ -38,47 +25,6 @@ const [heartWidth, heartHeight, , , heartPath] = faHeart.icon;
       margin-top: 2.25rem;
       color: var(--ar-text-soft);
       font-size: var(--sl-text-sm);
-    }
-    .project-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1.5rem;
-      margin-top: 1.8rem;
-      padding: 1.25rem 0;
-      border-top: 1px solid var(--ar-border);
-      color: var(--ar-text-soft);
-      font-size: .72rem;
-    }
-    .project-footer > div { display: flex; flex-wrap: wrap; gap: .45rem 1rem; }
-    .footer-credit { display: inline-flex; align-items: center; gap: .32rem; }
-    .footer-heart {
-      position: relative;
-      display: inline-grid;
-      place-items: center;
-      width: 1.05rem;
-      height: 1.05rem;
-      flex: 0 0 auto;
-      color: var(--ar-heart) !important;
-    }
-    .footer-heart::before {
-      content: '';
-      position: absolute;
-      inset: -.48rem;
-      border-radius: 50%;
-      background: radial-gradient(circle, color-mix(in srgb, var(--ar-heart) 42%, transparent), transparent 68%);
-      filter: blur(3px);
-      opacity: .72;
-      animation: heart-glow 1.8s ease-in-out infinite;
-    }
-    .footer-heart svg {
-      position: relative;
-      width: 1rem;
-      height: 1rem;
-      fill: currentColor;
-      animation: heart-pulse 1.8s ease-in-out infinite;
-      transform-origin: center;
-      will-change: transform;
     }
     :global(.pagination-links) {
       grid-template-columns: repeat(2, minmax(0, 14rem));
@@ -97,27 +43,9 @@ const [heartWidth, heartHeight, , , heartPath] = faHeart.icon;
     :global(.pagination-links a > span:first-child) { font-size: .68rem; }
     :global(.pagination-links svg) { width: 1rem; height: 1rem; }
     .pagination-transition { min-width: 0; }
-    .project-footer a { display: inline-flex; align-items: center; gap: .4rem; color: var(--ar-text-muted); text-decoration: none; }
-    .project-footer a:hover { color: var(--ar-accent-violet); }
-    @keyframes heart-pulse {
-      0%, 100% { transform: scale(1); }
-      14% { transform: scale(1.24); }
-      28% { transform: scale(1.04); }
-      42% { transform: scale(1.18); }
-      58% { transform: scale(1); }
-    }
-    @keyframes heart-glow {
-      0%, 100% { opacity: .45; transform: scale(.82); }
-      22% { opacity: .9; transform: scale(1.12); }
-      48% { opacity: .58; transform: scale(.94); }
-    }
     @media (max-width: 32rem) {
       :global(.pagination-links) { grid-template-columns: 1fr; }
       :global(.pagination-links a[rel='next']:only-child) { grid-column: 1; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .footer-heart::before,
-      .footer-heart svg { animation: none; }
     }
   }
 </style>

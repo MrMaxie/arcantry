@@ -23,7 +23,9 @@ const icons = {
   {sidebar.map((entry) => (
     entry.type === 'link' ? (
       <a class:list={['nav-link', { active: entry.isCurrent }]} href={entry.href}>
-        {entry.label in icons && <Icon name={icons[entry.label as keyof typeof icons]} />}
+        <span class="nav-icon-slot" aria-hidden="true">
+          {entry.label in icons && <Icon name={icons[entry.label as keyof typeof icons]} />}
+        </span>
         <span>{entry.label}</span>
       </a>
     ) : (
@@ -32,7 +34,9 @@ const icons = {
         <div class="nav-items">
           {entry.entries.map((item) => item.type === 'link' && (
             <a class:list={['nav-link', { active: item.isCurrent }]} href={item.href}>
-              {item.label in icons && <Icon name={icons[item.label as keyof typeof icons]} />}
+              <span class="nav-icon-slot" aria-hidden="true">
+                {item.label in icons && <Icon name={icons[item.label as keyof typeof icons]} />}
+              </span>
               <span>{item.label}</span>
             </a>
           ))}
@@ -73,6 +77,7 @@ const icons = {
       letter-spacing: -.015em;
       transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
     }
+    .nav-icon-slot { display: grid; width: .9rem; flex: 0 0 .9rem; place-items: center; }
     .nav-link :global(svg) { flex: 0 0 auto; color: var(--ar-text-soft); font-size: .9rem; transition: color 150ms ease; }
     .nav-link:hover { color: var(--ar-text); background: var(--ar-surface); }
     .nav-link:hover :global(svg) { color: var(--ar-accent-blue); }

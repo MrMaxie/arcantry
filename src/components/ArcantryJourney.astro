@@ -34,43 +34,38 @@ import { Icon } from '@astrojs/starlight/components';
     <p>With and without</p>
     <h2 id="comparison-title">Make project knowledge inspectable without flattening it</h2>
   </div>
-  <div class="comparison-flow" role="list">
-    <article role="listitem">
-      <header><span>01</span><h3>Discovery</h3></header>
-      <div class="comparison-before"><small>Without Arcantry</small><p>Each tool must rediscover files, conventions, and missing sources.</p></div>
-      <span class="comparison-arrow" aria-hidden="true">
-        <svg viewBox="0 0 88 24" focusable="false">
-          <defs><linearGradient id="comparison-gradient-1"><stop stop-color="var(--ar-accent-blue)"/><stop offset=".5" stop-color="var(--ar-accent-violet)"/><stop offset="1" stop-color="var(--ar-accent-pink)"/></linearGradient></defs>
-          <path class="connector-track" d="M3 12H84M76 5L84 12L76 19" />
-          <path class="connector-flow" d="M3 12H84M76 5L84 12L76 19" stroke="url(#comparison-gradient-1)" />
-        </svg>
-      </span>
-      <div class="comparison-after"><small>With Arcantry</small><p>One inspection describes the sources that exist and the ones that do not.</p></div>
-    </article>
-    <article role="listitem">
-      <header><span>02</span><h3>Ownership</h3></header>
-      <div class="comparison-before"><small>Without Arcantry</small><p>Authority, projections, queues, and procedures are easy to treat as one layer.</p></div>
-      <span class="comparison-arrow" aria-hidden="true">
-        <svg viewBox="0 0 88 24" focusable="false">
-          <defs><linearGradient id="comparison-gradient-2"><stop stop-color="var(--ar-accent-blue)"/><stop offset=".5" stop-color="var(--ar-accent-violet)"/><stop offset="1" stop-color="var(--ar-accent-pink)"/></linearGradient></defs>
-          <path class="connector-track" d="M3 12H84M76 5L84 12L76 19" />
-          <path class="connector-flow" d="M3 12H84M76 5L84 12L76 19" stroke="url(#comparison-gradient-2)" />
-        </svg>
-      </span>
-      <div class="comparison-after"><small>With Arcantry</small><p>Each source declares its role, management level, visibility, and adapter.</p></div>
-    </article>
-    <article role="listitem">
-      <header><span>03</span><h3>Structural change</h3></header>
-      <div class="comparison-before"><small>Without Arcantry</small><p>A migration can mix discovery, decisions, and file writes in one step.</p></div>
-      <span class="comparison-arrow" aria-hidden="true">
-        <svg viewBox="0 0 88 24" focusable="false">
-          <defs><linearGradient id="comparison-gradient-3"><stop stop-color="var(--ar-accent-blue)"/><stop offset=".5" stop-color="var(--ar-accent-violet)"/><stop offset="1" stop-color="var(--ar-accent-pink)"/></linearGradient></defs>
-          <path class="connector-track" d="M3 12H84M76 5L84 12L76 19" />
-          <path class="connector-flow" d="M3 12H84M76 5L84 12L76 19" stroke="url(#comparison-gradient-3)" />
-        </svg>
-      </span>
-      <div class="comparison-after"><small>With Arcantry</small><p><code>repo plan</code> records hashes and <code>repo apply</code> rejects drift before writing.</p></div>
-    </article>
+  <div class="comparison-table-shell">
+    <table class="comparison-flow">
+      <colgroup>
+        <col class="comparison-area-column" />
+        <col />
+        <col />
+      </colgroup>
+      <thead>
+        <tr>
+          <th scope="col">Area</th>
+          <th class="comparison-before-heading" scope="col">Without Arcantry</th>
+          <th class="comparison-after-heading" scope="col">With Arcantry</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row"><span>01</span><h3>Discovery</h3></th>
+          <td class="comparison-before"><p>Each tool must rediscover files, conventions, and missing sources.</p></td>
+          <td class="comparison-after"><p>One inspection describes the sources that exist and the ones that do not.</p></td>
+        </tr>
+        <tr>
+          <th scope="row"><span>02</span><h3>Ownership</h3></th>
+          <td class="comparison-before"><p>Authority, projections, queues, and procedures are easy to treat as one layer.</p></td>
+          <td class="comparison-after"><p>Each source declares its role, management level, visibility, and adapter.</p></td>
+        </tr>
+        <tr>
+          <th scope="row"><span>03</span><h3>Structural change</h3></th>
+          <td class="comparison-before"><p>A migration can mix discovery, decisions, and file writes in one step.</p></td>
+          <td class="comparison-after"><p><code>repo plan</code> records hashes and <code>repo apply</code> rejects drift before writing.</p></td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </section>
 
