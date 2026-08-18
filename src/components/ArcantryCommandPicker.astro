@@ -1,0 +1,258 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+import packageManifest from '../../packages/arcantry/package.json';
+
+interface Props {
+  idPrefix: string;
+  variant?: 'hero' | 'content';
+}
+
+const { idPrefix, variant = 'content' } = Astro.props;
+const packageName = packageManifest.name;
+const commandOptions = [
+  { id: 'npm', label: 'npm', executable: 'npx', packageCommand: packageName, value: `npx ${packageName} repo inspect` },
+  { id: 'pnpm', label: 'pnpm', executable: 'pnpm dlx', packageCommand: packageName, value: `pnpm dlx ${packageName} repo inspect` },
+  { id: 'nub', label: 'Nub', executable: 'nubx', packageCommand: packageName, value: `nubx ${packageName} repo inspect` },
+] as const;
+---
+
+<arcantry-command-picker class:list={['command-picker', 'not-content', `${variant}-command`]}>
+  <div class="command-tabs" role="tablist" aria-label="Package runner">
+    {commandOptions.map((option, index) => (
+      <button
+        type="button"
+        role="tab"
+        id={`${idPrefix}-tab-${option.id}`}
+        aria-controls={`${idPrefix}-panel-${option.id}`}
+        aria-selected={index === 0 ? 'true' : 'false'}
+        tabindex={index === 0 ? 0 : -1}
+        data-runner={option.id}
+      >
+        {option.label}
+      </button>
+    ))}
+  </div>
+  {commandOptions.map((option, index) => (
+    <div
+      class="command-panel"
+      role="tabpanel"
+      id={`${idPrefix}-panel-${option.id}`}
+      aria-labelledby={`${idPrefix}-tab-${option.id}`}
+      data-command={option.id}
+      hidden={index !== 0}
+    >
+      <button
+        class="command-row"
+        type="button"
+        aria-label={`Copy ${option.label} command`}
+        data-label={option.label}
+        data-copy={option.value}
+      >
+        <code><span class="prompt">$</span> <span class="executable">{option.executable}</span> <span class="package">{option.packageCommand}</span> <span class="arguments">repo inspect</span></code>
+        <span class="copy-state" aria-hidden="true">
+          <span class="copy-idle"><Icon name="document" /></span>
+          <span class="copy-done"><Icon name="approve-check" /></span>
+        </span>
+      </button>
+    </div>
+  ))}
+</arcantry-command-picker>
+
+<script>
+  type CommandRunner = 'npm' | 'pnpm' | 'nub';
+
+  const commandStorageKey = 'arcantry:command-runner';
+  const commandRunners: CommandRunner[] = ['npm', 'pnpm', 'nub'];
+
+  async function copyText(text: string): Promise<boolean> {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const input = document.createElement('textarea');
+      input.value = text;
+      input.setAttribute('readonly', '');
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.append(input);
+      input.select();
+      const legacyDocument = document as unknown as { execCommand(command: 'copy'): boolean };
+      const copied = legacyDocument.execCommand('copy');
+      input.remove();
+      return copied;
+    }
+  }
+
+  class ArcantryCommandPicker extends HTMLElement {
+    private runner: CommandRunner = 'npm';
+
+    connectedCallback(): void {
+      const stored = localStorage.getItem(commandStorageKey);
+      if (commandRunners.includes(stored as CommandRunner)) this.runner = stored as CommandRunner;
+      this.render();
+      this.querySelectorAll<HTMLButtonElement>('[data-runner]').forEach((button) => button.addEventListener('click', this.selectRunner));
+      this.querySelector('[role="tablist"]')?.addEventListener('keydown', this.navigateTabs);
+      this.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((button) => button.addEventListener('click', this.copy));
+    }
+
+    disconnectedCallback(): void {
+      this.querySelectorAll<HTMLButtonElement>('[data-runner]').forEach((button) => button.removeEventListener('click', this.selectRunner));
+      this.querySelector('[role="tablist"]')?.removeEventListener('keydown', this.navigateTabs);
+      this.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((button) => button.removeEventListener('click', this.copy));
+    }
+
+    private selectRunner = (event: Event): void => {
+      const button = event.currentTarget;
+      if (!(button instanceof HTMLButtonElement)) return;
+      const runner = button.dataset.runner as CommandRunner;
+      if (!commandRunners.includes(runner)) return;
+      this.runner = runner;
+      localStorage.setItem(commandStorageKey, runner);
+      this.render();
+    };
+
+    private navigateTabs = (event: Event): void => {
+      if (!(event instanceof KeyboardEvent)) return;
+      const currentIndex = commandRunners.indexOf(this.runner);
+      let nextIndex = currentIndex;
+      if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % commandRunners.length;
+      else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + commandRunners.length) % commandRunners.length;
+      else if (event.key === 'Home') nextIndex = 0;
+      else if (event.key === 'End') nextIndex = commandRunners.length - 1;
+      else return;
+      event.preventDefault();
+      this.runner = commandRunners[nextIndex];
+      localStorage.setItem(commandStorageKey, this.runner);
+      this.render();
+      this.querySelector<HTMLButtonElement>(`[data-runner="${this.runner}"]`)?.focus();
+    };
+
+    private copy = async (event: Event): Promise<void> => {
+      const button = event.currentTarget;
+      if (!(button instanceof HTMLButtonElement)) return;
+      const copied = await copyText(button.dataset.copy ?? '');
+      if (!copied) return;
+      button.dataset.copied = 'true';
+      button.setAttribute('aria-label', `${button.dataset.label} command copied`);
+      window.setTimeout(() => {
+        delete button.dataset.copied;
+        button.setAttribute('aria-label', `Copy ${button.dataset.label} command`);
+      }, 1600);
+    };
+
+    private render(): void {
+      this.querySelectorAll<HTMLButtonElement>('[data-runner]').forEach((button) => {
+        const selected = button.dataset.runner === this.runner;
+        button.setAttribute('aria-selected', String(selected));
+        button.tabIndex = selected ? 0 : -1;
+      });
+      this.querySelectorAll<HTMLElement>('[data-command]').forEach((panel) => {
+        panel.hidden = panel.dataset.command !== this.runner;
+      });
+    }
+  }
+
+  if (!customElements.get('arcantry-command-picker')) {
+    customElements.define('arcantry-command-picker', ArcantryCommandPicker);
+  }
+</script>
+
+<style>
+  @layer starlight.core {
+    .command-picker {
+      display: block;
+      border: 1px solid transparent;
+      border-radius: .25rem;
+      background:
+        linear-gradient(color-mix(in srgb, var(--ar-bg) 91%, transparent), color-mix(in srgb, var(--ar-bg-subtle) 88%, transparent)) padding-box,
+        linear-gradient(112deg, color-mix(in srgb, var(--ar-accent-blue) 76%, var(--ar-border)), color-mix(in srgb, var(--ar-accent-violet) 82%, var(--ar-border)) 52%, color-mix(in srgb, var(--ar-accent-pink) 72%, var(--ar-border))) border-box;
+      -webkit-backdrop-filter: blur(18px) saturate(88%);
+      backdrop-filter: blur(18px) saturate(88%);
+      box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--ar-text) 5%, transparent),
+        0 1.3rem 3.8rem color-mix(in srgb, var(--ar-accent-violet) 10%, transparent);
+      overflow: hidden;
+    }
+    .hero-command { max-width: 45rem; margin-top: 2rem; }
+    .content-command { width: 100%; margin-block: 1.25rem; }
+    .command-tabs {
+      display: flex;
+      gap: .1rem;
+      padding: .18rem .3rem;
+      border-bottom: 1px solid color-mix(in srgb, var(--ar-accent-violet) 18%, var(--ar-border));
+    }
+    .command-tabs button {
+      position: relative;
+      height: 1.55rem;
+      min-height: 0;
+      padding: 0 .45rem;
+      border: 0;
+      border-radius: .15rem;
+      background: transparent;
+      color: var(--ar-text-soft);
+      cursor: pointer;
+      font-family: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif !important;
+      font-size: .8rem !important;
+      font-weight: 650 !important;
+      line-height: 1 !important;
+      transition: color 150ms ease, background-color 150ms ease;
+    }
+    .command-tabs button:hover { color: var(--ar-text); }
+    .command-tabs button[aria-selected='true'] { color: var(--ar-text); background: color-mix(in srgb, var(--ar-surface-raised) 84%, transparent); }
+    .command-tabs button[aria-selected='true']::after {
+      content: '';
+      position: absolute;
+      inset: auto .36rem -.2rem;
+      height: 1px;
+      background: linear-gradient(90deg, var(--ar-accent-blue), var(--ar-accent-violet), var(--ar-accent-pink));
+    }
+    .command-panel[hidden] { display: none; }
+    .command-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 1rem;
+      align-items: center;
+      gap: 1rem;
+      width: 100%;
+      min-width: 0;
+      padding: .78rem 1rem;
+      border: 0;
+      background: transparent;
+      color: var(--ar-text);
+      cursor: copy;
+      text-align: left;
+      transition: background-color 150ms ease;
+    }
+    .command-row:hover { background: var(--ar-surface); }
+    .command-row code {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      overflow-x: auto;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--ar-text-muted);
+      font-size: .8rem;
+      white-space: nowrap;
+    }
+    .command-row .prompt { color: var(--ar-accent-blue); font-weight: 800; }
+    .command-row .executable { color: var(--ar-text); font-weight: 750; }
+    .command-row .package { color: var(--ar-accent-violet); }
+    .command-row .flag { color: var(--ar-accent-pink); }
+    .copy-state { display: grid; flex: 0 0 auto; place-items: center; color: var(--ar-text-soft); font-size: .9rem; }
+    .copy-state .copy-idle { display: block; }
+    .copy-state .copy-done { display: none; }
+    .command-row[data-copied='true'] .copy-idle { display: none; }
+    .command-row[data-copied='true'] .copy-done { display: block; }
+
+    @media (max-width: 49.99rem) {
+      .command-row { padding-inline: .8rem; }
+      .command-row code {
+        overflow: hidden;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.55;
+      }
+    }
+  }
+</style>

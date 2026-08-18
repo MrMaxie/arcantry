@@ -3,6 +3,8 @@ title: Get started
 description: Inspect a project with Arcantry before choosing any repository footprint.
 ---
 
+import ArcantryCommandPicker from '../../components/ArcantryCommandPicker.astro';
+
 Arcantry can describe an empty directory or an established project without creating files. Start with inspection, then decide whether any source needs an explicit responsibility.
 
 ## Requirements
@@ -13,17 +15,7 @@ Run the CLI with Node.js 24 or newer. Node is required only in the environment t
 
 Choose the package runner already available on your machine:
 
-```sh
-npx @arcantry/arcantry repo inspect
-```
-
-```sh
-pnpm dlx @arcantry/arcantry repo inspect
-```
-
-```sh
-nubx @arcantry/arcantry repo inspect
-```
+<ArcantryCommandPicker idPrefix="getting-started-command" />
 
 These commands run the package through the runner's cache. `repo inspect` is read-only: it does not create `arcantry.toml`, initialize Git, or modify a recognized source.
 

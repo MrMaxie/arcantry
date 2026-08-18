@@ -8,7 +8,8 @@ const packageManifest = JSON.parse(readFileSync(join(root, 'packages', 'arcantry
 };
 
 const publicIdentitySurfaces = [
-  'src/content/docs/getting-started.md',
+  'src/content/docs/getting-started.mdx',
+  'src/components/ArcantryCommandPicker.astro',
   'src/components/ArcantryHero.astro',
   'src/components/ArcantryCopyCommands.astro',
   'packages/arcantry/scripts/check-package.mjs',
@@ -26,9 +27,10 @@ describe('npm package identity', () => {
   });
 
   it('keeps authored launcher examples aligned with the manifest', () => {
-    const gettingStarted = readFileSync(join(root, 'src', 'content', 'docs', 'getting-started.md'), 'utf8');
-    expect(gettingStarted).toContain(`npx ${packageManifest.name} repo inspect`);
-    expect(gettingStarted).toContain(`pnpm dlx ${packageManifest.name} repo inspect`);
-    expect(gettingStarted).toContain(`nubx ${packageManifest.name} repo inspect`);
+    const commandPicker = readFileSync(join(root, 'src', 'components', 'ArcantryCommandPicker.astro'), 'utf8');
+    expect(commandPicker).toContain('const packageName = packageManifest.name');
+    expect(commandPicker).toContain('value: `npx ${packageName} repo inspect`');
+    expect(commandPicker).toContain('value: `pnpm dlx ${packageName} repo inspect`');
+    expect(commandPicker).toContain('value: `nubx ${packageName} repo inspect`');
   });
 });
