@@ -1,7 +1,8 @@
 # npm-distribution Specification
 
 ## Purpose
-TBD - created by archiving change publish-under-arcantry-npm-scope. Update Purpose after archive.
+
+Define the public npm package identity and the verified, release-sealed publication boundary for Arcantry packages.
 
 ## Requirements
 

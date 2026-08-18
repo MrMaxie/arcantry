@@ -1,7 +1,8 @@
 # project-knowledge-stack Specification
 
 ## Purpose
-TBD - created by archiving change compose-versioned-project-knowledge. Update Purpose after archive.
+
+Define how Arcantry discovers, configures and safely changes independently versioned project knowledge sources without imposing a repository shape.
 
 ## Requirements
 
