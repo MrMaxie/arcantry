@@ -267,6 +267,8 @@ adapter = "todo-txt@1"
 
   it('links private repository skills without adding them to the public catalog', async () => {
     const root = await createFixtureRepository();
+    await mkdir(join(root, 'skills'));
+    await writeFile(join(root, 'catalog.json'), '{"$schema":"./schemas/catalog.schema.json","skills":[]}\n');
     const privateSkill = join(root, '.local/skills/private-helper');
     await mkdir(privateSkill, { recursive: true });
     await writeFile(
