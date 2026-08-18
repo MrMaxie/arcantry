@@ -3,6 +3,8 @@ title: Change lifecycle
 description: Define and archive product or engineering changes made to Arcantry itself.
 ---
 
+import ArcantryMermaid from '../../../components/ArcantryMermaid.astro';
+
 This page describes contribution rules for the Arcantry repository. Projects that use the CLI may choose their own delivery lifecycle; adopting Arcantry does not make OpenSpec mandatory for them.
 
 Inside Arcantry, one OpenSpec change describes one coherent product or engineering outcome. It can require many commits; those commits do not become separate release entries.
@@ -13,11 +15,15 @@ Every completed Arcantry product or engineering change requires an OpenSpec reco
 
 Arcantry extends the normal spec-driven flow with `release.md`:
 
-```text
-proposal -+-> specs --> tasks
-          +-> design --> tasks
-          +-> release
-```
+<ArcantryMermaid
+  label="Arcantry change artifacts from a proposal through specifications, design, tasks, and release metadata"
+  diagram={`flowchart LR
+    proposal[Proposal] --> specs[Specifications]
+    proposal --> design[Design]
+    specs --> tasks[Tasks]
+    design --> tasks
+    proposal --> release[release.md]`}
+/>
 
 `release.md` records the release-facing interpretation of the Arcantry change while the proposal and specs retain the deeper rationale and behavioral contract.
 
