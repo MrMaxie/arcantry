@@ -4,6 +4,11 @@ import { checkRelease, cutRelease, planRelease, renderChangelog } from '../packa
 
 export * from '../packages/arcantry/src/release.js';
 
+function pullRequestHead(): string | undefined {
+  if (process.env.GITHUB_ACTIONS !== 'true' || process.env.GITHUB_EVENT_NAME !== 'pull_request') return undefined;
+  return process.env.ARCANTRY_PULL_REQUEST_HEAD_SHA?.trim() || undefined;
+}
+
 function main(): void {
   const command = process.argv[2];
   if (command === 'plan') {
@@ -19,7 +24,7 @@ function main(): void {
     return;
   }
   if (command === 'check') {
-    checkRelease();
+    checkRelease(process.cwd(), {}, { pullRequestHead: pullRequestHead() });
     return;
   }
   throw new Error('usage: release.ts <plan|cut|render|check>');

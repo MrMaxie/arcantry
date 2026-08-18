@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-08-18
+
+### Changed
+
+<!-- openspec: use-unscoped-arcantry-package -->
+#### Use the concise Arcantry npm package name
+
+The combined CLI and library package now uses `arcantry`, so launcher commands and public imports no longer repeat the product name.
+
 ## [0.4.2] - 2026-08-18
 
 ### Security

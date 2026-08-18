@@ -255,6 +255,37 @@ describe('release completion', () => {
     expect(() => checkRelease(root)).not.toThrow();
   });
 
+  it('accepts the sealed pull request head when checking a synthetic merge commit', () => {
+    const root = fixture();
+    commitAll(root, 'chore: initialize repository');
+    manifest(root);
+    writeFileSync(join(root, 'CHANGELOG.md'), renderChangelog(root));
+    commitAll(root, 'release: cut 0.1.0');
+    const releaseHead = git(root, ['rev-parse', 'HEAD']);
+
+    git(root, ['checkout', '-b', 'base', 'HEAD^']);
+    writeFileSync(join(root, 'base.txt'), 'base change\n');
+    commitAll(root, 'fix: base change');
+    git(root, ['merge', '--no-ff', releaseHead, '-m', 'test: synthetic pull request merge']);
+
+    expect(() => validateReleaseSeal(root)).toThrow('repository HEAD is not sealed by release 0.1.0');
+    expect(() => validateReleaseSeal(root, {}, { pullRequestHead: releaseHead })).not.toThrow();
+  });
+
+  it('rejects a pull request release head that is not a direct merge parent', () => {
+    const root = fixture();
+    manifest(root);
+    writeFileSync(join(root, 'CHANGELOG.md'), renderChangelog(root));
+    commitAll(root, 'release: cut 0.1.0');
+    const releaseHead = git(root, ['rev-parse', 'HEAD']);
+    writeFileSync(join(root, 'later.txt'), 'later work\n');
+    commitAll(root, 'fix: later work');
+
+    expect(() => validateReleaseSeal(root, {}, { pullRequestHead: releaseHead })).toThrow(
+      'pull request release head is not a direct parent of the checked-out merge commit',
+    );
+  });
+
   it('rejects a commit after the latest release seal', () => {
     const root = fixture();
     manifest(root);
