@@ -46,12 +46,13 @@ Reports the active and shadowed configuration and every discovered or configured
 arcantry repo plan --source <id> --transition <strategy>
   [--to-path <path>]
   [--to-adapter <adapter>]
+  [--from <source...>]
   [--managed-from <version>]
   [--delete-source]
   [--json]
 ```
 
-`--transition` accepts `preserve`, `adopt`, `rebind`, `cutover`, `migrate`, or `relocate`. JSON output is the serializable input for apply.
+`--transition` accepts `preserve`, `adopt`, `rebind`, `cutover`, `migrate`, or `relocate`. During adoption, `--from` records explicit source dependencies. JSON output is the serializable input for apply.
 
 ### `repo apply`
 

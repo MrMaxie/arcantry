@@ -12,7 +12,14 @@ import {
   type PlanOperation,
   type ProjectPlan,
 } from './projectPlan.js';
-import { type Transition, transitionSchema, type Visibility } from './projectConfig.js';
+import {
+  parseProjectConfig,
+  renderProjectConfig,
+  type ProjectSourceConfig,
+  type Transition,
+  transitionSchema,
+  type Visibility,
+} from './projectConfig.js';
 import { getOpenSpecAssetFiles } from './repository.js';
 import { planLocalGitExclude } from './privateState.js';
 
@@ -23,6 +30,7 @@ export type SourceTransitionOptions = {
   targetPath?: string;
   targetAdapter?: string;
   managedFrom?: string;
+  from?: string[];
   deleteSource?: boolean;
 };
 
@@ -42,11 +50,13 @@ export const planSourceTransition = async (
   let desiredAdapter = options.targetAdapter ?? source.adapter;
   let desiredManagement = source.management;
   let desiredManagedFrom = source.managedFrom;
+  let desiredFrom = source.from;
 
   if (transition === 'preserve') {
     notes.push('The source remains unchanged and keeps its current management policy.');
   } else if (transition === 'adopt') {
     desiredManagement = 'manage';
+    desiredFrom = options.from ?? source.from;
     if (adapterFor(source) === null) conflicts.push(`Adapter ${source.adapter} is not available for adoption.`);
     if (!source.exists && conflicts.length === 0) {
       await planSourceInitialization(inspection.root, source, operations);
@@ -115,26 +125,44 @@ export const planSourceTransition = async (
     conflicts.push(`Target adapter ${desiredAdapter} is not supported for ${transition}.`);
   }
 
-  if (inspection.configPath !== null && source.origin === 'configured' && conflicts.length === 0 && transition !== 'preserve') {
+  if (inspection.configPath !== null && conflicts.length === 0 && transition !== 'preserve') {
     if (isAbsolute(desiredPath) && isWithin(inspection.root, inspection.configPath)) {
       conflicts.push('Embedded configuration cannot persist an absolute source path. Use an external --config file.');
     } else {
       const configContent = await readFile(inspection.configPath, 'utf8');
-      const updated = patchConfiguredSource(configContent, source.id, {
-        path: desiredPath,
-        management: desiredManagement,
-        adapter: desiredAdapter,
-        managed_from: desiredManagedFrom,
-      });
-      if (updated !== configContent) {
-        operations.push(
-          await createWriteOperation(
-            inspection.root,
-            planPath(inspection.root, inspection.configPath),
-            updated,
-            configVisibility(inspection.root, inspection.configPath),
-          ),
-        );
+      try {
+        const updated = source.origin === 'configured'
+          ? patchConfiguredSource(configContent, source.id, {
+              path: desiredPath,
+              management: desiredManagement,
+              adapter: desiredAdapter,
+              from: desiredFrom,
+              managed_from: desiredManagedFrom,
+            })
+          : addConfiguredSource(configContent, {
+              id: source.id,
+              kind: source.kind,
+              path: desiredPath,
+              management: desiredManagement,
+              adapter: desiredAdapter,
+              from: desiredFrom,
+              ...(desiredManagedFrom === undefined ? {} : { managedFrom: desiredManagedFrom }),
+              visibility: source.visibility,
+              scope: source.scope,
+            }, inspection.configScope === 'external');
+        parseProjectConfig(updated, { allowAbsolutePaths: inspection.configScope === 'external' });
+        if (updated !== configContent) {
+          operations.push(
+            await createWriteOperation(
+              inspection.root,
+              planPath(inspection.root, inspection.configPath),
+              updated,
+              configVisibility(inspection.root, inspection.configPath),
+            ),
+          );
+        }
+      } catch (error) {
+        conflicts.push(error instanceof Error ? error.message : String(error));
       }
     }
   } else if (inspection.configPath === null && transition !== 'preserve') {
@@ -269,7 +297,7 @@ const planDirectoryRelocation = async (
 const patchConfiguredSource = (
   content: string,
   id: string,
-  updates: { path: string; management: string; adapter: string; managed_from?: string },
+  updates: { path: string; management: string; adapter: string; from: string[]; managed_from?: string },
 ): string => {
   const newline = content.includes('\r\n') ? '\r\n' : '\n';
   const lines = content.split(/\r?\n/);
@@ -279,7 +307,7 @@ const patchConfiguredSource = (
   const next = lines.findIndex((line, index) => index > start && /^\s*\[/.test(line));
   let end = next < 0 ? lines.length : next;
 
-  const setValue = (key: string, value: string | undefined): void => {
+  const setValue = (key: string, value: string | undefined, raw = false): void => {
     const index = lines.findIndex((line, lineIndex) => lineIndex > start && lineIndex < end && new RegExp(`^\\s*${key}\\s*=`).test(line));
     if (value === undefined) {
       if (index >= 0) {
@@ -288,7 +316,7 @@ const patchConfiguredSource = (
       }
       return;
     }
-    const rendered = `${key} = ${JSON.stringify(value)}`;
+    const rendered = `${key} = ${raw ? value : JSON.stringify(value)}`;
     if (index >= 0) lines[index] = rendered;
     else {
       lines.splice(end, 0, rendered);
@@ -299,8 +327,19 @@ const patchConfiguredSource = (
   setValue('path', updates.path);
   setValue('management', updates.management);
   setValue('adapter', updates.adapter);
+  setValue('from', updates.from.length === 0 ? undefined : JSON.stringify(updates.from), true);
   setValue('managed_from', updates.managed_from);
   return lines.join(newline);
+};
+
+const addConfiguredSource = (
+  content: string,
+  source: ProjectSourceConfig,
+  allowAbsolutePaths: boolean,
+): string => {
+  const config = parseProjectConfig(content, { allowAbsolutePaths });
+  if (source.id in config.sources) throw new Error(`Configured source already exists: ${source.id}.`);
+  return renderProjectConfig({ ...config, sources: { ...config.sources, [source.id]: source } });
 };
 
 const sourcePathExists = async (root: string, path: string, kind: ProjectSource['kind']): Promise<boolean> => {

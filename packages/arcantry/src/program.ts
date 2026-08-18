@@ -89,6 +89,7 @@ export const buildProgram = (context: CliContext): Command => {
     .requiredOption('--transition <transition>', 'Transition: preserve, adopt, rebind, cutover, migrate, or relocate.')
     .option('--to-path <path>', 'Target source path for rebind or relocate.')
     .option('--to-adapter <adapter>', 'Target versioned adapter.')
+    .option('--from <source...>', 'Explicit source dependencies for adoption.')
     .option('--managed-from <version>', 'First managed SemVer version for changelog cutover.')
     .option('--delete-source', 'Delete the verified source after relocation.')
     .option('--json', 'Write the serializable plan required by repo apply.')
@@ -97,6 +98,7 @@ export const buildProgram = (context: CliContext): Command => {
       transition: string;
       toPath?: string;
       toAdapter?: string;
+      from?: string[];
       managedFrom?: string;
       deleteSource?: boolean;
       json?: boolean;
@@ -109,6 +111,7 @@ export const buildProgram = (context: CliContext): Command => {
           toolVersion: arcantryVersion,
           ...(options.toPath === undefined ? {} : { targetPath: options.toPath }),
           ...(options.toAdapter === undefined ? {} : { targetAdapter: options.toAdapter }),
+          ...(options.from === undefined ? {} : { from: options.from }),
           ...(options.managedFrom === undefined ? {} : { managedFrom: options.managedFrom }),
           deleteSource: options.deleteSource === true,
         });
