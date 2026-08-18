@@ -2,16 +2,43 @@
 import EditLink from '@astrojs/starlight/components/EditLink.astro';
 import LastUpdated from '@astrojs/starlight/components/LastUpdated.astro';
 import Pagination from '@astrojs/starlight/components/Pagination.astro';
+import { Icon } from '@astrojs/starlight/components';
+import { faHeart } from '@fortawesome/free-solid-svg-icons';
+import packageManifest from '../../packages/arcantry/package.json';
+
+const { hasSidebar } = Astro.locals.starlightRoute;
+const [heartWidth, heartHeight, , , heartPath] = faHeart.icon;
 ---
 
 <footer class="page-footer">
-  <div class="page-meta">
-    <EditLink />
-    <LastUpdated />
-  </div>
+  {hasSidebar && (
+    <div class="page-meta">
+      <EditLink />
+      <LastUpdated />
+    </div>
+  )}
   <div class="pagination-transition" transition:name="arcantry-next-action">
     <Pagination />
   </div>
+  {!hasSidebar && (
+    <div class="project-footer">
+      <span class="footer-credit">
+        Created with <span class="sr-only">love</span>
+        <span class="footer-heart" aria-hidden="true">
+          <svg viewBox={`0 0 ${heartWidth} ${heartHeight}`}><path d={heartPath as string} /></svg>
+        </span>
+        by <a href="https://maxie.dev">Maxie</a>
+      </span>
+      <div class="project-footer-links">
+        <LastUpdated />
+        <a href="https://github.com/MrMaxie/arcantry/blob/master/LICENSE">{packageManifest.license}</a>
+        <a href="https://github.com/MrMaxie/arcantry" aria-label="Arcantry on GitHub">
+          <Icon name="github" />
+          <span>GitHub</span>
+        </a>
+      </div>
+    </div>
+  )}
 </footer>
 
 <style>

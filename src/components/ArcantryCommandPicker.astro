@@ -10,26 +10,41 @@ interface Props {
 const { idPrefix, variant = 'content' } = Astro.props;
 const packageName = packageManifest.name;
 const commandOptions = [
-  { id: 'npm', label: 'npm', executable: 'npx', packageCommand: packageName, value: `npx ${packageName} repo inspect` },
-  { id: 'pnpm', label: 'pnpm', executable: 'pnpm dlx', packageCommand: packageName, value: `pnpm dlx ${packageName} repo inspect` },
-  { id: 'nub', label: 'Nub', executable: 'nubx', packageCommand: packageName, value: `nubx ${packageName} repo inspect` },
+  { id: 'npm', label: 'npm', executable: 'npx', packageCommand: packageName, arguments: 'repo inspect', value: `npx ${packageName} repo inspect` },
+  { id: 'pnpm', label: 'pnpm', executable: 'pnpm dlx', packageCommand: packageName, arguments: 'repo inspect', value: `pnpm dlx ${packageName} repo inspect` },
+  { id: 'bun', label: 'Bun', executable: 'bunx', packageCommand: packageName, arguments: 'repo inspect', value: `bunx ${packageName} repo inspect` },
+  { id: 'nub', label: 'Nub', executable: 'nubx', packageCommand: packageName, arguments: 'repo inspect', value: `nubx ${packageName} repo inspect` },
+  { id: 'powershell', label: 'PowerShell', platform: 'windows', executable: 'irm', packageCommand: 'https://raw.githubusercontent.com/MrMaxie/arcantry/master/install.ps1', arguments: '| iex', value: 'irm https://raw.githubusercontent.com/MrMaxie/arcantry/master/install.ps1 | iex' },
+  { id: 'scoop', label: 'Scoop', platform: 'windows', executable: 'scoop install', packageCommand: 'MrMaxie/arcantry/arcantry', arguments: '', value: 'scoop install MrMaxie/arcantry/arcantry' },
+  { id: 'homebrew', label: 'Homebrew', platform: 'macos', executable: 'brew install', packageCommand: 'MrMaxie/tap/arcantry', arguments: '', value: 'brew install MrMaxie/tap/arcantry' },
+  { id: 'shell', label: 'Shell', platform: 'linux', executable: 'curl -fsSL', packageCommand: 'https://raw.githubusercontent.com/MrMaxie/arcantry/master/install.sh', arguments: '| sh', value: 'curl -fsSL https://raw.githubusercontent.com/MrMaxie/arcantry/master/install.sh | sh' },
 ] as const;
 ---
 
 <arcantry-command-picker class:list={['command-picker', 'not-content', `${variant}-command`]}>
-  <div class="command-tabs" role="tablist" aria-label="Package runner">
+  <div class="command-tabs" role="tablist" aria-label="Run or install Arcantry">
     {commandOptions.map((option, index) => (
-      <button
-        type="button"
-        role="tab"
-        id={`${idPrefix}-tab-${option.id}`}
-        aria-controls={`${idPrefix}-panel-${option.id}`}
-        aria-selected={index === 0 ? 'true' : 'false'}
-        tabindex={index === 0 ? 0 : -1}
-        data-runner={option.id}
-      >
-        {option.label}
-      </button>
+      <>
+        {option.id === 'powershell' && <span class="command-tab-separator" role="presentation"></span>}
+        <button
+          type="button"
+          role="tab"
+          id={`${idPrefix}-tab-${option.id}`}
+          aria-controls={`${idPrefix}-panel-${option.id}`}
+          aria-selected={index === 0 ? 'true' : 'false'}
+          tabindex={index === 0 ? 0 : -1}
+          data-runner={option.id}
+        >
+          {'platform' in option && option.platform === 'windows' && (
+            <svg class="platform-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M2 4.4 10.6 3v8H2V4.4Zm9.6-1.6L22 1v10H11.6V2.8ZM2 12h8.6v8L2 18.6V12Zm9.6 0H22v10l-10.4-1.8V12Z"></path>
+            </svg>
+          )}
+          {'platform' in option && option.platform === 'macos' && <Icon name="apple" class="platform-icon" />}
+          {'platform' in option && option.platform === 'linux' && <Icon name="linux" class="platform-icon" />}
+          <span>{option.label}</span>
+        </button>
+      </>
     ))}
   </div>
   {commandOptions.map((option, index) => (
@@ -48,7 +63,7 @@ const commandOptions = [
         data-label={option.label}
         data-copy={option.value}
       >
-        <code><span class="prompt">$</span> <span class="executable">{option.executable}</span> <span class="package">{option.packageCommand}</span> <span class="arguments">repo inspect</span></code>
+        <code><span class="prompt">$</span> <span class="executable">{option.executable}</span> <span class="package">{option.packageCommand}</span>{option.arguments && <> <span class="arguments">{option.arguments}</span></>}</code>
         <span class="copy-state" aria-hidden="true">
           <span class="copy-idle"><Icon name="document" /></span>
           <span class="copy-done"><Icon name="approve-check" /></span>
@@ -59,10 +74,10 @@ const commandOptions = [
 </arcantry-command-picker>
 
 <script>
-  type CommandRunner = 'npm' | 'pnpm' | 'nub';
+  type CommandRunner = 'npm' | 'pnpm' | 'bun' | 'nub' | 'powershell' | 'scoop' | 'homebrew' | 'shell';
 
   const commandStorageKey = 'arcantry:command-runner';
-  const commandRunners: CommandRunner[] = ['npm', 'pnpm', 'nub'];
+  const commandRunners: CommandRunner[] = ['npm', 'pnpm', 'bun', 'nub', 'powershell', 'scoop', 'homebrew', 'shell'];
 
   async function copyText(text: string): Promise<boolean> {
     try {
@@ -177,12 +192,27 @@ const commandOptions = [
     .content-command { width: 100%; margin-block: 1.25rem; }
     .command-tabs {
       display: flex;
+      align-items: stretch;
       gap: .1rem;
+      overflow-x: auto;
+      overflow-y: hidden;
       padding: .18rem .3rem;
       border-bottom: 1px solid color-mix(in srgb, var(--ar-accent-violet) 18%, var(--ar-border));
+      scrollbar-width: none;
+    }
+    .command-tabs::-webkit-scrollbar { display: none; }
+    .command-tab-separator {
+      flex: 0 0 1px;
+      width: 1px;
+      margin: .24rem .35rem;
+      background: color-mix(in srgb, var(--ar-text-soft) 38%, var(--ar-border));
     }
     .command-tabs button {
       position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      flex: 0 0 auto;
       height: 1.55rem;
       min-height: 0;
       padding: 0 .45rem;
@@ -196,6 +226,13 @@ const commandOptions = [
       font-weight: 650 !important;
       line-height: 1 !important;
       transition: color 150ms ease, background-color 150ms ease;
+    }
+    .command-tabs .platform-icon,
+    .command-tabs :global(.platform-icon) {
+      width: .78rem;
+      height: .78rem;
+      flex: 0 0 auto;
+      fill: currentColor;
     }
     .command-tabs button:hover { color: var(--ar-text); }
     .command-tabs button[aria-selected='true'] { color: var(--ar-text); background: color-mix(in srgb, var(--ar-surface-raised) 84%, transparent); }
@@ -244,8 +281,17 @@ const commandOptions = [
     .copy-state .copy-done { display: none; }
     .command-row[data-copied='true'] .copy-idle { display: none; }
     .command-row[data-copied='true'] .copy-done { display: block; }
-
     @media (max-width: 49.99rem) {
+      .command-tabs {
+        flex-wrap: wrap;
+        overflow: visible;
+      }
+      .command-tab-separator {
+        flex: 0 0 calc(100% - .7rem);
+        width: auto;
+        height: 1px;
+        margin: .12rem .35rem;
+      }
       .command-row { padding-inline: .8rem; }
       .command-row code {
         overflow: hidden;
