@@ -19,6 +19,7 @@
     "release:cut": "tsx tooling/release.ts cut",
     "release:plan": "tsx tooling/release.ts plan",
     "release:render": "tsx tooling/release.ts render",
+    "release:seal": "tsx tooling/release.ts seal",
     "test": "vitest run tooling && pnpm --filter ./packages/arcantry run test"
   },
   "devDependencies": {

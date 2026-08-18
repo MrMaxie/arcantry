@@ -51,8 +51,6 @@ The combined CLI and library package now uses `arcantry`, so launcher commands a
 
 Release validation now parses contributed title lines in linear time, preventing malformed OpenSpec content from causing polynomial regular-expression work in CI.
 
-## [0.4.1] - 2026-08-18
-
 ## [0.4.0] - 2026-08-18
 
 ### Changed

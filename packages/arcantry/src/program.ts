@@ -40,6 +40,13 @@ import { planSourceTransition } from './sourceTransition.js';
 import { addTodoTask, completeTodoTask, inspectTodoTasks, moveTodoTask } from './todoTxt.js';
 import { planLocalGitExclude, planLocalGitExcludeEntries } from './privateState.js';
 import type { ProjectSource } from './knowledge.js';
+import {
+  checkProjectRelease,
+  inspectReleasePlan,
+  planReleaseBaseline,
+  planReleaseCut,
+  planReleaseRender,
+} from './projectRelease.js';
 
 const packageManifest = JSON.parse(
   readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
@@ -57,7 +64,7 @@ export const buildProgram = (context: CliContext): Command => {
   const program = new Command();
   program
     .name('arcantry')
-    .description('Manage Arcantry repository adoption and skill links.')
+    .description('Manage Arcantry project sources, local releases, and skill links.')
     .version(arcantryVersion)
     .option('--cwd <path>', 'Run against another repository or catalog location.')
     .option('--config <path>', 'Use one explicit arcantry.toml file without config merging.')
@@ -286,6 +293,71 @@ export const buildProgram = (context: CliContext): Command => {
       });
     });
 
+  const release = program.command('release').description('Manage an OpenSpec-backed local release story without publishing.');
+  release
+    .command('baseline <version>')
+    .description('Preview or apply a baseline for an existing project release.')
+    .requiredOption('--date <date>', 'Existing release date in YYYY-MM-DD.')
+    .option('--apply', 'Apply the previewed release plan.')
+    .option('--json', 'Write the plan or applied operations as JSON.')
+    .action(async (version: string, options: { date: string; apply?: boolean; json?: boolean }) => {
+      await execute(program, context, async () => {
+        const plan = await planReleaseBaseline(await commandProject(program, context), version, options.date, arcantryVersion);
+        await handleMutationPlan(program, context, plan, options.apply === true, options.json === true);
+      });
+    });
+
+  release
+    .command('plan')
+    .description('Inspect the next local release without changing files.')
+    .option('--json', 'Write the release plan as JSON.')
+    .action(async (options: { json?: boolean }) => {
+      await execute(program, context, async () => {
+        const plan = inspectReleasePlan(await commandProject(program, context));
+        if (options.json === true) context.stdout(`${JSON.stringify(plan, null, 2)}\n`);
+        else {
+          context.stdout(`Current: ${plan.current}\nNext: ${plan.next}\nImpact: ${plan.impact}\n`);
+          context.stdout(plan.changes.length === 0 ? 'Changes: none\n' : `Changes: ${plan.changes.join(', ')}\n`);
+        }
+      });
+    });
+
+  release
+    .command('cut')
+    .description('Preview or apply the next local release manifest, versions and changelog.')
+    .option('--date <date>', 'Release date in YYYY-MM-DD.', localDate())
+    .option('--apply', 'Apply the previewed release plan.')
+    .option('--json', 'Write the plan or applied operations as JSON.')
+    .action(async (options: { date: string; apply?: boolean; json?: boolean }) => {
+      await execute(program, context, async () => {
+        const plan = await planReleaseCut(await commandProject(program, context), options.date, arcantryVersion);
+        await handleMutationPlan(program, context, plan, options.apply === true, options.json === true);
+      });
+    });
+
+  release
+    .command('render')
+    .description('Preview or apply the deterministic managed changelog.')
+    .option('--apply', 'Apply the previewed changelog plan.')
+    .option('--json', 'Write the plan or applied operations as JSON.')
+    .action(async (options: { apply?: boolean; json?: boolean }) => {
+      await execute(program, context, async () => {
+        const plan = await planReleaseRender(await commandProject(program, context), arcantryVersion);
+        await handleMutationPlan(program, context, plan, options.apply === true, options.json === true);
+      });
+    });
+
+  release
+    .command('check')
+    .description('Check local release consistency without changing files.')
+    .option('--sealed', 'Also require final assignment, clean Git state and a release seal.')
+    .action(async (options: { sealed?: boolean }) => {
+      await execute(program, context, async () => {
+        checkProjectRelease(await commandProject(program, context), options.sealed === true);
+        context.stdout(options.sealed === true ? 'Release state is sealed.\n' : 'Release state is consistent.\n');
+      });
+    });
+
   const skills = program.command('skills').description('Inspect the catalog and manage skill links.');
   skills
     .command('list')
@@ -490,12 +562,31 @@ const renderKnowledgeValidation = async (program: Command, context: CliContext, 
 };
 
 const handleTodoPlan = async (program: Command, context: CliContext, plan: ReturnType<typeof parseProjectPlan>, apply: boolean): Promise<void> => {
+  await handleMutationPlan(program, context, plan, apply, false);
+};
+
+const handleMutationPlan = async (
+  program: Command,
+  context: CliContext,
+  plan: ReturnType<typeof parseProjectPlan>,
+  apply: boolean,
+  json: boolean,
+): Promise<void> => {
   if (!apply) {
-    renderPlanResult(program, context, plan);
-    context.stdout('Run the same command with --apply to write these changes.\n');
+    if (json) {
+      context.stdout(serializeProjectPlan(plan));
+      if (plan.conflicts.length > 0) exitCodes.set(program, 1);
+    } else {
+      renderPlanResult(program, context, plan);
+      context.stdout('Run the same command with --apply to write these changes.\n');
+    }
     return;
   }
   const result = await applyProjectPlan(plan, arcantryVersion);
+  if (json) {
+    context.stdout(`${JSON.stringify({ applied: result.applied }, null, 2)}\n`);
+    return;
+  }
   for (const operation of result.applied) context.stdout(`${operation.action}: ${operation.path}\n`);
   if (result.applied.length === 0) context.stdout('No file changes.\n');
 };

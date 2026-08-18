@@ -68,6 +68,55 @@ describe('CLI', () => {
     expect(result.stdout).toContain('Knowledge stack is valid.');
   });
 
+  it('previews and applies a configured release baseline without publishing', async () => {
+    const root = await createFixtureDirectory('arcantry-cli-release-');
+    await mkdir(join(root, 'openspec', 'changes', 'archive'), { recursive: true });
+    await writeFile(join(root, 'package.json'), '{\n  "name": "fixture",\n  "version": "0.8.0"\n}\n');
+    await writeFile(join(root, 'arcantry.toml'), `config_version = 1
+
+[sources.openspec]
+kind = "openspec"
+path = "openspec"
+management = "manage"
+adapter = "openspec@1"
+
+[sources.changelog]
+kind = "changelog"
+path = "CHANGELOG.md"
+management = "manage"
+adapter = "keep-a-changelog@2"
+from = ["openspec"]
+
+[release]
+adapter = "openspec-release@1"
+manifests_path = "releases"
+changelog_source = "changelog"
+tag_prefix = "v"
+
+[[release.version_sources]]
+path = "package.json"
+adapter = "json-package@1"
+`);
+
+    const preview = await run(root, ['release', 'baseline', '0.8.0', '--date', '2026-06-11']);
+    expect(preview.exitCode).toBe(0);
+    expect(preview.stdout).toContain('write: releases/0.8.0.yaml');
+    expect(preview.stdout).toContain('Run the same command with --apply');
+    await expect(readFile(join(root, 'releases', '0.8.0.yaml'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+
+    const applied = await run(root, [
+      'release',
+      'baseline',
+      '0.8.0',
+      '--date',
+      '2026-06-11',
+      '--apply',
+    ]);
+    expect(applied.exitCode).toBe(0);
+    expect(applied.stdout).toContain('write: releases/0.8.0.yaml');
+    expect((await run(root, ['release', 'check'])).stdout).toContain('Release state is consistent.');
+  });
+
   it('inspects, plans, and applies a source without repository metadata', async () => {
     const root = await createFixtureDirectory('arcantry-cli-plan-');
     await writeFile(join(root, 'todo.txt'), 'Move me @desk\n');

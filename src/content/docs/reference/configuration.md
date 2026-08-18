@@ -61,6 +61,17 @@ path = ".local/todo.txt"
 management = "observe"
 adapter = "todo-txt@1"
 visibility = "private"
+
+[release]
+adapter = "openspec-release@1"
+manifests_path = "releases"
+changelog_source = "history"
+tag_prefix = "v"
+repository_url = "https://github.com/example/project"
+
+[[release.version_sources]]
+path = "Cargo.toml"
+adapter = "cargo-workspace@1"
 ```
 
 The equivalent private intent and release sources use `.local/openspec` and `.local/CHANGELOG.md`. They can be configured explicitly or discovered without configuration.
@@ -75,6 +86,7 @@ The equivalent private intent and release sources use `.local/openspec` and `.lo
 | `[tool].requires` | No | SemVer range the running Arcantry version must satisfy. |
 | `[project].root` | No | Project root relative to the configuration boundary. |
 | `[sources.<id>]` | No | One independently versioned knowledge source. |
+| `[release]` | No | Local OpenSpec-backed release planning and rendering. |
 
 ## Source fields
 
@@ -98,5 +110,20 @@ Project-local configuration rejects absolute source paths. An explicit external 
 Shared and private source content is not synchronized automatically. Use inspection and an explicit transition plan to promote, relocate, or preserve it.
 
 A shared changelog cannot depend on private OpenSpec because collaborators could not reproduce that release meaning. A private changelog may depend on shared OpenSpec, private OpenSpec, or both.
+
+## Release fields
+
+| Field | Required | Default | Contract |
+| --- | --- | --- | --- |
+| `adapter` | Yes | - | `openspec-release@1`. |
+| `manifests_path` | Yes | - | Directory containing `<version>.yaml` release manifests. |
+| `changelog_source` | Yes | - | Id of a managed changelog source whose `from` entries identify OpenSpec authorities. |
+| `tag_prefix` | No | `v` | Prefix used only for generated changelog links. |
+| `repository_url` | No | - | Repository URL used for comparison links. Links are omitted when absent. |
+| `version_sources` | Yes | - | One or more explicit `path` and `adapter` tables. |
+
+Version source adapters are `json-package@1` for a top-level JSON `version` and `cargo-workspace@1` for `[workspace.package] version` in Cargo TOML. Release commands do not inspect or update an unconfigured version file.
+
+A baseline manifest anchors an existing version without reconstructing unknown history. Later versions are computed from archived OpenSpec release artifacts. Internal artifacts stay in manifests and SemVer planning but are omitted from the public changelog.
 
 The editor contract is [arcantry-config-v1.tosd](/arcantry/schemas/arcantry-config-v1.tosd). Runtime validation also enforces SemVer compatibility, graph cycles, authority overlap, path privacy, and changelog dependencies.

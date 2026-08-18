@@ -22,6 +22,7 @@ export interface ReleaseManifest {
   version: string;
   date: string;
   changes: string[];
+  baseline?: true;
 }
 
 export interface ReleaseState {
@@ -35,6 +36,14 @@ export interface ReleaseAdapterOptions {
   releasesPath?: string;
   changelogPath?: string;
   distributionManifestPaths?: string[];
+  repositoryUrl?: string;
+  tagPrefix?: string;
+  versionSources?: ReleaseVersionSource[];
+}
+
+export interface ReleaseVersionSource {
+  path: string;
+  adapter: 'json-package@1' | 'cargo-workspace@1';
 }
 
 export interface ReleaseSealValidationOptions {
@@ -63,6 +72,12 @@ const visibilities: ReleaseVisibility[] = ['public', 'internal'];
 const componentPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*(?::[a-z0-9]+(?:-[a-z0-9]+)*)?$/;
 const semVerPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+export function isReleaseDate(value: string): boolean {
+  if (!datePattern.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
+}
 
 export function parseReleaseArtifact(source: string): ReleaseArtifact {
   const match = source.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
@@ -136,15 +151,22 @@ export function readArchivedChanges(root = process.cwd(), openSpecPaths = ['open
 export function readManifests(root = process.cwd(), releasesPath = 'releases'): ReleaseManifest[] {
   const directory = resolve(root, releasesPath);
   if (!existsSync(directory)) return [];
-  return readdirSync(directory).filter((file) => file.endsWith('.yaml')).map((file) => {
+  const manifests = readdirSync(directory).filter((file) => file.endsWith('.yaml')).map((file) => {
     const data = parseYaml(readFileSync(join(directory, file), 'utf8')) as Partial<ReleaseManifest>;
     if (!data || typeof data.version !== 'string' || !semVerPattern.test(data.version)) throw new Error(`invalid release version: ${file}`);
     if (basename(file, '.yaml') !== data.version) throw new Error(`release manifest filename must match version: ${file}`);
-    if (typeof data.date !== 'string' || !datePattern.test(data.date)) throw new Error(`invalid release date: ${file}`);
+    if (typeof data.date !== 'string' || !isReleaseDate(data.date)) throw new Error(`invalid release date: ${file}`);
     if (!Array.isArray(data.changes) || !data.changes.every((change) => typeof change === 'string' && change.length > 0)) throw new Error(`invalid release changes: ${file}`);
     if (new Set(data.changes).size !== data.changes.length) throw new Error(`duplicate change in release manifest: ${file}`);
+    if (data.baseline !== undefined && data.baseline !== true) throw new Error(`invalid release baseline marker: ${file}`);
+    if (data.baseline === true && data.changes.length > 0) throw new Error(`baseline release cannot assign changes: ${file}`);
+    if (data.baseline !== true && data.changes.length === 0) throw new Error(`non-baseline release must assign changes: ${file}`);
     return data as ReleaseManifest;
   }).sort((left, right) => compareSemVer(left.version, right.version));
+  const baselines = manifests.filter((manifest) => manifest.baseline === true);
+  if (baselines.length > 1) throw new Error('release history may contain only one baseline manifest');
+  if (baselines.length === 1 && manifests[0] !== baselines[0]) throw new Error('release baseline must be the oldest manifest');
+  return manifests;
 }
 
 function compareSemVer(left: string, right: string): number {
@@ -183,7 +205,7 @@ export function cutRelease(
   date = new Date().toISOString().slice(0, 10),
   options: ReleaseAdapterOptions = {},
 ): ReleaseManifest {
-  if (!datePattern.test(date)) throw new Error(`invalid release date: ${date}`);
+  if (!isReleaseDate(date)) throw new Error(`invalid release date: ${date}`);
   const plan = planRelease(root, options);
   if (plan.changes.length === 0) throw new Error('no unassigned archived changes to release');
   if (plan.impact === 'none') throw new Error('unassigned changes do not require a SemVer release');
@@ -192,22 +214,36 @@ export function cutRelease(
   mkdirSync(directory, { recursive: true });
   const path = join(directory, `${manifest.version}.yaml`);
   if (existsSync(path)) throw new Error(`release manifest already exists: ${manifest.version}`);
-  writeFileSync(path, stringifyYaml(manifest, { lineWidth: 0 }), 'utf8');
+  writeFileSync(path, renderReleaseManifest(manifest), 'utf8');
   return manifest;
 }
 
 export function renderChangelog(root = process.cwd(), options: ReleaseAdapterOptions = {}): string {
-  const { archived, manifests } = validateReleaseState(root, options);
+  return renderReleaseChangelog(validateReleaseState(root, options), options);
+}
+
+export function renderReleaseManifest(manifest: ReleaseManifest): string {
+  return stringifyYaml(manifest, { lineWidth: 0 });
+}
+
+export function renderReleaseChangelog(state: Pick<ReleaseState, 'archived' | 'manifests'>, options: ReleaseAdapterOptions = {}): string {
+  const { archived, manifests } = state;
   const ordered = [...manifests].sort((left, right) => compareSemVer(right.version, left.version));
   const lines = [keepAChangelogPreamble.trimEnd(), '', '## [Unreleased]', ''];
+  const baseline = manifests.find((manifest) => manifest.baseline === true);
+  if (baseline !== undefined) {
+    lines.push(`<!-- Arcantry release baseline: ${baseline.version} (${baseline.date}). Earlier history is not reconstructed. -->`, '');
+  }
   for (const manifest of ordered) {
-    lines.push(`## [${manifest.version}] - ${manifest.date}`, '');
+    if (manifest.baseline === true) continue;
     const grouped = new Map<Category, Array<{ id: string; artifact: ReleaseArtifact }>>();
     for (const changeId of manifest.changes) {
       const artifact = archived.get(changeId)!;
       if (artifact.visibility === 'internal') continue;
       grouped.set(artifact.category, [...(grouped.get(artifact.category) ?? []), { id: changeId, artifact }]);
     }
+    if (grouped.size === 0) continue;
+    lines.push(`## [${manifest.version}] - ${manifest.date}`, '');
     for (const category of categories) {
       const entries = grouped.get(category);
       if (!entries?.length) continue;
@@ -217,14 +253,67 @@ export function renderChangelog(root = process.cwd(), options: ReleaseAdapterOpt
   }
   const invalidHeadings = Object.values(categoryHeadings).filter((heading) => !changelogCategories.includes(heading));
   if (invalidHeadings.length > 0) throw new Error(`invalid changelog categories: ${invalidHeadings.join(', ')}`);
-  return `${lines.join('\n').trimEnd()}\n`;
+  const body = `${lines.join('\n').trimEnd()}\n`;
+  if (options.repositoryUrl === undefined || manifests.length === 0) return body;
+  const repositoryUrl = options.repositoryUrl.replace(/\/$/, '');
+  const ascending = [...manifests].sort((left, right) => compareSemVer(left.version, right.version));
+  const latest = ascending.at(-1)!;
+  const links = [`[Unreleased]: ${repositoryUrl}/compare/${options.tagPrefix ?? 'v'}${latest.version}...HEAD`];
+  for (const [index, manifest] of ascending.entries()) {
+    if (manifest.baseline === true) continue;
+    const previous = ascending[index - 1];
+    links.push(previous === undefined
+      ? `[${manifest.version}]: ${repositoryUrl}/releases/tag/${options.tagPrefix ?? 'v'}${manifest.version}`
+      : `[${manifest.version}]: ${repositoryUrl}/compare/${options.tagPrefix ?? 'v'}${previous.version}...${options.tagPrefix ?? 'v'}${manifest.version}`);
+  }
+  return `${body}\n${links.join('\n')}\n`;
 }
 
 export function checkChangelog(root = process.cwd(), options: ReleaseAdapterOptions = {}): void {
   const path = resolve(root, options.changelogPath ?? 'CHANGELOG.md');
   if (!existsSync(path)) throw new Error('CHANGELOG.md is missing');
-  validateDistributionVersions(root, options.distributionManifestPaths, options.releasesPath);
-  if (readFileSync(path, 'utf8') !== renderChangelog(root, options)) throw new Error('CHANGELOG.md is stale; run `just release-render`');
+  validateReleaseVersions(root, options);
+  if (readFileSync(path, 'utf8') !== renderChangelog(root, options)) throw new Error('CHANGELOG.md is stale; run the configured release render command');
+}
+
+export function readReleaseVersion(root: string, source: ReleaseVersionSource): string {
+  const path = resolve(root, source.path);
+  const content = readFileSync(path, 'utf8');
+  if (source.adapter === 'json-package@1') {
+    const manifest = JSON.parse(content) as { version?: unknown };
+    if (typeof manifest.version !== 'string' || !semVerPattern.test(manifest.version)) {
+      throw new Error(`JSON version source has no full SemVer version: ${source.path}`);
+    }
+    return manifest.version;
+  }
+  return readCargoWorkspaceVersion(content, source.path);
+}
+
+export function updateReleaseVersion(root: string, source: ReleaseVersionSource, version: string): string {
+  if (!semVerPattern.test(version)) throw new Error(`invalid SemVer version: ${version}`);
+  const path = resolve(root, source.path);
+  const content = readFileSync(path, 'utf8');
+  if (source.adapter === 'json-package@1') {
+    const manifest = JSON.parse(content) as Record<string, unknown>;
+    if (typeof manifest.version !== 'string') throw new Error(`JSON version source has no version: ${source.path}`);
+    manifest.version = version;
+    const indentation = content.match(/\r?\n([ \t]+)"/)?.[1] ?? '  ';
+    const newline = content.includes('\r\n') ? '\r\n' : '\n';
+    return `${JSON.stringify(manifest, null, indentation).replaceAll('\n', newline)}${content.endsWith('\n') ? newline : ''}`;
+  }
+  return updateCargoWorkspaceVersion(content, version, source.path);
+}
+
+export function validateReleaseVersions(root: string, options: ReleaseAdapterOptions): void {
+  if (options.versionSources === undefined) {
+    validateDistributionVersions(root, options.distributionManifestPaths, options.releasesPath);
+    return;
+  }
+  const expected = readManifests(root, options.releasesPath).at(-1)?.version ?? '0.0.0';
+  for (const source of options.versionSources) {
+    const actual = readReleaseVersion(root, source);
+    if (actual !== expected) throw new Error(`version source must match release ${expected}: ${source.path}`);
+  }
 }
 
 export function readActiveChangeIds(root = process.cwd(), openSpecPaths = ['openspec']): string[] {
@@ -335,4 +424,36 @@ export function validateDistributionVersions(
     const manifest = JSON.parse(readFileSync(path, 'utf8')) as { version?: unknown };
     if (manifest.version !== expected) throw new Error(`distribution version must match release ${expected}: ${path}`);
   }
+}
+
+function readCargoWorkspaceVersion(content: string, sourcePath: string): string {
+  const location = cargoWorkspaceVersionLine(content, sourcePath);
+  const match = location.line.match(/^\s*version\s*=\s*"([^"]+)"/);
+  const version = match?.[1];
+  if (version === undefined || !semVerPattern.test(version)) {
+    throw new Error(`Cargo workspace package version must be full SemVer: ${sourcePath}`);
+  }
+  return version;
+}
+
+function updateCargoWorkspaceVersion(content: string, version: string, sourcePath: string): string {
+  const location = cargoWorkspaceVersionLine(content, sourcePath);
+  const lines = content.split(/\r?\n/);
+  lines[location.index] = location.line.replace(/^(\s*version\s*=\s*")[^"]+(".*)$/, `$1${version}$2`);
+  return lines.join(content.includes('\r\n') ? '\r\n' : '\n');
+}
+
+function cargoWorkspaceVersionLine(content: string, sourcePath: string): { index: number; line: string } {
+  const lines = content.split(/\r?\n/);
+  const sectionStart = lines.findIndex((line) => /^\s*\[workspace\.package\]\s*(?:#.*)?$/.test(line));
+  if (sectionStart < 0) throw new Error(`Cargo version source has no [workspace.package] section: ${sourcePath}`);
+  const sectionEnd = lines.findIndex((line, index) => index > sectionStart && /^\s*\[/.test(line));
+  const end = sectionEnd < 0 ? lines.length : sectionEnd;
+  const matches = lines
+    .map((line, index) => ({ index, line }))
+    .filter(({ index, line }) => index > sectionStart && index < end && /^\s*version\s*=/.test(line));
+  if (matches.length !== 1) {
+    throw new Error(`Cargo [workspace.package] must contain exactly one version: ${sourcePath}`);
+  }
+  return matches[0]!;
 }
