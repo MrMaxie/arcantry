@@ -1,6 +1,37 @@
 # Changelog
 
-## 0.3.2 - 2026-08-17
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.4.0] - 2026-08-18
+
+### Changed
+
+<!-- openspec: compose-versioned-project-knowledge -->
+#### Compose versioned project knowledge
+
+Arcantry can discover and combine independently versioned OpenSpec, changelog and todo.txt sources with optional TOML configuration, explicit compatibility and safe per-source transitions in new or established projects. Skills can declare compatible source kinds, adapter ranges and learning outcomes without becoming project state.
+
+<!-- openspec: preserve-derived-artifact-fidelity -->
+#### Preserve derived artifact fidelity
+
+Audience and scope guidance now preserves the structure and comparison semantics of existing artifacts unless the requester explicitly authorizes a different representation.
+
+<!-- openspec: publish-under-arcantry-npm-scope -->
+#### Publish from the Arcantry npm organization
+
+Arcantry uses the `@arcantry/arcantry` public package identity and can publish a verified package archive from a sealed release through token-free npm trusted publishing after a one-time maintainer bootstrap.
+
+<!-- openspec: refine-documentation-entrypoint -->
+#### Clearer documentation entrypoint
+
+Arcantry now explains its repository outcome in plain language, offers equivalent npm, pnpm, and Nub launch commands, keeps version, authorship, theme, and GitHub controls consistent across the documentation, and adds a responsive overview atmosphere with smooth page-to-page navigation.
+
+## [0.3.2] - 2026-08-17
 
 ### Fixed
 
@@ -9,7 +40,7 @@
 
 Arcantry CI now initializes ephemeral repository adoption through the public CLI before running strict read-only self-validation, without committing private `.local` configuration.
 
-## 0.3.1 - 2026-08-17
+## [0.3.1] - 2026-08-17
 
 ### Fixed
 
@@ -28,7 +59,7 @@ Arcantry now detects outdated managed guidance, reports actionable doctor repair
 
 The staged code review skill now requires repository-wide reviews to account for every material component and contract before claiming complete coverage.
 
-## 0.3.0 - 2026-08-17
+## [0.3.0] - 2026-08-17
 
 ### Added
 
@@ -44,7 +75,7 @@ Arcantry now combines its OpenSpec lifecycle with reusable skills, a complete Co
 
 Arcantry now opens with a concrete repository adoption path, keeps one brand lockup in the shell, and routes developers through the skill catalog by the work they need to do.
 
-## 0.2.3 - 2026-08-16
+## [0.2.3] - 2026-08-16
 
 ### Fixed
 
@@ -53,7 +84,7 @@ Arcantry now opens with a concrete repository adoption path, keeps one brand loc
 
 Arcantry documentation now applies distinct light and dark palettes correctly, keeps brand assets readable in both modes, and removes glassy, pill-heavy visual treatments that were not part of the approved design direction.
 
-## 0.2.2 - 2026-08-16
+## [0.2.2] - 2026-08-16
 
 ### Fixed
 
@@ -62,7 +93,7 @@ Arcantry documentation now applies distinct light and dark palettes correctly, k
 
 The documentation now uses the approved Arcantry logo assets, neutral concept palette and intended Manrope / Instrument Serif typography, with the compact mark carried through the header and favicon.
 
-## 0.2.1 - 2026-08-16
+## [0.2.1] - 2026-08-16
 
 ### Changed
 
@@ -71,7 +102,7 @@ The documentation now uses the approved Arcantry logo assets, neutral concept pa
 
 The documentation shell and overview now use the approved Arcantry layout, typography hierarchy and navigation treatment instead of presenting the default Starlight visual language.
 
-## 0.2.0 - 2026-08-16
+## [0.2.0] - 2026-08-16
 
 ### Changed
 
@@ -80,7 +111,7 @@ The documentation shell and overview now use the approved Arcantry layout, typog
 
 Arcantry now validates release manifests and archived change assignments as one state, can cut the next release from the OpenSpec plan, and fails repository checks when the committed changelog drifts from its OpenSpec sources.
 
-## 0.1.0 - 2026-08-16
+## [0.1.0] - 2026-08-16
 
 ### Added
 

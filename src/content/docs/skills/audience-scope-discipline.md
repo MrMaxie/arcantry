@@ -39,4 +39,5 @@ The smallest coherent change, with material risks challenged once and unrelated 
 
 ## Release history
 
+- **0.4.0** — Preserve derived artifact fidelity
 - **0.3.0** — Unified Arcantry capabilities
