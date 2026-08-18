@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-08-18
+
+### Security
+
+<!-- openspec: harden-release-artifact-parser -->
+#### Bound release artifact title parsing
+
+Release validation now parses contributed title lines in linear time, preventing malformed OpenSpec content from causing polynomial regular-expression work in CI.
+
 ## [0.4.1] - 2026-08-18
 
 ## [0.4.0] - 2026-08-18
