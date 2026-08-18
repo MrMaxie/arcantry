@@ -1,6 +1,6 @@
 ---
 name: audience-scope-discipline
-description: Design, write, review, and implement product-facing or externally shared content and changes for their actual audience while preventing local-context leakage, unnecessary detail, scope creep, incidental refactoring, and preference-driven churn. Use for pull-request descriptions, reviewer handoffs, UI text, messages, documents, exports, configuration, or any task where audience, information layering, local/private boundaries, or requested scope materially affect the result.
+description: Design, write, review, and implement product-facing or externally shared content and changes for their actual audience while preventing local-context leakage, unnecessary detail, scope creep, incidental refactoring, and preference-driven churn. Use for audience-facing artifacts, derived copies of existing structured artifacts, or non-trivial implementation where audience, local/private boundaries, or scope fidelity materially affect the result. Do not use for trivial translation, calculation, or private implementation-only edits with no audience or artifact contract.
 ---
 
 # Audience and Scope Discipline
@@ -62,7 +62,20 @@ For every proposed file or code change, answer:
 
 Leave it unchanged when nothing relevant breaks and it does not block safe delivery. Ease of implementation is not evidence that a change belongs in scope.
 
-### 5. Challenge without taking over
+### 5. Preserve existing artifact contracts
+
+When editing or deriving an existing artifact, treat its structure, labels, order, formulas, styles, and detail as contractual unless the requester explicitly authorizes redesign.
+
+Before editing:
+
+1. Identify the exact source artifact and inspect the full affected surface.
+2. Mark elements to preserve, change, remove, or neutralize.
+3. Start from the named source or a fresh copy and make the smallest transformation.
+4. Compare the result with the source for structural and visual drift before handoff.
+
+Do not treat a request to reduce, adapt, or copy as permission to rename, summarize, restructure, or restyle. For comparison or audit copies, preserve source rows and labels. Use the established neutral or disabled values and exclude them from calculations; absent a convention, keep field types valid, such as `0` for an excluded numeric estimate. Delete or reclassify only when explicitly requested. For other artifacts, inspect the source and adjacent versions, then ask one focused question only if the choice remains material and unresolved.
+
+### 6. Challenge without taking over
 
 Challenge a request when it has a material effect on the audience, public contract, risk, or scope and it:
 
@@ -241,4 +254,3 @@ For implementation work, report:
 Do not narrate routine actions or seek confirmation for reversible, obvious steps already authorized by the task.
 
 For independent forward-testing, use a task-equivalent prompt not stored in this skill. After receiving the raw response, evaluate it with [references/evaluation-rubric.md](references/evaluation-rubric.md). Never provide the rubric to the test agent.
-

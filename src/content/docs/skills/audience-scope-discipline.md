@@ -7,7 +7,7 @@ description: "Keep product-facing work useful to its real audience while prevent
 
 <p class="skill-reference-meta"><span>Included since Arcantry 0.3.0</span><code>$audience-scope-discipline</code></p>
 
-Design, write, review, and implement product-facing or externally shared content and changes for their actual audience while preventing local-context leakage, unnecessary detail, scope creep, incidental refactoring, and preference-driven churn. Use for pull-request descriptions, reviewer handoffs, UI text, messages, documents, exports, configuration, or any task where audience, information layering, local/private boundaries, or requested scope materially affect the result.
+Design, write, review, and implement product-facing or externally shared content and changes for their actual audience while preventing local-context leakage, unnecessary detail, scope creep, incidental refactoring, and preference-driven churn. Use for audience-facing artifacts, derived copies of existing structured artifacts, or non-trivial implementation where audience, local/private boundaries, or scope fidelity materially affect the result. Do not use for trivial translation, calculation, or private implementation-only edits with no audience or artifact contract.
 
 ## Link this skill
 

@@ -114,6 +114,12 @@ Prefer the smallest coherent change. Require evidence that the narrow option wou
 
 Do not rewrite understandable content because another phrase sounds better. Change it to correct a demonstrated problem such as ambiguity, inaccuracy, accessibility failure, audience mismatch, or a required terminology conflict.
 
+### Derived structured artifact
+
+A requester asks for a reduced-scope copy of an existing estimate, workbook, configuration, or report.
+
+Start from the named source and preserve its established structure, labels, order, formulas, styles, and level of detail. Change only the requested scope and values. Do not add summaries or redesign the artifact to explain the transformation. For comparison or audit artifacts, keep excluded rows and labels, use the established neutral convention, and exclude them from calculations. If no convention exists, preserve field types, such as `0` for excluded numeric estimates. Delete or reclassify only when explicitly requested.
+
 ### Public contract cleanup
 
 Do not rename or reshape a public contract merely for consistency. Require explicit authorization, compatibility analysis, and an appropriate migration plan.
@@ -125,4 +131,3 @@ Do not rename or reshape a public contract merely for consistency. Require expli
 - Establish whether failing validation predates the change.
 - Use the smallest justified unblocker when credible validation is otherwise impossible.
 - Report serious risk privately and stop current work only when continuing would make the risk worse or harder to handle safely.
-
