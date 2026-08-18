@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { parse as parseToml } from 'smol-toml';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createFixtureDirectory, removeFixtures } from './testHelpers.js';
@@ -82,9 +82,10 @@ scope = "packages/app"
   });
 
   it('allows absolute paths only for explicitly supplied external configuration', () => {
-    const absolute = configured().replace('path = "openspec"', 'path = "C:/project/openspec"');
+    const absolutePath = resolve('project', 'openspec').replaceAll('\\', '/');
+    const absolute = configured().replace('path = "openspec"', `path = "${absolutePath}"`);
     expect(() => parseProjectConfig(absolute)).toThrow('Absolute source path requires');
-    expect(parseProjectConfig(absolute, { allowAbsolutePaths: true }).sources.intent?.path).toBe('C:/project/openspec');
+    expect(parseProjectConfig(absolute, { allowAbsolutePaths: true }).sources.intent?.path).toBe(absolutePath);
   });
 
   it('renders TOML Schema discovery metadata and round-trips', () => {
