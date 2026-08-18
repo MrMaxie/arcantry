@@ -21,7 +21,7 @@ export default defineConfig({
         {
           label: 'Start',
           items: [
-            { label: 'Overview', slug: 'index' },
+            { label: 'Homepage', slug: 'index' },
             { label: 'Get started', slug: 'getting-started' },
             { label: 'Adoption paths', slug: 'adoption' }
           ]
@@ -43,7 +43,27 @@ export default defineConfig({
           items: [
             { label: 'CLI', slug: 'reference/cli' },
             { label: 'Configuration', slug: 'reference/configuration' },
-            { label: 'Skill catalog', slug: 'skills/catalog' }
+            {
+              label: 'Skill catalog',
+              collapsed: true,
+              items: [
+                { label: 'Catalog overview', slug: 'skills/catalog' },
+                { label: 'Adopt Arcantry', slug: 'skills/adopt-arcantry' },
+                { label: 'Agent Self Improve', slug: 'skills/agent-self-improve' },
+                { label: 'Audit Skill Portfolio', slug: 'skills/audit-skill-portfolio' },
+                { label: 'Capture Repeatable Work', slug: 'skills/capture-repeatable-work' },
+                { label: 'Evaluate Skill Change', slug: 'skills/evaluate-skill-change' },
+                { label: 'Forge Skill from Conversations', slug: 'skills/forge-skill-from-conversations' },
+                { label: 'Productize Repeatable Work', slug: 'skills/productize-repeatable-work' },
+                { label: 'Select Task Skills', slug: 'skills/select-task-skills' },
+                { label: 'Audience and Scope Discipline', slug: 'skills/audience-scope-discipline' },
+                { label: 'Design Terminal UX', slug: 'skills/design-terminal-ux' },
+                { label: 'Intake Linear Work', slug: 'skills/intake-linear-work' },
+                { label: 'Intake Repository Work', slug: 'skills/intake-repository-work' },
+                { label: 'Promote Meeting Notes', slug: 'skills/promote-meeting-notes' },
+                { label: 'Stage Code Review Findings', slug: 'skills/stage-code-review-findings' }
+              ]
+            }
           ]
         },
         {

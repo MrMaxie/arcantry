@@ -1,30 +1,50 @@
 ---
-import type {} from '@astrojs/starlight';
+import type { StarlightIcon } from '@astrojs/starlight/types';
 import { Icon } from '@astrojs/starlight/components';
 import { faHeart } from '@fortawesome/free-solid-svg-icons';
 
 const { sidebar } = Astro.locals.starlightRoute;
 const [heartWidth, heartHeight, , , heartPath] = faHeart.icon;
-const icons = {
-  Overview: 'rocket',
+const icons: Record<string, StarlightIcon> = {
+  Homepage: 'rocket',
+  'Get started': 'approve-check',
   Adoption: 'approve-check',
+  'Adoption paths': 'approve-check',
   Skills: 'puzzle',
   'Skill catalog': 'list-format',
+  'Catalog overview': 'list-format',
   CLI: 'setting',
-  'Repository workflow': 'code-branch',
-  Changes: 'document',
-  Releases: 'star',
+  Configuration: 'setting',
+  'Inspect, plan and apply': 'code-branch',
+  'todo.txt queues': 'list-format',
+  'Project knowledge stack': 'document',
+  'Change lifecycle': 'document',
+  'Release lifecycle': 'star',
   'Contributor commands': 'open-book',
-  'Repository contract': 'document',
-} as const;
+  'Adopt Arcantry': 'rocket',
+  'Agent Self Improve': 'setting',
+  'Audit Skill Portfolio': 'list-format',
+  'Capture Repeatable Work': 'document',
+  'Evaluate Skill Change': 'approve-check',
+  'Forge Skill from Conversations': 'puzzle',
+  'Productize Repeatable Work': 'code-branch',
+  'Select Task Skills': 'list-format',
+  'Audience and Scope Discipline': 'document',
+  'Design Terminal UX': 'setting',
+  'Intake Linear Work': 'document',
+  'Intake Repository Work': 'code-branch',
+  'Promote Meeting Notes': 'open-book',
+  'Stage Code Review Findings': 'approve-check',
+};
+const iconFor = (label: string): StarlightIcon => icons[label] ?? 'document';
 ---
 
 <div class="navigation">
   {sidebar.map((entry) => (
     entry.type === 'link' ? (
-      <a class:list={['nav-link', { active: entry.isCurrent }]} href={entry.href}>
+      <a class:list={['nav-link', { active: entry.isCurrent }]} href={entry.href} aria-current={entry.isCurrent ? 'page' : undefined}>
         <span class="nav-icon-slot" aria-hidden="true">
-          {entry.label in icons && <Icon name={icons[entry.label as keyof typeof icons]} />}
+          <Icon name={iconFor(entry.label)} />
         </span>
         <span>{entry.label}</span>
       </a>
@@ -32,13 +52,27 @@ const icons = {
       <section class="nav-group">
         <div class="nav-label">{entry.label}</div>
         <div class="nav-items">
-          {entry.entries.map((item) => item.type === 'link' && (
-            <a class:list={['nav-link', { active: item.isCurrent }]} href={item.href}>
-              <span class="nav-icon-slot" aria-hidden="true">
-                {item.label in icons && <Icon name={icons[item.label as keyof typeof icons]} />}
-              </span>
+          {entry.entries.map((item) => item.type === 'link' ? (
+            <a class:list={['nav-link', { active: item.isCurrent }]} href={item.href} aria-current={item.isCurrent ? 'page' : undefined}>
+              <span class="nav-icon-slot" aria-hidden="true"><Icon name={iconFor(item.label)} /></span>
               <span>{item.label}</span>
             </a>
+          ) : (
+            <details class="nav-subgroup" open={!item.collapsed || item.entries.some((child) => child.type === 'link' && child.isCurrent)}>
+              <summary>
+                <span class="nav-icon-slot" aria-hidden="true"><Icon name={iconFor(item.label)} /></span>
+                <span>{item.label}</span>
+                <Icon class="nav-caret" name="right-caret" aria-hidden="true" />
+              </summary>
+              <div class="nav-subitems">
+                {item.entries.map((child) => child.type === 'link' && (
+                  <a class:list={['nav-link', 'nav-sublink', { active: child.isCurrent }]} href={child.href} aria-current={child.isCurrent ? 'page' : undefined}>
+                    <span class="nav-icon-slot" aria-hidden="true"><Icon name={iconFor(child.label)} /></span>
+                    <span>{child.label}</span>
+                  </a>
+                ))}
+              </div>
+            </details>
           ))}
         </div>
       </section>
@@ -87,6 +121,29 @@ const icons = {
       border-left-color: var(--ar-accent-violet);
       background: linear-gradient(90deg, color-mix(in srgb, var(--ar-accent-violet) 9%, transparent), transparent 82%);
     }
+    .nav-subgroup { margin-inline: -.9rem; }
+    :global(.nav-subgroup > summary) {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      padding: .5rem .9rem .5rem 1.6rem;
+      color: var(--ar-text-muted);
+      cursor: pointer;
+      font-size: .83rem;
+      font-weight: 560;
+      letter-spacing: -.015em;
+      list-style: none;
+      transition: color 150ms ease, background-color 150ms ease;
+    }
+    :global(.nav-subgroup > summary::-webkit-details-marker),
+    :global(.nav-subgroup > summary::marker) { content: ''; display: none; }
+    :global(.nav-subgroup > summary:hover) { color: var(--ar-text); background: var(--ar-surface); }
+    :global(.nav-subgroup > summary svg) { color: var(--ar-text-soft); font-size: .9rem; transition: color 150ms ease, transform 150ms ease; }
+    :global(.nav-subgroup > summary:hover svg) { color: var(--ar-accent-blue); }
+    :global(.nav-subgroup[open] > summary) { color: var(--ar-text); }
+    :global(.nav-subgroup[open] > summary > .nav-caret) { transform: rotate(90deg); }
+    .nav-subitems { display: grid; gap: .08rem; padding-bottom: .2rem; }
+    .nav-sublink { margin-inline: 0; padding-left: 2.75rem; font-size: .78rem; }
     .sidebar-foot { display: flex; align-items: center; min-height: 3.25rem; padding: .8rem 1.35rem; border-top: 1px solid var(--ar-border); color: var(--ar-text-soft); font-size: .65rem; }
     .sidebar-credit { display: inline-flex; align-items: center; gap: .26rem; }
     .sidebar-heart {
