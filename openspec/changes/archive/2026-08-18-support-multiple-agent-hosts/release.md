@@ -9,6 +9,6 @@ components:
   - tooling
 ---
 
-# Use Arcantry skills in Codex, Claude Code, and Gemini CLI
+# Use universal Agent Skills with Claude compatibility
 
-Arcantry now links individual skills to each supported agent's native directory and exposes the complete catalog through aligned Codex, Claude Code, and Gemini CLI package manifests.
+Arcantry links individual skills through the universal `.agents` directory, lets Codex consume that standard directly, and can add Claude Code compatibility aliases to the same canonical packages.

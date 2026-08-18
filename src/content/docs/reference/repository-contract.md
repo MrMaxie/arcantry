@@ -9,11 +9,11 @@ Arcantry keeps project knowledge roles distinct while making them inspectable th
 
 | Role | Arcantry model | Responsibility |
 | --- | --- | --- |
-| Authority | OpenSpec source | Accepted product and engineering meaning for its configured scope. |
-| Projection | Changelog source | Consumer-facing release history derived from explicit authority when managed. |
+| Authority | `openspec` or `.local/openspec` | Accepted shared or private product and engineering meaning for its configured scope. |
+| Projection | `CHANGELOG.md` or `.local/CHANGELOG.md` | Shared or private release history derived from explicit authority when managed. |
 | Queue | todo.txt source | Short shared or private work items without product authority. |
-| Capability | Skill package | A reusable procedure that is not project state. |
-| Guidance | `AGENTS.md` or `.local/AGENTS.md` | Shared or private instructions that shape agent behavior. |
+| Capability | `skills/<name>` or `.local/skills/<name>` | A reusable public or private procedure that is not project knowledge. |
+| Guidance | `AGENTS.md` or `.local/AGENTS.md` | Universal shared or private instructions that shape agent behavior. |
 | Privacy boundary | `.local/` | Machine-local configuration and sources that must remain untracked. |
 | Verification evidence | Static, automated, live, independent, or user checks | Proof matched to the risk and acceptance boundary. |
 
@@ -40,6 +40,8 @@ A project can manage one source, validate another, observe a third, and omit the
 
 Source dependencies form an acyclic `from` graph. A managed changelog projects release meaning from one or more OpenSpec authorities. Git commits and diffs remain implementation evidence and do not generate consumer release prose.
 
+Shared release history cannot depend on private intent. Private release history may compose shared and private intent because it remains inside the same privacy boundary.
+
 An observed changelog can exist without OpenSpec. Arcantry may inspect it, but it cannot invent new release meaning for it.
 
 Todo queues stay independent until an explicit move. A hot thought belongs in todo before it becomes accepted intent. Accepted intent belongs in OpenSpec. Completed consumer impact belongs in the changelog. A repeated procedure belongs in the skill improvement pipeline.
@@ -51,6 +53,8 @@ Todo queues stay independent until an explicit move. A hot thought belongs in to
 - `content-safely` protects audience and privacy while improving terminal experiences and product writing.
 
 Skills can be used without repository adoption. They do not install themselves or establish project facts.
+
+`.agents/skills` is the universal installation surface. Codex consumes it directly. Claude compatibility uses imports and aliases in branded locations while preserving the universal guidance and canonical package as the only source.
 
 ## Safety invariants
 

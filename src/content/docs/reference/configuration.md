@@ -63,6 +63,8 @@ adapter = "todo-txt@1"
 visibility = "private"
 ```
 
+The equivalent private intent and release sources use `.local/openspec` and `.local/CHANGELOG.md`. They can be configured explicitly or discovered without configuration.
+
 ## Top-level fields
 
 | Field | Required | Contract |
@@ -89,10 +91,12 @@ visibility = "private"
 
 ## Relationships and privacy
 
-`from` relationships form an acyclic graph. A managed changelog requires at least one OpenSpec source. Managed OpenSpec scopes cannot overlap.
+`from` relationships form an acyclic graph. A managed changelog requires at least one OpenSpec source. Shared and private OpenSpec authorities can govern the same project scope independently, but authorities with the same visibility cannot overlap.
 
 Project-local configuration rejects absolute source paths. An explicit external configuration may use them. A source inside `.local` is private and cannot be declared shared.
 
 Shared and private source content is not synchronized automatically. Use inspection and an explicit transition plan to promote, relocate, or preserve it.
+
+A shared changelog cannot depend on private OpenSpec because collaborators could not reproduce that release meaning. A private changelog may depend on shared OpenSpec, private OpenSpec, or both.
 
 The editor contract is [arcantry-config-v1.tosd](/arcantry/schemas/arcantry-config-v1.tosd). Runtime validation also enforces SemVer compatibility, graph cycles, authority overlap, path privacy, and changelog dependencies.

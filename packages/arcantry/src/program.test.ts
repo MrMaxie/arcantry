@@ -178,7 +178,7 @@ adapter = "todo-txt@1"
     expect((await run(root, ['skills', 'unlink', 'example-skill', '--target', links])).stdout).toContain('Unlinked: example-skill');
   });
 
-  it('links skills into native Claude Code and Gemini CLI repository directories', async () => {
+  it('links skills into the universal directory with optional Claude compatibility', async () => {
     const root = await createFixtureRepository();
     const skill = join(root, 'skills', 'example-skill');
     await mkdir(join(skill, 'agents'), { recursive: true });
@@ -200,21 +200,56 @@ adapter = "todo-txt@1"
     );
     await writeFile(join(skill, 'agents', 'openai.yaml'), 'interface:\n  default_prompt: Use $example-skill.\n');
 
-    expect((await run(root, ['skills', 'link', 'example-skill', '--scope', 'repo', '--agent', 'claude'])).exitCode).toBe(0);
-    expect((await run(root, ['skills', 'doctor', '--scope', 'repo', '--agent', 'claude'])).exitCode).toBe(0);
-    expect((await run(root, ['skills', 'unlink', 'example-skill', '--scope', 'repo', '--agent', 'claude'])).exitCode).toBe(0);
-    expect((await run(root, ['skills', 'link', 'example-skill', '--scope', 'repo', '--agent', 'gemini'])).exitCode).toBe(0);
-    expect((await run(root, ['skills', 'unlink', 'example-skill', '--scope', 'repo', '--agent', 'gemini'])).exitCode).toBe(0);
+    expect((await run(root, ['skills', 'link', 'example-skill', '--scope', 'repo', '--compat', 'claude'])).exitCode).toBe(0);
+    expect((await run(root, ['skills', 'doctor', '--scope', 'repo', '--compat', 'claude'])).exitCode).toBe(0);
+    expect((await run(root, ['skills', 'unlink', 'example-skill', '--scope', 'repo', '--compat', 'claude'])).exitCode).toBe(0);
   });
 
-  it('rejects agent selection without scope or with an explicit target', async () => {
+  it('rejects compatibility without scope or with an explicit target', async () => {
     const root = await createFixtureRepository();
-    const withoutScope = await run(root, ['skills', 'doctor', '--agent', 'claude']);
-    const withTarget = await run(root, ['skills', 'doctor', '--agent', 'claude', '--target', 'links']);
+    const withoutScope = await run(root, ['skills', 'doctor', '--compat', 'claude']);
+    const withTarget = await run(root, ['skills', 'doctor', '--compat', 'claude', '--target', 'links']);
 
     expect(withoutScope.exitCode).toBe(1);
-    expect(withoutScope.stderr).toContain('--agent requires --scope user|repo');
+    expect(withoutScope.stderr).toContain('--compat requires --scope user|repo|private');
     expect(withTarget.exitCode).toBe(1);
-    expect(withTarget.stderr).toContain('--target cannot be combined with --scope or --agent');
+    expect(withTarget.stderr).toContain('--target cannot be combined with --scope or --compat');
+  });
+
+  it('links private repository skills without adding them to the public catalog', async () => {
+    const root = await createFixtureRepository();
+    const privateSkill = join(root, '.local/skills/private-helper');
+    await mkdir(privateSkill, { recursive: true });
+    await writeFile(
+      join(privateSkill, 'SKILL.md'),
+      '---\nname: private-helper\ndescription: Use one private repository workflow without publishing its local instructions.\n---\n',
+    );
+
+    const result = await run(root, ['skills', 'link', 'private-helper', '--scope', 'private', '--compat', 'claude']);
+
+    expect(result.exitCode).toBe(0);
+    expect((await run(root, ['skills', 'list', '--scope', 'private'])).stdout).toContain('private-helper');
+    expect(await readFile(join(root, '.git/info/exclude'), 'utf8')).toContain('.agents/skills/private-helper');
+    expect(await readFile(join(root, '.git/info/exclude'), 'utf8')).toContain('.claude/skills/private-helper');
+  });
+
+  it('rejects a private skill that reuses a public catalog identity', async () => {
+    const root = await createFixtureRepository();
+    const privateSkill = join(root, '.local/skills/example-skill');
+    await mkdir(privateSkill, { recursive: true });
+    await mkdir(join(root, 'skills'));
+    await writeFile(join(root, 'catalog.json'), '{"$schema":"./schemas/catalog.schema.json","skills":[{"name":"example-skill","family":"repo-safely","tags":["quality"]}]}\n');
+    await writeFile(
+      join(privateSkill, 'SKILL.md'),
+      '---\nname: example-skill\ndescription: Keep this private package distinct from every public skill identity.\n---\n',
+    );
+
+    const link = await run(root, ['skills', 'link', 'example-skill', '--scope', 'private']);
+    const doctor = await run(root, ['skills', 'doctor', '--scope', 'private']);
+
+    expect(link.exitCode).toBe(1);
+    expect(link.stderr).toContain('exists in both the public catalog and .local/skills');
+    expect(doctor.exitCode).toBe(1);
+    expect(doctor.stderr).toContain('exists in both the public catalog and .local/skills');
   });
 });

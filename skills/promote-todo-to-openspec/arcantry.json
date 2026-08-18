@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
-  "summary": "Review todo.txt items and propose approval-gated, privacy-safe transformations into existing or new OpenSpec changes.",
+  "summary": "Group selected todo.txt items into privacy-safe OpenSpec transformations and hold every proposed change for approval.",
   "compatibility": {
     "sourceKinds": ["openspec", "todo-txt"]
   },
@@ -13,12 +13,12 @@
   "scenarios": [
     {
       "title": "Review a mixed todo queue",
-      "prompt": "Use $promote-todo-to-openspec to classify this todo.txt and propose separate transformations for my approval before changing files.",
+      "prompt": "Use the promote-todo-to-openspec skill to classify this todo.txt and propose separate transformations for my approval before changing files.",
       "outcome": "Every item is accounted for while operational, unclear, private, and sensitive work remains outside shared specifications."
     },
     {
       "title": "Consolidate overlapping product intent",
-      "prompt": "Use $promote-todo-to-openspec to map these overlapping todo.txt entries into existing or new OpenSpec changes without assuming one-to-one promotion.",
+      "prompt": "Use the promote-todo-to-openspec skill to map these overlapping todo.txt entries into existing or new OpenSpec changes without assuming one-to-one promotion.",
       "outcome": "A coverage ledger presents merge, split, relocation, and preservation choices that can be accepted independently."
     }
   ]

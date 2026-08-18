@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit Codex skill metadata without changing skills or configuration."""
+"""Audit Agent Skills metadata without changing skills or configuration."""
 
 from __future__ import annotations
 
@@ -63,7 +63,7 @@ class ConfigRule:
 
 def default_roots() -> list[Path]:
     home = Path.home()
-    return [home / ".codex" / "skills", home / ".agents" / "skills"]
+    return [home / ".agents" / "skills", home / ".claude" / "skills", home / ".codex" / "skills"]
 
 
 def strip_yaml_scalar(value: str) -> str:
@@ -646,4 +646,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -1,6 +1,6 @@
 ---
 name: audience-scope-discipline
-description: Keep product-facing or shared work faithful to its audience, scope, privacy boundary, and established artifact contract. Use when content, implementation, or a derived artifact could leak local context, drift in scope, or change an approved representation.
+description: Protect the audience, scope, privacy boundary, and established structure of product-facing or derived artifacts when implementation or content could drift.
 ---
 
 # Audience and Scope Discipline

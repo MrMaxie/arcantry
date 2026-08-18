@@ -185,7 +185,6 @@ describe('release state validation', () => {
     writeFileSync(join(packageRoot, 'package.json'), '{"version":"0.1.0"}\n');
     writeFileSync(join(codexPluginRoot, 'plugin.json'), '{"version":"0.1.0"}\n');
     writeFileSync(join(claudePluginRoot, 'plugin.json'), '{"version":"0.1.0"}\n');
-    writeFileSync(join(root, 'gemini-extension.json'), '{"version":"0.1.0"}\n');
     expect(() => validateDistributionVersions(root)).not.toThrow();
     writeFileSync(join(claudePluginRoot, 'plugin.json'), '{"version":"0.2.0"}\n');
     expect(() => validateDistributionVersions(root)).toThrow('distribution version must match release 0.1.0');

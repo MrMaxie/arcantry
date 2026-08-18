@@ -48,6 +48,9 @@ const rawProjectConfigSchema = z
   })
   .strict()
   .superRefine((config, context) => {
+    const effectiveVisibility = (source: z.infer<typeof sourceConfigSchema>): Visibility =>
+      source.visibility ?? (isPrivateProjectPath(source.path) ? 'private' : 'shared');
+
     for (const [id, source] of Object.entries(config.sources)) {
       if (!sourceIdPattern.test(id)) {
         context.addIssue({ code: 'custom', message: 'source ids may contain letters, numbers, dot, underscore and hyphen.', path: ['sources', id] });
@@ -57,13 +60,15 @@ const rawProjectConfigSchema = z
           context.addIssue({ code: 'custom', message: `unknown source dependency: ${dependency}`, path: ['sources', id, 'from'] });
         }
       }
-      if (source.kind === 'changelog' && source.management === 'manage') {
-        if (source.from.length === 0) {
+      if (source.kind === 'changelog') {
+        if (source.management === 'manage' && source.from.length === 0) {
           context.addIssue({ code: 'custom', message: 'managed changelog sources require at least one OpenSpec source.', path: ['sources', id, 'from'] });
         }
         for (const dependency of source.from) {
           if (config.sources[dependency]?.kind !== 'openspec') {
             context.addIssue({ code: 'custom', message: 'managed changelog dependencies must be OpenSpec sources.', path: ['sources', id, 'from'] });
+          } else if (effectiveVisibility(source) === 'shared' && effectiveVisibility(config.sources[dependency]) === 'private') {
+            context.addIssue({ code: 'custom', message: 'shared changelog sources cannot depend on private OpenSpec sources.', path: ['sources', id, 'from'] });
           }
         }
       }
@@ -95,7 +100,8 @@ const rawProjectConfigSchema = z
       ([, source]) => source.kind === 'openspec' && source.management === 'manage',
     );
     for (const [index, [id, source]] of managedOpenSpec.entries()) {
-      const conflicting = managedOpenSpec.slice(index + 1).find(([, candidate]) => scopesOverlap(candidate.scope, source.scope));
+      const conflicting = managedOpenSpec.slice(index + 1).find(([, candidate]) =>
+        effectiveVisibility(candidate) === effectiveVisibility(source) && scopesOverlap(candidate.scope, source.scope));
       if (conflicting !== undefined) {
         context.addIssue({
           code: 'custom',

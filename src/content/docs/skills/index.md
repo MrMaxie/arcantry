@@ -21,39 +21,49 @@ No family is a router skill. Every catalog entry performs one focused job.
 arcantry skills list
 arcantry skills inspect <name>
 arcantry skills link <name> --scope user
-arcantry skills link <name> --scope user --agent claude
-arcantry skills link <name> --scope user --agent gemini
+arcantry skills link <name> --scope user --compat claude
 arcantry skills doctor --scope user
 ```
 
-The target depends on scope and agent:
+Arcantry recommends the universal Agent Skills locations:
 
-| Agent | User scope | Repository scope |
+| Surface | User scope | Repository scope |
 | --- | --- | --- |
-| Codex or default | `~/.agents/skills` | `<repo>/.agents/skills` |
-| Claude Code | `~/.claude/skills` | `<repo>/.claude/skills` |
-| Gemini CLI | `~/.gemini/skills` | `<repo>/.gemini/skills` |
+| Universal Agent Skills | `~/.agents/skills` | `<repo>/.agents/skills` |
+| Optional Claude compatibility | `~/.claude/skills` | `<repo>/.claude/skills` |
 
-Repository scope uses the same agent profile:
+Codex reads the universal surface directly. Claude Code compatibility is an additional alias to the same canonical package:
 
 ```text
-arcantry skills link <name> --scope repo --agent claude
+arcantry skills link <name> --scope repo --compat claude
 ```
 
-Use `--target <path>` only for an advanced explicit Agent Skills directory. It cannot be combined with `--scope` or `--agent`.
+Use `--target <path>` only for an advanced explicit Agent Skills directory. It cannot be combined with `--scope` or `--compat`.
 
-Linking is idempotent when the target already points to the canonical package. Arcantry does not overwrite an ordinary directory. `--replace` creates a backup first. Unlinking removes only an exact link to the selected Arcantry skill.
+Linking is idempotent when the target already points to the canonical package. Arcantry preflights the universal and compatibility destinations before writing. It does not overwrite an ordinary directory. `--replace` creates a backup first. Unlinking removes only exact links to the selected skill.
+
+## Keep repository skills private
+
+A repository can keep a canonical skill under `.local/skills/<name>` and expose it through locally excluded links:
+
+```text
+arcantry skills list --scope private
+arcantry skills inspect <name> --scope private
+arcantry skills link <name> --scope private
+arcantry skills link <name> --scope private --compat claude
+```
+
+Private and public packages cannot reuse the same skill name. `.agents` and `.claude` aliases that resolve to one real package remain one skill, not duplicates.
 
 ## Load the complete catalog
 
-The repository exposes the same `skills/` tree through native host manifests:
+The repository exposes the same `skills/` tree through optional package manifests:
 
 ```text
 claude --plugin-dir ./arcantry
-gemini extensions install https://github.com/MrMaxie/arcantry
 ```
 
-Claude Code namespaces plugin skills as `/arcantry:<name>`. Gemini CLI loads the catalog as the `arcantry` extension. Codex uses `.codex-plugin/plugin.json` from the same repository. All three manifests carry the current Arcantry version.
+Claude Code namespaces plugin skills as `/arcantry:<name>`. Codex can use `.codex-plugin/plugin.json` from the same repository. Both manifests carry the current Arcantry version, but neither is required for the universal `.agents` workflow.
 
 ## Other Agent Skills workflows
 

@@ -1,24 +1,31 @@
 import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { relative, resolve } from 'node:path';
 import { Command } from 'commander';
 import { ZodError } from 'zod';
 import {
+  doctorPrivateSkills,
   doctorSkills,
   findCatalogRoot,
+  inspectPrivateSkill,
   inspectSkill,
-  linkSkill,
+  linkSkillTargets,
+  listPrivateSkills,
   loadCatalog,
+  privateSkillExists,
+  repositoryClaudeSkillTargetRoot,
   repositorySkillTargetRoot,
-  skillAgentSchema,
-  type SkillAgent,
-  unlinkSkill,
+  rollbackSkillLinks,
+  unlinkSkillTargets,
+  userClaudeSkillTargetRoot,
   userSkillTargetRoot,
+  type SkillLinkOptions,
 } from './catalog.js';
 import {
   doctorRepository,
   initRepository,
   removeRepository,
+  repositoryCompatibilitySchema,
   repositoryScopeSchema,
   resolveRepositoryRoot,
   updateRepository,
@@ -27,11 +34,11 @@ import {
   type RepositoryResult,
 } from './repository.js';
 import { displaySourcePath, inspectKnowledge, validateKnowledge, type KnowledgeInspection } from './knowledge.js';
-import { applyProjectPlan, createProjectPlan, createWriteOperation, parseProjectPlan, renderProjectPlan, serializeProjectPlan } from './projectPlan.js';
+import { applyProjectPlan, createProjectPlan, createWriteOperation, parseProjectPlan, renderProjectPlan, serializeProjectPlan, type PlanOperation } from './projectPlan.js';
 import { resolveProject, transitionSchema } from './projectConfig.js';
 import { planSourceTransition } from './sourceTransition.js';
 import { addTodoTask, completeTodoTask, inspectTodoTasks, moveTodoTask } from './todoTxt.js';
-import { planLocalGitExclude } from './privateState.js';
+import { planLocalGitExclude, planLocalGitExcludeEntries } from './privateState.js';
 import type { ProjectSource } from './knowledge.js';
 
 const packageManifest = JSON.parse(
@@ -129,9 +136,14 @@ export const buildProgram = (context: CliContext): Command => {
     .command('init')
     .description('Initialize minimal shared or private Arcantry repository state.')
     .requiredOption('--scope <scope>', 'Configuration scope: shared or private.')
-    .action(async (options: { scope: string }) => {
+    .option('--compat <compatibility>', 'Add an explicit compatibility adapter: claude.')
+    .action(async (options: { scope: string; compat?: string }) => {
       await execute(program, context, async () => {
-        const result = await initRepository(commandCwd(program, context), repositoryScopeSchema.parse(options.scope));
+        const result = await initRepository(
+          commandCwd(program, context),
+          repositoryScopeSchema.parse(options.scope),
+          parseCompatibility(options.compat),
+        );
         renderRepositoryResult(context, result);
       });
     });
@@ -140,8 +152,13 @@ export const buildProgram = (context: CliContext): Command => {
     .command('update')
     .description('Refresh owned artifacts while preserving configuration.')
     .requiredOption('--scope <scope>', 'Configuration scope: shared or private.')
-    .action(async (options: { scope: string }) => execute(program, context, async () =>
-      renderRepositoryResult(context, await updateRepository(commandCwd(program, context), repositoryScopeSchema.parse(options.scope)))));
+    .option('--compat <compatibility>', 'Add or refresh an explicit compatibility adapter: claude.')
+    .action(async (options: { scope: string; compat?: string }) => execute(program, context, async () =>
+      renderRepositoryResult(context, await updateRepository(
+        commandCwd(program, context),
+        repositoryScopeSchema.parse(options.scope),
+        parseCompatibility(options.compat),
+      ))));
 
   repo
     .command('doctor')
@@ -269,10 +286,17 @@ export const buildProgram = (context: CliContext): Command => {
   const skills = program.command('skills').description('Inspect the catalog and manage skill links.');
   skills
     .command('list')
-    .description('List skills in the canonical catalog.')
+    .description('List public catalog skills or private repository skills.')
     .option('--catalog-root <path>', 'Directory containing catalog.json and skills/.')
-    .action(async (options: { catalogRoot?: string }) => {
+    .option('--scope <scope>', 'Inventory scope: public or private.', 'public')
+    .action(async (options: { catalogRoot?: string; scope: string }) => {
       await execute(program, context, async () => {
+        if (options.scope === 'private') {
+          const root = await resolveRepositoryRoot(commandCwd(program, context));
+          for (const skill of await listPrivateSkills(root)) context.stdout(`${skill.name}\tprivate\t${skill.description}\n`);
+          return;
+        }
+        if (options.scope !== 'public') throw new Error('--scope must be public or private.');
         const root = await catalogRoot(program, context, options.catalogRoot);
         const catalog = await loadCatalog(root);
         for (const entry of catalog.skills) context.stdout(`${entry.name}\t${entry.family}\t${entry.tags.join(', ')}\n`);
@@ -281,10 +305,17 @@ export const buildProgram = (context: CliContext): Command => {
 
   skills
     .command('inspect <name>')
-    .description('Show public metadata for one skill.')
+    .description('Show metadata for one public or private skill.')
     .option('--catalog-root <path>', 'Directory containing catalog.json and skills/.')
-    .action(async (name: string, options: { catalogRoot?: string }) => {
+    .option('--scope <scope>', 'Inventory scope: public or private.', 'public')
+    .action(async (name: string, options: { catalogRoot?: string; scope: string }) => {
       await execute(program, context, async () => {
+        if (options.scope === 'private') {
+          const inspection = await inspectPrivateSkill(await resolveRepositoryRoot(commandCwd(program, context)), name);
+          context.stdout(`${inspection.name}\n${inspection.description}\nVisibility: private\nSource: ${inspection.directory}\n`);
+          return;
+        }
+        if (options.scope !== 'public') throw new Error('--scope must be public or private.');
         const inspection = await inspectSkill(await catalogRoot(program, context, options.catalogRoot), name);
         context.stdout(`${inspection.entry.name}\n${inspection.metadata.summary}\nFamily: ${inspection.entry.family}\nTags: ${inspection.entry.tags.join(', ')}\n`);
         for (const scenario of inspection.metadata.scenarios) context.stdout(`- ${scenario.title}: ${scenario.outcome}\n`);
@@ -293,22 +324,24 @@ export const buildProgram = (context: CliContext): Command => {
 
   skills
     .command('link <name>')
-    .description('Link one catalog skill into a supported agent skill directory.')
+    .description('Link one canonical skill into the universal Agent Skills directory.')
     .option('--catalog-root <path>', 'Directory containing catalog.json and skills/.')
-    .option('--scope <scope>', 'Skill scope: user or repo.')
-    .option('--agent <agent>', 'Agent host: codex, claude, or gemini.')
+    .option('--scope <scope>', 'Skill scope: user, repo, or private.')
+    .option('--compat <compatibility>', 'Also add a compatibility alias: claude.')
     .option('--target <path>', 'Advanced explicit Agent Skills directory.')
     .option('--replace', 'Back up an ordinary target or replace a different link before linking.')
-    .action(async (name: string, options: { catalogRoot?: string; scope?: string; agent?: string; target?: string; replace?: boolean }) => {
+    .action(async (name: string, options: SkillCommandOptions) => {
       await execute(program, context, async () => {
-        const result = await linkSkill({
-          catalogRoot: await catalogRoot(program, context, options.catalogRoot),
-          name,
-          targetRoot: await resolveSkillTarget(program, context, options),
-          replace: options.replace,
-        });
-        context.stdout(result.status === 'unchanged' ? `Already linked: ${name}\n` : `Linked: ${name}\n`);
-        if (result.backup !== null) context.stdout(`Backup: ${result.backup}\n`);
+        const operation = await resolveSkillOperation(program, context, name, options);
+        const results = await linkSkillTargets({ ...operation.source, name, replace: options.replace }, operation.targetRoots);
+        try {
+          if (operation.privateRoot !== null) await excludePrivateSkillLinks(operation.privateRoot, name, operation.targetRoots);
+        } catch (error) {
+          await rollbackSkillLinks(results);
+          throw error;
+        }
+        context.stdout(results.every((result) => result.status === 'unchanged') ? `Already linked: ${name}\n` : `Linked: ${name}\n`);
+        for (const result of results) if (result.backup !== null) context.stdout(`Backup: ${result.backup}\n`);
       });
     });
 
@@ -316,33 +349,38 @@ export const buildProgram = (context: CliContext): Command => {
     .command('unlink <name>')
     .description('Remove only an exact link to one catalog skill.')
     .option('--catalog-root <path>', 'Directory containing catalog.json and skills/.')
-    .option('--scope <scope>', 'Skill scope: user or repo.')
-    .option('--agent <agent>', 'Agent host: codex, claude, or gemini.')
+    .option('--scope <scope>', 'Skill scope: user, repo, or private.')
+    .option('--compat <compatibility>', 'Also remove the compatibility alias: claude.')
     .option('--target <path>', 'Advanced explicit Agent Skills directory.')
-    .action(async (name: string, options: { catalogRoot?: string; scope?: string; agent?: string; target?: string }) => {
+    .action(async (name: string, options: SkillCommandOptions) => {
       await execute(program, context, async () => {
-        await unlinkSkill({
-          catalogRoot: await catalogRoot(program, context, options.catalogRoot),
-          name,
-          targetRoot: await resolveSkillTarget(program, context, options),
-        });
-        context.stdout(`Unlinked: ${name}\n`);
+        const operation = await resolveSkillOperation(program, context, name, options);
+        const results = await unlinkSkillTargets({ ...operation.source, name }, operation.targetRoots);
+        context.stdout(results.every((result) => result.status === 'unchanged') ? `Already unlinked: ${name}\n` : `Unlinked: ${name}\n`);
       });
     });
 
   skills
     .command('doctor')
-    .description('Validate catalog packages and optionally inspect a skill link directory.')
+    .description('Validate skill packages and optionally inspect universal and compatibility links.')
     .option('--catalog-root <path>', 'Directory containing catalog.json and skills/.')
-    .option('--scope <scope>', 'Skill scope to inspect: user or repo.')
-    .option('--agent <agent>', 'Agent host: codex, claude, or gemini.')
+    .option('--scope <scope>', 'Skill scope to inspect: user, repo, or private.')
+    .option('--compat <compatibility>', 'Also inspect a compatibility alias: claude.')
     .option('--target <path>', 'Advanced explicit Agent Skills directory to inspect.')
-    .action(async (options: { catalogRoot?: string; scope?: string; agent?: string; target?: string }) => {
+    .action(async (options: SkillCommandOptions) => {
       await execute(program, context, async () => {
-        const target = options.scope === undefined && options.agent === undefined && options.target === undefined
-          ? undefined
-          : await resolveSkillTarget(program, context, options);
-        const report = await doctorSkills(await catalogRoot(program, context, options.catalogRoot), target);
+        let report: Awaited<ReturnType<typeof doctorSkills>>;
+        if (options.scope === 'private') {
+          const root = await resolveRepositoryRoot(commandCwd(program, context));
+          const targetRoots = await resolveSkillTargetRoots(program, context, options);
+          const publicCatalog = await loadCatalog(await catalogRoot(program, context, options.catalogRoot));
+          report = await doctorPrivateSkills(root, targetRoots, new Set(publicCatalog.skills.map((entry) => entry.name)));
+        } else {
+          const targetRoots = options.scope === undefined && options.compat === undefined && options.target === undefined
+            ? undefined
+            : await resolveSkillTargetRoots(program, context, options);
+          report = await doctorSkills(await catalogRoot(program, context, options.catalogRoot), targetRoots);
+        }
         for (const error of report.errors) context.stderr(`ERROR: ${error}\n`);
         for (const warning of report.warnings) context.stdout(`WARNING: ${warning}\n`);
         if (report.valid) context.stdout('Skill catalog is valid.\n');
@@ -506,26 +544,96 @@ const localDate = (): string => {
   return `${year}-${month}-${day}`;
 };
 
-const resolveSkillTarget = async (
+type SkillCommandOptions = {
+  catalogRoot?: string;
+  scope?: string;
+  compat?: string;
+  target?: string;
+  replace?: boolean;
+};
+
+type ResolvedSkillOperation = {
+  source: Pick<SkillLinkOptions, 'catalogRoot' | 'sourceDirectory'>;
+  targetRoots: string[];
+  privateRoot: string | null;
+};
+
+const resolveSkillOperation = async (
   program: Command,
   context: CliContext,
-  options: { scope?: string; agent?: string; target?: string },
-): Promise<string> => {
-  if (options.target !== undefined && (options.scope !== undefined || options.agent !== undefined)) {
-    throw new Error('--target cannot be combined with --scope or --agent.');
+  name: string,
+  options: SkillCommandOptions,
+): Promise<ResolvedSkillOperation> => {
+  const targetRoots = await resolveSkillTargetRoots(program, context, options);
+  if (options.scope === 'private') {
+    const root = await resolveRepositoryRoot(commandCwd(program, context));
+    const privateSkill = await inspectPrivateSkill(root, name);
+    const publicRoot = await catalogRoot(program, context, options.catalogRoot);
+    if ((await loadCatalog(publicRoot)).skills.some((entry) => entry.name === name)) {
+      throw new Error(`Skill name conflict: ${name} exists in both the public catalog and .local/skills.`);
+    }
+    return { source: { sourceDirectory: privateSkill.directory }, targetRoots, privateRoot: root };
   }
-  if (options.target !== undefined) return resolve(commandCwd(program, context), options.target);
-  if (options.agent !== undefined && options.scope === undefined) {
-    throw new Error('--agent requires --scope user|repo.');
-  }
-  const agent: SkillAgent = options.agent === undefined ? 'codex' : skillAgentSchema.parse(options.agent);
-  if (options.scope === 'user') return userSkillTargetRoot(agent);
   if (options.scope === 'repo') {
-    return repositorySkillTargetRoot(await resolveRepositoryRoot(commandCwd(program, context)), agent);
+    const root = await resolveRepositoryRoot(commandCwd(program, context));
+    if (await privateSkillExists(root, name)) {
+      throw new Error(`Skill name conflict: ${name} exists in both the public catalog and .local/skills.`);
+    }
   }
-  if (options.scope !== undefined) throw new Error('--scope must be user or repo.');
-  throw new Error('Choose --scope user|repo or provide --target.');
+  return {
+    source: { catalogRoot: await catalogRoot(program, context, options.catalogRoot) },
+    targetRoots,
+    privateRoot: null,
+  };
 };
+
+const resolveSkillTargetRoots = async (
+  program: Command,
+  context: CliContext,
+  options: Pick<SkillCommandOptions, 'scope' | 'compat' | 'target'>,
+): Promise<string[]> => {
+  if (options.target !== undefined && (options.scope !== undefined || options.compat !== undefined)) {
+    throw new Error('--target cannot be combined with --scope or --compat.');
+  }
+  if (options.target !== undefined) return [resolve(commandCwd(program, context), options.target)];
+  const compatibility = parseCompatibility(options.compat);
+  if (compatibility !== null && options.scope === undefined) {
+    throw new Error('--compat requires --scope user|repo|private.');
+  }
+  if (options.scope === 'user') {
+    return compatibility === 'claude' ? [userSkillTargetRoot(), userClaudeSkillTargetRoot()] : [userSkillTargetRoot()];
+  }
+  if (options.scope === 'repo' || options.scope === 'private') {
+    const root = await resolveRepositoryRoot(commandCwd(program, context));
+    return compatibility === 'claude'
+      ? [repositorySkillTargetRoot(root), repositoryClaudeSkillTargetRoot(root)]
+      : [repositorySkillTargetRoot(root)];
+  }
+  if (options.scope !== undefined) throw new Error('--scope must be user, repo, or private.');
+  throw new Error('Choose --scope user|repo|private or provide --target.');
+};
+
+const excludePrivateSkillLinks = async (root: string, name: string, targetRoots: string[]): Promise<void> => {
+  const entries = ['.local/'];
+  for (const targetRoot of targetRoots) {
+    const relativeRoot = relative(resolve(root), resolve(targetRoot)).replaceAll('\\', '/');
+    if (!relativeRoot.startsWith('../') && relativeRoot !== '') entries.push(`${relativeRoot}/${name}`);
+  }
+  const operations: PlanOperation[] = [];
+  await planLocalGitExcludeEntries(root, entries, operations);
+  if (operations.length === 0) return;
+  await applyProjectPlan(createProjectPlan({
+    toolVersion: arcantryVersion,
+    root,
+    sourceId: `private-skill-${name}`,
+    transition: 'preserve',
+    adapter: 'agent-skill@1',
+    operations,
+  }), arcantryVersion);
+};
+
+const parseCompatibility = (value: string | undefined): 'claude' | null =>
+  value === undefined ? null : repositoryCompatibilitySchema.parse(value);
 
 const formatError = (error: unknown): string => {
   if (error instanceof ZodError) return error.issues.map((issue) => issue.message).join(' ');

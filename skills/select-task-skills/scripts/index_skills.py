@@ -27,6 +27,7 @@ def scan(root: Path, scope: str) -> list[dict[str, object]]:
                 "availability": "use_now",
                 "scope": scope,
                 "path": str(path.resolve()),
+                "alias_path": str(path.absolute()),
             })
     return items
 
@@ -39,11 +40,32 @@ def main() -> int:
     args = parser.parse_args()
     home = Path.home()
     codex_home = (args.codex_home or Path(os.environ.get("CODEX_HOME", home / ".codex"))).resolve()
-    items = scan(codex_home / "skills", "global") + scan(home / ".agents" / "skills", "user")
+    items = (
+        scan(home / ".agents" / "skills", "user")
+        + scan(home / ".claude" / "skills", "user-compat")
+        + scan(codex_home / "skills", "global")
+    )
     if args.project_root:
         project = args.project_root.resolve()
         items += scan(project / ".agents" / "skills", "project")
-        items += scan(project / ".codex" / "skills", "project")
+        items += scan(project / ".claude" / "skills", "project-compat")
+        items += scan(project / ".local" / "skills", "private")
+    scope_priority = {"private": 0, "project": 1, "project-compat": 2, "user": 3, "user-compat": 4, "global": 5}
+    deduplicated: dict[str, dict[str, object]] = {}
+    for item in items:
+        key = os.path.normcase(os.path.realpath(str(item["path"])))
+        existing = deduplicated.get(key)
+        if existing is None:
+            item["aliases"] = [item.pop("alias_path")]
+            deduplicated[key] = item
+            continue
+        existing["aliases"] = sorted(
+            set([*existing.get("aliases", []), str(item["alias_path"])]),
+            key=str.casefold,
+        )
+        if scope_priority[str(item["scope"])] < scope_priority[str(existing["scope"] )]:
+            existing["scope"] = item["scope"]
+    items = list(deduplicated.values())
     counts: dict[str, int] = {}
     for item in items:
         counts[str(item["name"])] = counts.get(str(item["name"]), 0) + 1

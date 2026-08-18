@@ -5,9 +5,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   inspectSkill,
   linkSkill,
+  linkSkillTargets,
+  repositoryClaudeSkillTargetRoot,
   repositorySkillTargetRoot,
-  skillAgentSchema,
   unlinkSkill,
+  userClaudeSkillTargetRoot,
   userSkillTargetRoot,
   validateCatalog,
 } from './catalog.js';
@@ -51,12 +53,11 @@ const createCatalogFixture = async (): Promise<string> => {
 };
 
 describe('skill catalog', () => {
-  it('maps supported agents to their native skill directories', () => {
-    expect(userSkillTargetRoot('codex')).toMatch(/[\\/]\.agents[\\/]skills$/);
-    expect(userSkillTargetRoot('claude')).toMatch(/[\\/]\.claude[\\/]skills$/);
-    expect(userSkillTargetRoot('gemini')).toMatch(/[\\/]\.gemini[\\/]skills$/);
-    expect(repositorySkillTargetRoot('/project', 'claude')).toMatch(/[\\/]project[\\/]\.claude[\\/]skills$/);
-    expect(skillAgentSchema.safeParse('cursor').success).toBe(false);
+  it('keeps the universal target separate from Claude compatibility', () => {
+    expect(userSkillTargetRoot()).toMatch(/[\\/]\.agents[\\/]skills$/);
+    expect(userClaudeSkillTargetRoot()).toMatch(/[\\/]\.claude[\\/]skills$/);
+    expect(repositorySkillTargetRoot('/project')).toMatch(/[\\/]project[\\/]\.agents[\\/]skills$/);
+    expect(repositoryClaudeSkillTargetRoot('/project')).toMatch(/[\\/]project[\\/]\.claude[\\/]skills$/);
   });
 
   it('validates and inspects canonical skill packages', async () => {
@@ -74,6 +75,17 @@ describe('skill catalog', () => {
     expect((await linkSkill({ catalogRoot: root, name: 'example-skill', targetRoot })).status).toBe('linked');
     expect((await linkSkill({ catalogRoot: root, name: 'example-skill', targetRoot })).status).toBe('unchanged');
     expect((await unlinkSkill({ catalogRoot: root, name: 'example-skill', targetRoot })).status).toBe('unlinked');
+  });
+
+  it('links one canonical package through universal and Claude aliases', async () => {
+    const root = await createCatalogFixture();
+    const universal = await createFixtureDirectory('arcantry-universal-links-');
+    const claude = await createFixtureDirectory('arcantry-claude-links-');
+
+    const results = await linkSkillTargets({ catalogRoot: root, name: 'example-skill' }, [universal, claude]);
+
+    expect(results.map((result) => result.status)).toEqual(['linked', 'linked']);
+    expect(results[0]?.source).toBe(results[1]?.source);
   });
 
   it('backs up an ordinary directory only with explicit replacement', async () => {

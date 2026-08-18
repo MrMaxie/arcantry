@@ -1,6 +1,6 @@
 ---
 name: capture-repeatable-work
-description: Find repeated friction in supplied or recent Codex conversations and propose the smallest durable artifact. Use only when explicitly invoked with $capture-repeatable-work; remain read-only and do not create or install anything.
+description: Extract repeated workflow friction from supplied or available conversations and propose the smallest durable carrier without implementing it. Use only when explicitly requested.
 ---
 
 # Capture Repeatable Work
