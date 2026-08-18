@@ -1,50 +1,72 @@
 ---
-title: Repository workflow
-description: Route private context, durable guidance and accepted change intent to the right place.
+title: Inspect, plan and apply
+description: Change one project knowledge source through a drift-safe, explicit plan.
 ---
 
-An Arcantry repository separates working context from durable guidance and change governance. The separation keeps private material out of shared artifacts without forcing every project to use the same native build system.
+Use this flow when a source must be adopted, rebound, cut over, migrated, or relocated. Inspection and planning are read-only. Application is the separate mutation boundary.
 
-## Read order
+## Inspect the current stack
 
-1. Follow the explicit instruction for the current task.
-2. Read repository and private agent instructions that apply to the target files.
-3. Read relevant durable guidance under `.docs/`.
-4. Read the active or accepted OpenSpec material for the change.
-5. Confirm behavior in the codebase and current diff.
+```sh
+arcantry repo inspect
+```
 
-This order lets task-specific authority override defaults while keeping durable constraints available to the next contributor.
+Inspection reports the resolved root, configuration mode, source ids, paths, kinds, adapters, visibility, management, existence, and compatibility. Add `--json` for the complete machine-readable result.
 
-## Information ownership
+Use the reported source id in the next step. Inspection does not create a configuration or source.
 
-### `.local/`
+## Plan one transition
 
-Use `.local/` for machine-local agent instructions, access notes, reproduction material, logs and other private execution context. Arcantry keeps the directory in `.git/info/exclude`; it is not a public documentation source or package input.
+```sh
+arcantry repo plan --source history --transition cutover --managed-from 1.0.0
+```
 
-### `.docs/`
+Available transitions are:
 
-Use `.docs/` for durable, non-specification guidance that explains how the project operates: recurring practices, meeting decisions, onboarding notes and project-specific templates. A team may commit this directory when its contents should travel with the repository. Product and engineering specifications belong only in OpenSpec.
+| Transition | Purpose |
+| --- | --- |
+| `preserve` | Keep the current source and ownership boundary. |
+| `adopt` | Begin using or managing a source at its current path. |
+| `rebind` | Change the responsibility or adapter relationship without moving the source. |
+| `cutover` | Preserve earlier changelog history and manage only from a SemVer boundary. |
+| `migrate` | Convert recoverable source meaning through an explicit adapter transition. |
+| `relocate` | Write a verified target and optionally remove the verified source. |
 
-### OpenSpec
+Use `--to-path`, `--to-adapter`, `--managed-from`, and `--delete-source` only when the selected transition needs them. Planning reports conflicts and does not write.
 
-Use OpenSpec for every coherent product or engineering change and its delivery record. Proposal, observable requirements, design decisions, implementation tasks and `release.md` stay together. The record may precede implementation or be recovered postfactum, but archive and version assignment are required before the repository state is complete. Release manifests group archived changes without copying their prose.
+## Serialize and protect the plan
 
-## Adoption and updates
+`repo apply` accepts the complete JSON plan produced by `--json`:
 
-`arcantry repo init` adds only missing managed foundations. `arcantry repo update` advances managed metadata and generated artifacts while preserving user-editable configuration and unowned files.
+```sh
+arcantry repo plan --source history --transition cutover --managed-from 1.0.0 --json > plan.json
+```
 
-If an existing file occupies a managed path without Arcantry ownership metadata, the CLI reports the conflict. It does not claim or replace that file automatically.
+The plan records its format version, Arcantry version, project root, source and adapter ids, expected input hashes, ordered operations, desired write content, content hashes, visibility, notes, and conflicts. Because write content can include private source data, store the plan at the sensitivity of the most private operation. A plan may live outside the target project and does not need to become repository metadata.
 
-Use `arcantry repo doctor` for repair guidance and `arcantry repo validate` for a deterministic read-only gate.
+## Apply an unchanged plan
 
-## Removal
+```sh
+arcantry repo apply --plan plan.json
+```
 
-`arcantry repo remove` acts only on verified managed artifacts. A familiar path name is not proof of ownership, and user-authored files inside a durable directory remain outside the removal set unless Arcantry created and tracks them explicitly.
+Use `--plan -` to read JSON from standard input. Before writing, apply verifies the plan format, exact Arcantry version, conflicts, expected path hashes, and planned content hashes. It stages and verifies writes, commits the ordered operations, verifies the targets, and rolls back committed operations if the transaction fails.
 
-## External sources
+For relocation with deletion, the target is staged and verified before the separately requested source deletion is committed.
 
-Issues, pull requests, design tools and project trackers may supply task context. Their write permissions remain independent from the repository workflow. A configured source or installed connector does not authorize Arcantry or a skill to publish, reply or update it.
+## Replan after drift
 
-## Arcantry uses this workflow
+If a source changes after planning or during apply, Arcantry rejects the plan before accepting the changed state. Do not edit hash fields or reuse the stale plan. Run `repo inspect`, recreate the plan from current inputs, and apply the replacement.
 
-The Arcantry repository is a consumer of its own contract. A clean CI checkout initializes ephemeral private adoption state through the public CLI before running the same read-only repository validation available to other repositories. It also validates skill packages, catalog projections and release state through public commands and schemas. Every completed Arcantry change is archived, versioned and represented in the generated changelog before final CI can pass.
+An Arcantry update can also invalidate a serialized plan because plans bind to the exact tool version. Replan with the version that will perform the apply.
+
+## Validate without repair
+
+```sh
+arcantry repo validate
+arcantry repo doctor
+```
+
+`repo validate` checks configured `validate` and `manage` responsibilities without changing a source. `repo doctor` adds repair guidance but remains read-only. Neither command upgrades adapters or applies a plan.
+
+External trackers, pull requests, and design tools may provide context, but source configuration and skills do not grant permission to modify those systems.

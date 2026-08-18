@@ -1,11 +1,28 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
   "summary": "Integrate Arcantry into a repository without overwriting project-owned tooling, specifications, or private operational state.",
+  "compatibility": {
+    "sourceKinds": ["openspec", "changelog", "todo-txt"],
+    "adapters": [
+      { "name": "openspec", "versions": ">=1 <2" },
+      { "name": "keep-a-changelog", "versions": ">=1 <3" },
+      { "name": "todo-txt", "versions": ">=1 <2" }
+    ]
+  },
+  "learning": {
+    "prerequisites": [
+      "Identify the project root and any private configuration supplied by the user."
+    ],
+    "outcomes": [
+      "Distinguish discovery, footprint, and management for each project source.",
+      "Choose an explicit preservation or migration boundary without automatic conversion."
+    ]
+  },
   "scenarios": [
     {
       "title": "Adopt Arcantry in a mature repository",
-      "prompt": "Use $adopt-arcantry to add Arcantry with local operational state and shared documentation while preserving existing tooling.",
-      "outcome": "A conflict-aware CLI adoption that creates only missing managed artifacts and leaves project-owned files unchanged."
+      "prompt": "Use $adopt-arcantry to inspect a mature repository and plan selective adoption while preserving existing tooling and knowledge sources.",
+      "outcome": "A source-by-source adoption plan that leaves project-owned files unchanged until explicitly applied."
     },
     {
       "title": "Diagnose an existing adoption",
@@ -14,4 +31,3 @@
     }
   ]
 }
-

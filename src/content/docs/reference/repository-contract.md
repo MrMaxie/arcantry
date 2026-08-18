@@ -1,34 +1,83 @@
 ---
-title: Repository contract
-description: Responsibilities and boundaries of an Arcantry repository.
+title: Project knowledge stack
+description: Understand authority, projections, queues, capabilities, privacy, and integrity evidence.
 ---
 
-## Sources of truth
+Arcantry composes project knowledge without treating every artifact as the same kind of truth. Each source keeps a distinct role, responsibility, path, and versioned adapter.
 
-| Concern | Source of truth |
+## Roles in the stack
+
+| Role | Arcantry model | Responsibility |
+| --- | --- | --- |
+| Authority | OpenSpec source | Accepted product and engineering meaning for its configured scope. |
+| Projection | Changelog source | Human release history derived from explicit authority when managed. |
+| Queue | todo.txt source | Short shared or private work items without product authority. |
+| Capability | Skill package | A reusable procedure that may describe compatibility but is not project state. |
+| Privacy boundary | `.local/` | Machine-local or private sources that must not be presented as shared. |
+| Integrity evidence | Optional VCS, including Git | Evidence about implementation history or release sealing, never the source of release prose. |
+
+Project-owned documentation, including any `.docs` directory, remains outside Arcantry's model unless a future explicit capability says otherwise.
+
+## Three independent axes
+
+### Discovery
+
+A project can use configuration-free discovery, one explicit `--config` file, or the nearest ancestor `arcantry.toml`. These modes decide how Arcantry finds a stack, not what it may change.
+
+### Footprint
+
+Arcantry can remain absent from the project, use an external or private configuration, or use one tracked project configuration. Footprint does not imply management responsibility.
+
+### Management
+
+Each source independently uses one level:
+
+| Level | Meaning |
 | --- | --- |
-| Private machine-local context | `.local/` |
-| Durable project guidance | `.docs/` |
-| Current behavior | `openspec/specs/` |
-| Change intent and rationale | active/archived OpenSpec change |
-| Release-facing description | archived change `release.md` |
-| Release membership | release manifest |
-| Skill instructions and resources | `skills/<name>/` |
-| Catalog, plugin and skill reference pages | generated from canonical skill packages |
-| Versioned implementation | Git |
-| Shared tool versions | `mise.toml` |
-| Repository commands | `justfile` |
-| Automation | GitHub Actions calling `just` |
+| `ignore` | Exclude the source from Arcantry responsibility. |
+| `observe` | Describe the source without enforcing or changing it. |
+| `validate` | Check the configured contract without writing. |
+| `manage` | Permit explicit planned writes through the source adapter. |
 
-## Invariants
+A project can therefore manage one source, validate another, observe a third, and omit the rest.
 
-- A changelog entry must resolve to an archived OpenSpec change.
-- A public changelog must not be generated from Git commit messages.
-- A release manifest must not duplicate release prose.
-- Every completed product or engineering change must be archived and assigned to a new internal SemVer release, whether or not it is published externally.
-- The latest release manifest, distribution versions and generated changelog must seal the current Git state.
-- CI must use the same repository command surface as local development.
-- Project-native tooling remains free to vary behind that command surface.
-- Private `.local/` state must not enter commits, packages or public documentation.
-- Generated discovery surfaces must not become competing authored sources.
-- Repository and skill diagnostics must use the same public contracts in Arcantry and adopter repositories.
+## Relationships and meaning
+
+Source dependencies form an acyclic `from` graph. A managed changelog is a projection of one or more OpenSpec authorities, so its wording, category, and version impact come from accepted OpenSpec release artifacts. Git commits and diffs are not semantic inputs.
+
+An observed or validated changelog can exist without OpenSpec. In that case Arcantry can report or check its structure, but it cannot generate new release meaning for it.
+
+Todo queues are independent. They preserve todo.txt metadata and do not become specifications or changelog inputs. Skills are also independent: they teach a procedure but do not install themselves or establish project facts.
+
+## Version boundaries
+
+Four versions may coexist:
+
+- the Arcantry CLI version;
+- the `config_version` format;
+- each source adapter version, such as `openspec@1`;
+- the source data version, such as a changelog's historical format boundary.
+
+Updating the CLI does not automatically update the configuration, adapter, or source data. A supported earlier adapter remains usable until an explicit transition changes it.
+
+## Safety invariants
+
+- Empty directories and missing source kinds are valid.
+- Git, configuration, package managers, task runners, and project-local Node tooling are optional.
+- Configurations are singular and never implicitly merged.
+- Managed source relationships are acyclic and managed OpenSpec authorities do not overlap.
+- `inspect` and `plan` do not write.
+- `apply` rejects changed inputs and corrupt planned content before accepting the transition.
+- Serialized plans must be protected because they can contain planned source content.
+- Private `.local` sources cannot be declared shared.
+- Managed changelog meaning always comes from OpenSpec.
+
+## Built-in adapter compatibility
+
+| Source kind | Read | Write |
+| --- | --- | --- |
+| OpenSpec | `openspec@1` | `openspec@1` |
+| Changelog | `keep-a-changelog@1`, `keep-a-changelog@2` | `keep-a-changelog@1`, `keep-a-changelog@2` |
+| todo.txt | `todo-txt@1` | `todo-txt@1` |
+
+An unsupported adapter reports its id and stops before producing a partial transition. See [Configuration](/arcantry/reference/configuration/) for the complete `arcantry.toml` contract.

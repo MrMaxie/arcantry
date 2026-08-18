@@ -7,7 +7,7 @@ description: "Integrate Arcantry into a repository without overwriting project-o
 
 <p class="skill-reference-meta"><span>Included since Arcantry 0.3.0</span><code>$adopt-arcantry</code></p>
 
-Integrate Arcantry into an existing Git repository through the Arcantry CLI while preserving project instructions, existing OpenSpec history, private local state, and user-owned tooling. Use when Codex needs to initialize, update, validate, diagnose, or remove Arcantry-managed repository artifacts safely.
+Inspect, plan, apply, validate, or remove an Arcantry project knowledge stack while preserving project-owned sources, private state, and native tooling. Use for configured or configuration-free adoption in existing repositories, new projects, monorepos, or directories without Git.
 
 ## Link this skill
 
@@ -15,17 +15,32 @@ Integrate Arcantry into an existing Git repository through the Arcantry CLI whil
 arcantry skills link adopt-arcantry
 ```
 
+## Compatibility
+
+Source kinds: `openspec`, `changelog`, `todo-txt`.
+
+Adapters:
+
+- `openspec`: `>=1 <2`
+- `keep-a-changelog`: `>=1 <3`
+- `todo-txt`: `>=1 <2`
+
+## Learning outcomes
+
+- Distinguish discovery, footprint, and management for each project source.
+- Choose an explicit preservation or migration boundary without automatic conversion.
+
 ## Examples
 
 ### Adopt Arcantry in a mature repository
 
 **Prompt**
 
-> Use $adopt-arcantry to add Arcantry with local operational state and shared documentation while preserving existing tooling.
+> Use $adopt-arcantry to inspect a mature repository and plan selective adoption while preserving existing tooling and knowledge sources.
 
 **Expected outcome**
 
-A conflict-aware CLI adoption that creates only missing managed artifacts and leaves project-owned files unchanged.
+A source-by-source adoption plan that leaves project-owned files unchanged until explicitly applied.
 
 ### Diagnose an existing adoption
 

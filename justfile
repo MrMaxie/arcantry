@@ -28,7 +28,7 @@ package-check:
     pnpm run package:check
 
 arcantry-build:
-    pnpm --filter @maxiedev/arcantry run build
+    pnpm --filter ./packages/arcantry run build
 
 arcantry-init: arcantry-build
     node packages/arcantry/dist/cli.js --cwd . repo init --docs none
@@ -53,6 +53,9 @@ release-render:
 
 release-check:
     pnpm run release:check
+
+publish-check tag:
+    pnpm run publish:check -- --tag {{tag}}
 
 openspec-validate:
     pnpm exec openspec schema validate arcantry

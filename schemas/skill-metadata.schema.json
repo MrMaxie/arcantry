@@ -14,6 +14,65 @@
       "minLength": 30,
       "maxLength": 180
     },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceKinds"],
+      "properties": {
+        "sourceKinds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["openspec", "changelog", "todo-txt"]
+          }
+        },
+        "adapters": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "versions"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              "versions": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "learning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcomes"],
+      "properties": {
+        "prerequisites": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 160
+          }
+        },
+        "outcomes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 160
+          }
+        }
+      }
+    },
     "scenarios": {
       "type": "array",
       "minItems": 2,

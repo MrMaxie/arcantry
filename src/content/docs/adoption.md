@@ -1,74 +1,84 @@
 ---
-title: Adoption
-description: Add Arcantry guidance, validation and skills without replacing your build system.
+title: Adoption paths
+description: Choose a trace-free, external, tracked, monorepo, changelog, queue, or skills-only path.
 ---
 
-Arcantry sits above the project's native build system. It does not replace Cargo, CMake, pnpm, Gradle or another domain tool.
+Arcantry does not classify an entire project as greenfield or brownfield. Inspect first, then choose discovery, footprint, and responsibility independently for each source.
 
-## Minimum adoption
-
-1. Run `arcantry repo init --docs <shared|local|none>` from the Git repository you want to adopt.
-2. Review the proposed private guidance, durable guidance and OpenSpec integration.
-3. Run `arcantry repo doctor` to see unresolved adoption work.
-4. Run `arcantry repo validate` to verify the managed contract without changing files.
-5. Put the same validation behind the repository's normal contributor and CI commands.
-
-```text
-arcantry repo init --docs none
-arcantry repo doctor
-arcantry repo validate
+```sh
+arcantry repo inspect
 ```
 
-Initialization preserves existing, unowned files. If a repository already has agent instructions or durable documentation, Arcantry reports the integration work instead of replacing that content.
+Inspection is read-only and valid without Git, configuration, or recognized sources.
 
-The required `--docs` choice prevents Arcantry from guessing whether `.docs/` is shared, local or unused. Add `--agent codex`, `--agent claude` or `--agent cursor` for each entrypoint that Arcantry should manage.
+## Choose an adoption path
 
-## Configure operational sources
-
-Repository choices live in private `.local/arcantry.json` with `schemaVersion: 1`:
-
-| Field | Meaning |
-| --- | --- |
-| `agents` | The selected Codex, Claude or Cursor entrypoints. |
-| `operationalSource` | The name of the single source that drives current work. |
-| `sources` | Ordered sources in `readonly`, `readwrite` or `operational` mode. |
-| `docs` | One explicit `shared`, `local` or `none` choice. |
-
-Initialize a repository with additional ordered sources by repeating `--source`:
-
-```text
-arcantry repo init --docs shared --source local=operational --source tracker=readonly
-```
-
-`readwrite` records a capability, not permission for the next write. Every external mutation still requires current user authorization for its exact target and action.
-
-## Keep each kind of information in its layer
-
-| Layer | Responsibility | Shared? |
+| Situation | Start here | Repository footprint |
 | --- | --- | --- |
-| `.local/` | Private instructions, access notes and machine-local execution state. | No. Arcantry keeps it in `.git/info/exclude`. |
-| `.docs/` | Durable non-specification guidance, meetings, onboarding notes and reusable project templates. | When the team wants to share it. |
-| OpenSpec | Accepted change intent, observable requirements, design decisions, tasks and release metadata. | Yes. |
-| Git | Versioned implementation history. | Yes. |
+| Empty directory | Inspect, then adopt only the source you need. | None until an explicit plan is applied. |
+| Mature project | Observe discovered sources before assigning responsibility. | None while inspection remains configuration-free. |
+| No tracked Arcantry metadata | Use one explicit external `arcantry.toml`. | None from configuration. |
+| Shared project contract | Track one `arcantry.toml` at the selected root. | One project-owned configuration file. |
+| Monorepo | Set one root and distinct source ids, paths, scopes, and relationships. | External or one tracked configuration. |
+| Existing changelog | Observe it, preserve it, or define an explicit managed boundary. | No rewrite without an applied plan. |
+| Queues or skills only | Use `todo` or `skills` commands directly. | Only an explicitly applied queue change or chosen skill link. |
 
-`.docs/` explains the project as it exists. OpenSpec governs a proposed or delivered change. Do not move credentials, logs, local URLs or workstation notes into either shared surface.
+## Empty directory
 
-## Keep native commands behind the repository surface
+An empty inspection is a successful result. Add a source only when the project has a concrete use for it. Define that source in an external or tracked configuration, inspect again, then use the reported id:
 
-The implementation below the repository's `setup`, `check`, `build` and `ci` commands remains project-specific. A TypeScript package may run type checking and Vitest; a Rust project may run formatting, Clippy and tests. Arcantry adds its validation to that existing surface instead of replacing it.
+```sh
+arcantry repo plan --source <id> --transition adopt --json > plan.json
+```
 
-Arcantry follows this rule itself: local development and CI invoke the same repository and skill validation contracts available to adopters.
+Planning does not write. Review and store the serialized plan according to its visibility before applying it.
 
-## Choose skills individually or as a collection
+## Mature project
 
-Use `arcantry skills list` and `arcantry skills inspect <name>` to find a focused capability. Link only the skill you need with `arcantry skills link <name>`.
+Discovered OpenSpec, `CHANGELOG.md`, root `todo.txt`, and `.local/todo.txt` default to observation when no configuration assigns another responsibility. Unrelated files remain project-owned. Existing `.docs` content is outside Arcantry's responsibility and is not classified, moved, validated, or removed.
 
-Install the Arcantry Codex plugin when you want the complete versioned catalog. Both paths use the same canonical skill packages and metadata.
+Use `preserve` when the current source remains as it is, `adopt` to take responsibility for an existing or missing source, `rebind` to change its role, `cutover` to manage only a future changelog boundary, `migrate` when old meaning is recoverable, and `relocate` to move a source explicitly.
 
-## Continue with OpenSpec
+## External configuration
 
-Every completed product or engineering change requires an OpenSpec change. Intent may be recorded before implementation or recovered postfactum, but archive and version assignment are the delivery boundary. Each delivered change carries its own `release.md` outcome and SemVer impact.
+Keep the control contract outside the target when the project must remain free of Arcantry metadata:
 
-## Do not migrate commit history into release history
+```sh
+arcantry --cwd ./project --config ../control/project.toml repo inspect
+```
 
-Existing tags and changelogs can remain historical records. Start using OpenSpec-derived releases from the first Arcantry-managed version. Do not manufacture OpenSpec changes from old commits unless the original intent can be recovered reliably.
+An explicit external configuration may use absolute source paths. It remains singular and is not merged with a nearer project file.
+
+## Tracked configuration
+
+Track one `arcantry.toml` when collaborators and automation need the same root, sources, versions, and responsibilities. The nearest file is selected automatically unless `--config` overrides it.
+
+Configuration is not mandatory, and adding it does not install Node tooling, initialize Git, or create package-manager or task-runner files. See [Configuration](/arcantry/reference/configuration/).
+
+## Monorepo
+
+Resolve one project root, then model each knowledge source separately. Use `scope` to partition OpenSpec authority and `from` to connect a changelog projection to one or more explicit authorities. Overlapping managed OpenSpec scopes and dependency cycles are rejected.
+
+Separate configuration files are not layered. Choose one explicit file for each invocation or place one shared file at the intended ancestor.
+
+## Existing changelog
+
+An existing changelog can remain observed without OpenSpec. Arcantry does not infer its prose from commits or diffs.
+
+When Arcantry manages future changelog entries, the configured changelog must depend on OpenSpec through `from`. Use `managed_from` and the `cutover` transition to preserve earlier history while deriving later release meaning from accepted OpenSpec artifacts. Use `migrate` only when historical meaning can be mapped without guessing.
+
+## Queues or skills only
+
+Todo queues and skills do not require OpenSpec or project configuration:
+
+```sh
+arcantry todo list
+arcantry skills list
+arcantry skills inspect <name>
+```
+
+A todo mutation previews by default and writes only with `--apply`. Linking a skill changes only the selected agent skill directory and does not make the skill authoritative project state.
+
+## Legacy compatibility
+
+`.local/arcantry.json` remains readable as a private legacy contract. `repo init`, `repo update`, and `repo remove` are compatibility commands, not the recommended adoption path. Only `repo init --docs none` is accepted; `.docs` remains entirely project-owned.

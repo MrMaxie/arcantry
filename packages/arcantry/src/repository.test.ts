@@ -7,17 +7,19 @@ import { createFixtureRepository, removeFixtures } from './testHelpers.js';
 afterEach(removeFixtures);
 
 describe('repository adoption', () => {
-  it('initializes owned artifacts without creating .docs/spec', async () => {
+  it('initializes owned artifacts without creating or reading .docs', async () => {
     const root = await createFixtureRepository();
+    await mkdir(join(root, '.docs'), { recursive: true });
+    await writeFile(join(root, '.docs/AGENTS.md'), 'project-owned docs\n');
 
-    await initRepository(root, { docs: 'local', agents: ['codex', 'cursor'] });
+    await initRepository(root, { docs: 'none', agents: ['codex', 'cursor'] });
 
     const config = JSON.parse(await readFile(join(root, '.local/arcantry.json'), 'utf8')) as { docs: string };
-    expect(config.docs).toBe('local');
+    expect(config.docs).toBe('none');
     expect(await readFile(join(root, 'AGENTS.md'), 'utf8')).toContain('<!-- arcantry:start -->');
     expect(await readFile(join(root, '.cursor/rules/arcantry.mdc'), 'utf8')).toContain('description: Arcantry repository guidance');
     expect(await readFile(join(root, '.git/info/exclude'), 'utf8')).toContain('.local/');
-    await expect(readFile(join(root, '.docs/spec'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await readFile(join(root, '.docs/AGENTS.md'), 'utf8')).toBe('project-owned docs\n');
     expect((await validateRepository(root)).valid).toBe(true);
   });
 
@@ -54,7 +56,7 @@ describe('repository adoption', () => {
   it('updates managed sections while preserving configuration and user content', async () => {
     const root = await createFixtureRepository();
     await initRepository(root, {
-      docs: 'shared',
+      docs: 'none',
       agents: ['codex'],
       sources: [
         { name: 'local', mode: 'operational' },
@@ -87,7 +89,7 @@ describe('repository adoption', () => {
   it('removes only verified generated content and managed sections', async () => {
     const root = await createFixtureRepository();
     await writeFile(join(root, 'AGENTS.md'), '# User rules\n');
-    await initRepository(root, { docs: 'shared', agents: ['codex'] });
+    await initRepository(root, { docs: 'none', agents: ['codex'] });
     await mkdir(join(root, 'openspec/specs'), { recursive: true });
     await writeFile(join(root, 'openspec/specs/user.md'), 'keep me\n');
 

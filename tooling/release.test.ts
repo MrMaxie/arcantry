@@ -13,6 +13,7 @@ import {
   planRelease,
   renderChangelog,
   validateDistributionVersions,
+  validateNpmPublication,
   validateReleaseSeal,
   validateReleaseState,
 } from './release.js';
@@ -43,6 +44,19 @@ function manifest(root: string, version = '0.1.0', changes = ['release-history']
   writeFileSync(
     join(root, 'releases', `${version}.yaml`),
     `version: ${version}\ndate: 2026-08-16\nchanges:\n${changes.map((change) => `  - ${change}`).join('\n')}\n`,
+  );
+}
+
+function npmPackage(root: string, name = '@arcantry/arcantry', version = '0.1.0'): void {
+  const packageRoot = join(root, 'packages', 'arcantry');
+  mkdirSync(packageRoot, { recursive: true });
+  writeFileSync(
+    join(packageRoot, 'package.json'),
+    `${JSON.stringify({
+      name,
+      version,
+      repository: { type: 'git', url: 'https://github.com/MrMaxie/arcantry.git' },
+    }, null, 2)}\n`,
   );
 }
 
@@ -169,7 +183,9 @@ describe('changelog rendering', () => {
     manifest(root);
     const changelog = renderChangelog(root);
 
-    expect(changelog).toContain('## 0.1.0 - 2026-08-16');
+    expect(changelog).toContain('https://keepachangelog.com/en/2.0.0/');
+    expect(changelog).toContain('## [Unreleased]');
+    expect(changelog).toContain('## [0.1.0] - 2026-08-16');
     expect(changelog).toContain('<!-- openspec: release-history -->');
     expect(changelog).toContain('#### Better release history');
   });
@@ -182,6 +198,19 @@ describe('changelog rendering', () => {
     manifest(root, '0.1.0', ['release-history', 'internal-cleanup']);
 
     expect(renderChangelog(root).match(/Better release history/g)).toHaveLength(1);
+  });
+
+  it('composes release meaning from multiple OpenSpec sources in a monorepo', () => {
+    const root = fixture();
+    const component = join(root, 'components', 'api', 'openspec', 'changes', 'archive', '2026-08-17-api-change');
+    mkdirSync(component, { recursive: true });
+    writeFileSync(join(component, 'release.md'), release('patch').replace('Better release history', 'API change'));
+    manifest(root, '0.1.0', ['release-history', 'api-change']);
+
+    const changelog = renderChangelog(root, { openSpecPaths: ['openspec', 'components/api/openspec'] });
+
+    expect(changelog).toContain('#### Better release history');
+    expect(changelog).toContain('#### API change');
   });
 
   it('detects a stale committed changelog', () => {
@@ -263,5 +292,51 @@ describe('release completion', () => {
     commitAll(root, 'release: cut 0.1.1');
 
     expect(() => checkRelease(root)).not.toThrow();
+  });
+});
+
+describe('npm publication', () => {
+  function sealedNpmRelease(): string {
+    const root = fixture();
+    manifest(root);
+    npmPackage(root);
+    writeFileSync(join(root, 'CHANGELOG.md'), renderChangelog(root));
+    commitAll(root, 'release: cut 0.1.0');
+    git(root, ['tag', 'v0.1.0']);
+    return root;
+  }
+
+  it('accepts the organization package at the matching sealed release tag', () => {
+    expect(validateNpmPublication('v0.1.0', sealedNpmRelease())).toEqual({
+      packageName: '@arcantry/arcantry',
+      version: '0.1.0',
+      tag: 'v0.1.0',
+      repositoryUrl: 'https://github.com/MrMaxie/arcantry.git',
+    });
+  });
+
+  it('rejects malformed or mismatched release tags', () => {
+    const root = sealedNpmRelease();
+    expect(() => validateNpmPublication('0.1.0', root)).toThrow('invalid npm release tag');
+    expect(() => validateNpmPublication('v0.1.1', root)).toThrow('does not match release 0.1.0');
+  });
+
+  it('rejects the wrong package identity', () => {
+    const root = fixture();
+    manifest(root);
+    npmPackage(root, '@other/arcantry');
+    writeFileSync(join(root, 'CHANGELOG.md'), renderChangelog(root));
+    commitAll(root, 'release: cut 0.1.0');
+    git(root, ['tag', 'v0.1.0']);
+
+    expect(() => validateNpmPublication('v0.1.0', root)).toThrow('npm package name must be @arcantry/arcantry');
+  });
+
+  it('rejects an unsealed commit after the release tag', () => {
+    const root = sealedNpmRelease();
+    writeFileSync(join(root, 'later.txt'), 'later\n');
+    commitAll(root, 'fix: later work');
+
+    expect(() => validateNpmPublication('v0.1.0', root)).toThrow('repository HEAD is not sealed by release 0.1.0');
   });
 });

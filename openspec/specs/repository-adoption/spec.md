@@ -7,17 +7,29 @@ Define safe repository adoption, diagnostics and removal while preserving projec
 
 ### Requirement: Repository guidance uses explicit information layers
 
-Arcantry MUST keep machine-local execution state in `.local/`, durable project guidance in `.docs/`, and accepted change intent and release metadata in OpenSpec. `.local/` MUST be excluded through `.git/info/exclude` and MUST NOT be promoted into shared project configuration by default.
+Arcantry MUST keep machine-local execution state in `.local/`, accepted product and engineering intent in OpenSpec, human release history in configured changelog sources and quick task queues in todo.txt sources. `.local/` MUST remain private when Git is present. Arcantry MUST NOT prescribe or manage `.docs/`.
+
+#### Scenario: An established project adopts selected capabilities
+
+- **WHEN** a project plans adoption for a subset of discovered sources
+- **THEN** only the selected sources and explicit guidance are included in the plan
+- **AND** unrelated project files and existing `.docs/` content remain untouched
 
 #### Scenario: An established repository adopts Arcantry
 
-- **WHEN** `arcantry repo init` initializes the repository
+- **WHEN** Arcantry initializes selected repository capabilities
 - **THEN** private working state is routed to `.local/`
-- **AND** durable guidance and OpenSpec responsibilities remain distinct
+- **AND** configured source responsibilities remain distinct
 
 ### Requirement: Adoption preserves existing repository ownership
 
-Initialization and update MUST preserve unowned files and user-editable content. Generated metadata MUST identify Arcantry-managed artifacts, and update MUST retain existing configuration choices unless the user explicitly replaces them.
+Initialization and update MUST preserve unowned files and user-editable content. New adoption MUST be capability-selective and MUST NOT create package-manager, runtime or task-runner scaffolding unless a separately configured capability requires it.
+
+#### Scenario: A non-Node project adopts OpenSpec
+
+- **WHEN** OpenSpec adoption is applied in a project without Node tooling
+- **THEN** Arcantry creates only the selected OpenSpec artifacts
+- **AND** does not create package manifests, justfiles or runtime version files
 
 #### Scenario: A repository already has agent instructions
 
@@ -37,12 +49,17 @@ Initialization and update MUST preserve unowned files and user-editable content.
 
 ### Requirement: Repository diagnostics remain non-mutating
 
-`doctor` MUST explain detected state and actionable repair paths. `validate` MUST produce a deterministic pass or failure result suitable for CI. Neither command may repair files implicitly.
+Inspection and doctor MUST explain detected state and repair paths without requiring configuration or Git. Strict validation MUST apply only to configured `validate` and `manage` sources. None of these commands may repair files implicitly.
+
+#### Scenario: An unconfigured project is inspected
+
+- **WHEN** no Arcantry configuration exists
+- **THEN** inspection reports discovered sources and compatibility without treating missing adoption metadata as an error
 
 #### Scenario: Managed metadata is outdated
 
-- **WHEN** the user runs `arcantry repo doctor`
-- **THEN** the output identifies the affected artifact and the explicit update or repair action
+- **WHEN** a configured source or managed section is outdated
+- **THEN** doctor identifies the affected artifact and explicit repair action
 - **AND** the artifact remains unchanged
 
 ### Requirement: Managed repository validation detects content drift

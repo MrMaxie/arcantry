@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { Command } from 'commander';
 import { ZodError } from 'zod';
@@ -13,6 +14,13 @@ import {
   type RepositoryReport,
   type RepositoryResult,
 } from './repository.js';
+import { displaySourcePath, inspectKnowledge, validateKnowledge, type KnowledgeInspection } from './knowledge.js';
+import { applyProjectPlan, createProjectPlan, createWriteOperation, parseProjectPlan, renderProjectPlan, serializeProjectPlan } from './projectPlan.js';
+import { resolveProject, transitionSchema } from './projectConfig.js';
+import { planSourceTransition } from './sourceTransition.js';
+import { addTodoTask, completeTodoTask, inspectTodoTasks, moveTodoTask } from './todoTxt.js';
+import { planLocalGitExclude } from './privateState.js';
+import type { ProjectSource } from './knowledge.js';
 
 const packageManifest = JSON.parse(
   readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
@@ -33,6 +41,7 @@ export const buildProgram = (context: CliContext): Command => {
     .description('Manage Arcantry repository adoption and skill links.')
     .version(arcantryVersion)
     .option('--cwd <path>', 'Run against another repository or catalog location.')
+    .option('--config <path>', 'Use one explicit arcantry.toml file without config merging.')
     .showHelpAfterError()
     .exitOverride()
     .configureOutput({
@@ -43,6 +52,68 @@ export const buildProgram = (context: CliContext): Command => {
 
   const repo = program.command('repo').description('Manage repository adoption.');
   repo
+    .command('inspect')
+    .description('Discover project knowledge sources without changing them.')
+    .option('--json', 'Write the complete machine-readable inspection.')
+    .action(async (options: { json?: boolean }) => {
+      await execute(program, context, async () => {
+        const inspection = await inspectKnowledge(await commandProject(program, context));
+        if (options.json === true) context.stdout(`${JSON.stringify(inspection, null, 2)}\n`);
+        else renderKnowledgeInspection(context, inspection);
+      });
+    });
+
+  repo
+    .command('plan')
+    .description('Plan one explicit source transition without changing the project.')
+    .requiredOption('--source <id>', 'Source id reported by repo inspect.')
+    .requiredOption('--transition <transition>', 'Transition: preserve, adopt, rebind, cutover, migrate, or relocate.')
+    .option('--to-path <path>', 'Target source path for rebind or relocate.')
+    .option('--to-adapter <adapter>', 'Target versioned adapter.')
+    .option('--managed-from <version>', 'First managed SemVer version for changelog cutover.')
+    .option('--delete-source', 'Delete the verified source after relocation.')
+    .option('--json', 'Write the serializable plan required by repo apply.')
+    .action(async (options: {
+      source: string;
+      transition: string;
+      toPath?: string;
+      toAdapter?: string;
+      managedFrom?: string;
+      deleteSource?: boolean;
+      json?: boolean;
+    }) => {
+      await execute(program, context, async () => {
+        const inspection = await inspectKnowledge(await commandProject(program, context));
+        const plan = await planSourceTransition(inspection, {
+          sourceId: options.source,
+          transition: transitionSchema.parse(options.transition),
+          toolVersion: arcantryVersion,
+          ...(options.toPath === undefined ? {} : { targetPath: options.toPath }),
+          ...(options.toAdapter === undefined ? {} : { targetAdapter: options.toAdapter }),
+          ...(options.managedFrom === undefined ? {} : { managedFrom: options.managedFrom }),
+          deleteSource: options.deleteSource === true,
+        });
+        if (options.json === true) {
+          context.stdout(serializeProjectPlan(plan));
+          if (plan.conflicts.length > 0) exitCodes.set(program, 1);
+        } else renderPlanResult(program, context, plan);
+      });
+    });
+
+  repo
+    .command('apply')
+    .description('Apply an unchanged serialized transition plan.')
+    .requiredOption('--plan <path>', 'Plan JSON file, or - for standard input.')
+    .action(async (options: { plan: string }) => {
+      await execute(program, context, async () => {
+        const content = options.plan === '-' ? await readStandardInput() : await readFile(resolve(commandCwd(program, context), options.plan), 'utf8');
+        const result = await applyProjectPlan(parseProjectPlan(content), arcantryVersion);
+        if (result.applied.length === 0) context.stdout('No file changes.\n');
+        else for (const operation of result.applied) context.stdout(`${operation.action}: ${operation.path}\n`);
+      });
+    });
+
+  repo
     .command('init')
     .description('Initialize Arcantry-managed repository artifacts.')
     .requiredOption('--docs <mode>', 'Documentation mode: shared, local, or none.')
@@ -51,10 +122,14 @@ export const buildProgram = (context: CliContext): Command => {
     .option('--operational-source <name>', 'Name of the single operational source.')
     .action(async (options: { docs: string; agent: AgentName[]; source: ArcantrySource[]; operationalSource?: string }) => {
       await execute(program, context, async () => {
+        const docs = docsModeSchema.parse(options.docs);
+        if (docs !== 'none') {
+          throw new Error('Legacy --docs shared/local modes are no longer supported. Existing .docs content remains project-owned; use --docs none.');
+        }
         const sources = options.source.length > 0 ? options.source : undefined;
         const inferredOperationalSource = sources?.find((source) => source.mode === 'operational')?.name;
         const result = await initRepository(commandCwd(program, context), {
-          docs: docsModeSchema.parse(options.docs),
+          docs,
           agents: options.agent.length > 0 ? options.agent : undefined,
           sources,
           operationalSource: options.operationalSource ?? inferredOperationalSource,
@@ -71,17 +146,129 @@ export const buildProgram = (context: CliContext): Command => {
   repo
     .command('doctor')
     .description('Diagnose repository adoption without changing it.')
-    .action(async () => execute(program, context, async () => renderRepositoryReport(program, context, await doctorRepository(commandCwd(program, context)))));
+    .action(async () => execute(program, context, async () => {
+      if (await shouldUseLegacyRepository(program, context)) {
+        renderRepositoryReport(program, context, await doctorRepository(commandCwd(program, context)));
+      } else {
+        await renderKnowledgeValidation(program, context, true);
+      }
+    }));
 
   repo
     .command('validate')
     .description('Validate repository adoption without changing it.')
-    .action(async () => execute(program, context, async () => renderRepositoryReport(program, context, await validateRepository(commandCwd(program, context)))));
+    .action(async () => execute(program, context, async () => {
+      if (await shouldUseLegacyRepository(program, context)) {
+        renderRepositoryReport(program, context, await validateRepository(commandCwd(program, context)));
+      } else {
+        await renderKnowledgeValidation(program, context, false);
+      }
+    }));
 
   repo
     .command('remove')
     .description('Remove only verified Arcantry-owned artifacts and sections.')
     .action(async () => execute(program, context, async () => renderRepositoryResult(context, await removeRepository(commandCwd(program, context)))));
+
+  const todo = program.command('todo').description('Use root or private todo.txt queues without imposing a workflow taxonomy.');
+  todo
+    .command('list')
+    .description('List todo.txt tasks from one or all detected queues.')
+    .option('--source <id>', 'Todo source id, root, or local.')
+    .action(async (options: { source?: string }) => {
+      await execute(program, context, async () => {
+        const inspection = await inspectKnowledge(await commandProject(program, context));
+        const sources = options.source === undefined
+          ? inspection.sources.filter((source) => source.kind === 'todo-txt' && source.exists)
+          : [resolveTodoSource(inspection, options.source, false)];
+        if (sources.length === 0) context.stdout('No todo.txt tasks.\n');
+        for (const source of sources) {
+          context.stdout(`[${source.id}]\n`);
+          for (const task of inspectTodoTasks(await readFile(source.absolutePath, 'utf8'))) {
+            context.stdout(`${task.line}\t${task.raw}\n`);
+          }
+        }
+      });
+    });
+
+  todo
+    .command('add <task>')
+    .description('Preview or apply one todo.txt task addition.')
+    .option('--source <id>', 'Todo source id, root, or local.')
+    .option('--apply', 'Apply the previewed file change.')
+    .action(async (task: string, options: { source?: string; apply?: boolean }) => {
+      await execute(program, context, async () => {
+        const inspection = await inspectKnowledge(await commandProject(program, context));
+        const source = selectTodoSource(inspection, options.source, true);
+        const current = source.exists ? await readFile(source.absolutePath, 'utf8') : '';
+        const operations = [await createWriteOperation(inspection.root, source.path, addTodoTask(current, task), source.visibility)];
+        if (source.visibility === 'private') await planLocalGitExclude(inspection.root, operations);
+        await handleTodoPlan(program, context, createProjectPlan({
+          toolVersion: arcantryVersion,
+          root: inspection.root,
+          sourceId: source.id,
+          transition: 'adopt',
+          adapter: 'todo-txt@1',
+          operations,
+        }), options.apply === true);
+      });
+    });
+
+  todo
+    .command('complete <line>')
+    .description('Preview or apply completion of one todo.txt line.')
+    .option('--source <id>', 'Todo source id, root, or local.')
+    .option('--date <date>', 'Completion date in YYYY-MM-DD.')
+    .option('--apply', 'Apply the previewed file change.')
+    .action(async (line: string, options: { source?: string; date?: string; apply?: boolean }) => {
+      await execute(program, context, async () => {
+        const inspection = await inspectKnowledge(await commandProject(program, context));
+        const source = selectTodoSource(inspection, options.source, false);
+        const current = await readFile(source.absolutePath, 'utf8');
+        const desired = completeTodoTask(current, parseLine(line), options.date ?? localDate());
+        await handleTodoPlan(program, context, createProjectPlan({
+          toolVersion: arcantryVersion,
+          root: inspection.root,
+          sourceId: source.id,
+          transition: 'adopt',
+          adapter: 'todo-txt@1',
+          operations: desired === current ? [] : [await createWriteOperation(inspection.root, source.path, desired, source.visibility)],
+        }), options.apply === true);
+      });
+    });
+
+  todo
+    .command('move <line>')
+    .description('Preview or apply an explicit move between todo.txt queues.')
+    .requiredOption('--from <id>', 'Source todo id, root, or local.')
+    .requiredOption('--to <id>', 'Target todo id, root, or local.')
+    .option('--apply', 'Apply the previewed file changes.')
+    .action(async (line: string, options: { from: string; to: string; apply?: boolean }) => {
+      await execute(program, context, async () => {
+        const inspection = await inspectKnowledge(await commandProject(program, context));
+        const source = resolveTodoSource(inspection, options.from, false);
+        const target = resolveTodoSource(inspection, options.to, true);
+        if (source.id === target.id) throw new Error('Todo move source and target must differ.');
+        const moved = moveTodoTask(
+          await readFile(source.absolutePath, 'utf8'),
+          target.exists ? await readFile(target.absolutePath, 'utf8') : '',
+          parseLine(line),
+        );
+        const operations = [
+          await createWriteOperation(inspection.root, source.path, moved.source, source.visibility),
+          await createWriteOperation(inspection.root, target.path, moved.target, target.visibility),
+        ];
+        if (target.visibility === 'private') await planLocalGitExclude(inspection.root, operations);
+        await handleTodoPlan(program, context, createProjectPlan({
+          toolVersion: arcantryVersion,
+          root: inspection.root,
+          sourceId: source.id,
+          transition: 'relocate',
+          adapter: 'todo-txt@1',
+          operations,
+        }), options.apply === true);
+      });
+    });
 
   const skills = program.command('skills').description('Inspect the catalog and manage skill links.');
   skills
@@ -184,6 +371,16 @@ const execute = async (program: Command, context: CliContext, action: () => Prom
 
 const commandCwd = (program: Command, context: CliContext): string => resolve(program.opts<{ cwd?: string }>().cwd ?? context.cwd);
 
+const commandProject = async (program: Command, context: CliContext) => {
+  const options = program.opts<{ cwd?: string; config?: string }>();
+  return resolveProject({
+    cwd: resolve(options.cwd ?? context.cwd),
+    ...(options.config === undefined ? {} : { configPath: options.config }),
+    cwdExplicit: options.cwd !== undefined,
+    toolVersion: arcantryVersion,
+  });
+};
+
 const catalogRoot = async (program: Command, context: CliContext, explicit?: string): Promise<string> =>
   explicit === undefined ? findCatalogRoot(commandCwd(program, context)) : resolve(explicit);
 
@@ -208,6 +405,104 @@ const renderRepositoryReport = (program: Command, context: CliContext, report: R
   else exitCodes.set(program, 1);
 };
 
+const renderKnowledgeInspection = (context: CliContext, inspection: KnowledgeInspection): void => {
+  context.stdout(`Mode: ${inspection.mode}\n`);
+  context.stdout(`Config: ${inspection.configPath === null ? 'none' : 'arcantry.toml'}\n`);
+  if (inspection.sources.length === 0) context.stdout('No knowledge sources detected.\n');
+  for (const source of inspection.sources) {
+    context.stdout(
+      `${source.id}\t${source.kind}\t${source.management}\t${source.adapter}\t${source.confidence}\t${source.exists ? 'present' : 'missing'}\t${displaySourcePath(inspection, source)}\n`,
+    );
+  }
+  for (const diagnostic of inspection.diagnostics) context.stdout(`WARNING: ${diagnostic}\n`);
+};
+
+const renderPlanResult = (program: Command, context: CliContext, plan: ReturnType<typeof parseProjectPlan>): void => {
+  context.stdout(renderProjectPlan(plan));
+  if (plan.conflicts.length > 0) exitCodes.set(program, 1);
+};
+
+const renderKnowledgeValidation = async (program: Command, context: CliContext, doctor: boolean): Promise<void> => {
+  const report = await validateKnowledge(await inspectKnowledge(await commandProject(program, context)), doctor);
+  for (const diagnostic of report.diagnostics) {
+    const write = diagnostic.severity === 'error' ? context.stderr : context.stdout;
+    write(`${diagnostic.severity.toUpperCase()}: ${diagnostic.sourceId}: ${diagnostic.message}\n`);
+    if (diagnostic.repair !== undefined) write(`Repair: ${diagnostic.repair}\n`);
+  }
+  if (report.valid) context.stdout('Knowledge stack is valid.\n');
+  else exitCodes.set(program, 1);
+};
+
+const shouldUseLegacyRepository = async (program: Command, context: CliContext): Promise<boolean> => {
+  const options = program.opts<{ config?: string }>();
+  if (options.config !== undefined) return false;
+  try {
+    await readFile(resolve(commandCwd(program, context), '.local', 'arcantry.json'), 'utf8');
+    return (await commandProject(program, context)).config === null;
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return false;
+    throw error;
+  }
+};
+
+const handleTodoPlan = async (program: Command, context: CliContext, plan: ReturnType<typeof parseProjectPlan>, apply: boolean): Promise<void> => {
+  if (!apply) {
+    renderPlanResult(program, context, plan);
+    context.stdout('Run the same command with --apply to write these changes.\n');
+    return;
+  }
+  const result = await applyProjectPlan(plan, arcantryVersion);
+  for (const operation of result.applied) context.stdout(`${operation.action}: ${operation.path}\n`);
+  if (result.applied.length === 0) context.stdout('No file changes.\n');
+};
+
+const selectTodoSource = (inspection: KnowledgeInspection, requested: string | undefined, allowMissing: boolean): ProjectSource => {
+  if (requested !== undefined) return resolveTodoSource(inspection, requested, allowMissing);
+  const sources = inspection.sources.filter((source) => source.kind === 'todo-txt' && (allowMissing || source.exists));
+  if (sources.length === 1) return sources[0]!;
+  if (sources.length === 0) throw new Error('No todo.txt source exists; choose --source root or --source local.');
+  throw new Error('More than one todo.txt source exists; choose --source explicitly.');
+};
+
+const resolveTodoSource = (inspection: KnowledgeInspection, requested: string, allowMissing: boolean): ProjectSource => {
+  const id = requested === 'root' ? 'todo-root' : requested === 'local' ? 'todo-local' : requested;
+  const existing = inspection.sources.find((source) => source.id === id && source.kind === 'todo-txt');
+  if (existing !== undefined && (allowMissing || existing.exists)) return existing;
+  if (allowMissing && (id === 'todo-root' || id === 'todo-local')) {
+    const path = id === 'todo-root' ? 'todo.txt' : '.local/todo.txt';
+    return {
+      id,
+      kind: 'todo-txt',
+      path,
+      absolutePath: resolve(inspection.root, path),
+      management: 'observe',
+      adapter: 'todo-txt@1',
+      from: [],
+      visibility: id === 'todo-local' ? 'private' : 'shared',
+      scope: '.',
+      exists: false,
+      origin: 'discovered',
+      confidence: 'high',
+      adapterStatus: 'supported',
+    };
+  }
+  throw new Error(`Todo source is missing: ${id}.`);
+};
+
+const parseLine = (value: string): number => {
+  const line = Number.parseInt(value, 10);
+  if (!Number.isSafeInteger(line) || line < 1 || String(line) !== value) throw new Error('Todo line must be a positive integer.');
+  return line;
+};
+
+const localDate = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const collectAgent = (value: string, previous: AgentName[]): AgentName[] => [...previous, agentNameSchema.parse(value)];
 
 const collectSource = (value: string, previous: ArcantrySource[]): ArcantrySource[] => {
@@ -225,3 +520,10 @@ const formatError = (error: unknown): string => {
 
 const isCommanderExit = (error: unknown): error is { exitCode: number } =>
   typeof error === 'object' && error !== null && 'exitCode' in error && typeof (error as { exitCode?: unknown }).exitCode === 'number';
+
+const readStandardInput = async (): Promise<string> => {
+  let content = '';
+  process.stdin.setEncoding('utf8');
+  for await (const chunk of process.stdin) content += chunk;
+  return content;
+};

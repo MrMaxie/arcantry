@@ -2,6 +2,7 @@ import { lstat, readFile, readdir, readlink, realpath, rename, rm, symlink } fro
 import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validRange } from 'semver';
 import { z } from 'zod';
 
 const skillNamePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -22,10 +23,25 @@ export const skillScenarioSchema = z.object({
   outcome: z.string().trim().min(15).max(220),
 }).strict();
 
+export const skillCompatibilitySchema = z.object({
+  sourceKinds: z.array(z.enum(['openspec', 'changelog', 'todo-txt'])).min(1),
+  adapters: z.array(z.object({
+    name: z.string().regex(/^[a-z][a-z0-9-]*$/),
+    versions: z.string().trim().refine((value) => validRange(value) !== null, 'Invalid adapter version range.'),
+  }).strict()).optional(),
+}).strict();
+
+export const skillLearningSchema = z.object({
+  prerequisites: z.array(z.string().trim().min(5).max(160)).min(1).optional(),
+  outcomes: z.array(z.string().trim().min(5).max(160)).min(1),
+}).strict();
+
 export const skillMetadataSchema = z.object({
   $schema: z.literal('../../schemas/skill-metadata.schema.json'),
   summary: z.string().trim().min(30).max(180),
   scenarios: z.array(skillScenarioSchema).length(2),
+  compatibility: skillCompatibilitySchema.optional(),
+  learning: skillLearningSchema.optional(),
 }).strict();
 
 export type CatalogEntry = z.infer<typeof catalogEntrySchema>;

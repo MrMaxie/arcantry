@@ -6,17 +6,28 @@ Define the repository-level contract that keeps intent, implementation and relea
 
 ### Requirement: OpenSpec is the source of release history
 
-Arcantry MUST derive release history from archived OpenSpec changes and release manifests. Every completed product or engineering change MUST resolve to an archived OpenSpec change before final repository validation succeeds, whether the intent was authored before or after implementation.
+When Arcantry manages a changelog, it MUST derive release meaning from configured OpenSpec sources and release manifests. Existing changelog history MAY remain external, preserved or frozen before an explicit cutover boundary. Git commits and file diffs MUST NOT supply release prose, category, version impact, visibility or components.
+
+#### Scenario: A brownfield changelog starts a managed future
+
+- **WHEN** a cutover plan defines a managed release boundary
+- **THEN** history before the boundary remains byte-for-byte unchanged
+- **AND** later entries are rendered from OpenSpec release artifacts
+
+#### Scenario: Historical meaning is ambiguous
+
+- **WHEN** full migration cannot map an existing entry to explicit semantic intent
+- **THEN** migration reports a conflict instead of inferring meaning from Git
 
 #### Scenario: Release history is generated
 
-- **WHEN** changelog or component history is rendered
-- **THEN** every entry resolves to an archived OpenSpec change grouped by a release manifest
+- **WHEN** a managed changelog or component history is rendered
+- **THEN** every generated entry resolves to an archived OpenSpec change grouped by a release manifest
 
 #### Scenario: Intent is recovered after implementation
 
 - **WHEN** implementation exists before its OpenSpec record
-- **THEN** the repository cannot reach a valid completed state until a normal OpenSpec change describes, verifies and archives the delivered behavior
+- **THEN** the managed release state cannot become complete until a normal OpenSpec change describes, verifies and archives the delivered behavior
 
 ### Requirement: Archive is the delivery boundary
 
@@ -66,12 +77,17 @@ Every releasable change MUST list affected components in its release artifact us
 
 ### Requirement: Generated changelog is reproducible
 
-The changelog MUST be generated from release manifests and archived change release artifacts in deterministic version order. Entries MUST describe behavior-level outcomes from OpenSpec and MUST NOT be derived from atomic commits.
+New managed changelogs MUST follow Keep a Changelog 2.0 structure with a fixed preamble, an Unreleased section, the six standard change categories, ISO dates and optional comparison links when a repository URL is explicitly available. Rendering MUST be deterministic and MUST preserve configured legacy history.
+
+#### Scenario: No repository URL is available
+
+- **WHEN** changelog rendering has no explicit comparison URL
+- **THEN** it omits comparison links instead of inventing a host or repository address
 
 #### Scenario: Changelog generation repeats
 
 - **WHEN** generation runs twice against unchanged release inputs
-- **THEN** both outputs are byte-for-byte identical
+- **THEN** both managed outputs are byte-for-byte identical
 
 #### Scenario: Multiple commits implement one outcome
 
@@ -94,12 +110,19 @@ Repository validation MUST fail when a manifest references a missing or active c
 
 ### Requirement: Git history is coverage evidence only
 
-Release validation MAY use Git history to prove that the current repository state is sealed by the newest release manifest. It MUST NOT derive release prose, category, SemVer impact, visibility or components from commits or file diffs.
+Release validation MAY use Git history to prove a configured release seal when Git is available and sealing is enabled. Projects without Git MUST remain able to inspect, plan, apply and validate non-seal source contracts.
+
+#### Scenario: A non-Git project manages todo and OpenSpec
+
+- **WHEN** repository validation runs without a Git worktree
+- **THEN** source validation succeeds or fails solely from configured source contracts
+- **AND** no Git seal requirement is inferred
 
 #### Scenario: The release seal is inspected
 
-- **WHEN** validation reads Git history for the newest release manifest
-- **THEN** it reports only whether later repository changes exist and resolves all release meaning from OpenSpec artifacts
+- **WHEN** configured validation reads Git history for the newest release manifest
+- **THEN** it reports only whether later repository changes exist
+- **AND** resolves all release meaning from OpenSpec artifacts
 
 ### Requirement: Repository commands are stable
 
@@ -109,3 +132,22 @@ The repository MUST expose stable commands for checking, building, serving, vali
 
 - **WHEN** they use the documented command interface
 - **THEN** check, build, serve, validation, release planning, release cutting, and changelog rendering remain available
+
+### Requirement: External publication consumes sealed release state
+
+An external package publication MUST consume a repository state already sealed by the newest release manifest. Its trigger and registry metadata MUST NOT define release prose, category, SemVer impact, visibility or components.
+
+#### Scenario: A release tag matches the seal
+
+- **WHEN** npm publication runs for `v<version>`
+- **THEN** the tag version, newest release manifest, distribution version and release-seal commit all match before registry mutation
+
+#### Scenario: Publication inputs disagree
+
+- **WHEN** the tag, manifest, package version or checked-out commit does not identify the same sealed release
+- **THEN** publication fails without changing registry state
+
+#### Scenario: A version already exists
+
+- **WHEN** the target package version is already public in npm
+- **THEN** publication fails as a duplicate instead of overwriting or reusing that version

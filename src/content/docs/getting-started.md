@@ -1,0 +1,61 @@
+---
+title: Get started
+description: Inspect a project with Arcantry before choosing any repository footprint.
+---
+
+Arcantry can describe an empty directory or an established project without creating files. Start with inspection, then decide whether any source needs an explicit responsibility.
+
+## Requirements
+
+Run the CLI with Node.js 24 or newer. Node is required only in the environment that launches Arcantry. Using a package runner does not add Node, a package manifest, a lockfile, or an Arcantry dependency to the target project.
+
+## Inspect the current directory
+
+Choose the package runner already available on your machine:
+
+```sh
+npx @arcantry/arcantry repo inspect
+```
+
+```sh
+pnpm dlx @arcantry/arcantry repo inspect
+```
+
+```sh
+nubx @arcantry/arcantry repo inspect
+```
+
+These commands run the package through the runner's cache. `repo inspect` is read-only: it does not create `arcantry.toml`, initialize Git, or modify a recognized source.
+
+If Arcantry is already installed as a command, the equivalent invocation is:
+
+```sh
+arcantry repo inspect
+```
+
+Use `--cwd` to inspect another directory:
+
+```sh
+arcantry --cwd ../project repo inspect
+```
+
+Add `--json` when another tool needs the complete machine-readable result.
+
+## Read the result
+
+Inspection reports:
+
+- the resolved project root and whether configuration was found;
+- discovered or configured OpenSpec, changelog, and todo.txt sources;
+- each source's path, visibility, management level, adapter, and compatibility;
+- missing sources as valid absence rather than an initialization error.
+
+An empty result is valid. Git and `arcantry.toml` are not prerequisites.
+
+## Choose what happens next
+
+- Keep using configuration-free inspection when you only need a trace-free observer.
+- Add one external or project `arcantry.toml` when paths and responsibilities must be explicit.
+- Use [todo.txt queues](/arcantry/guides/todo-txt/) or [skills](/arcantry/skills/) independently.
+- Follow [Adoption paths](/arcantry/adoption/) before planning a source transition.
+- Use [Inspect, plan and apply](/arcantry/reference/repository-workflow/) when a source must change.

@@ -1,5 +1,5 @@
 {
-  "name": "@maxiedev/arcantry",
+  "name": "@arcantry/arcantry",
   "version": "0.3.2",
   "description": "Arcantry repository adoption, skill catalog, and agent integration CLI.",
   "type": "module",
@@ -18,6 +18,14 @@
     "./repository": {
       "types": "./dist/repository.d.ts",
       "import": "./dist/repository.js"
+    },
+    "./project": {
+      "types": "./dist/project.d.ts",
+      "import": "./dist/project.js"
+    },
+    "./release": {
+      "types": "./dist/release.d.ts",
+      "import": "./dist/release.js"
     },
     "./agents": {
       "types": "./dist/agents.d.ts",
@@ -44,6 +52,14 @@
   "engines": {
     "node": ">=24.0.0"
   },
+  "homepage": "https://maxie.dev/arcantry/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MrMaxie/arcantry.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MrMaxie/arcantry/issues"
+  },
   "license": "Apache-2.0",
   "publishConfig": {
     "access": "public"
@@ -51,10 +67,14 @@
   "dependencies": {
     "commander": "14.0.3",
     "execa": "9.6.1",
+    "semver": "7.8.5",
+    "smol-toml": "1.7.1",
+    "yaml": "2.9.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
     "@types/node": "25.7.0",
+    "@types/semver": "7.8.0",
     "tsup": "8.5.1",
     "typescript": "6.0.3",
     "vitest": "4.1.10"

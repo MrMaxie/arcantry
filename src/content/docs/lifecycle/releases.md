@@ -1,13 +1,15 @@
 ---
-title: Releases
-description: Build version numbers and changelog entries from delivered OpenSpec changes.
+title: Release lifecycle
+description: Build Arcantry versions and changelog entries from delivered Arcantry changes.
 ---
 
-A release is a dated set of archived OpenSpec changes. It is required to complete repository work even when no package, Git tag or GitHub Release is published.
+This page describes how the Arcantry project releases itself. It is not a required release process for projects that inspect or adopt Arcantry.
+
+An Arcantry release is a dated set of archived OpenSpec changes. The internal release keeps repository state complete even when no package, Git tag, or GitHub Release is published.
 
 ## `release.md`
 
-Each change carries the release-facing outcome and its version impact:
+Each Arcantry change carries its release-facing outcome and version impact:
 
 ```md
 ---
@@ -23,19 +25,19 @@ components:
 The farm layout can now be rebuilt without replacing the map wholesale.
 ```
 
-The body describes the delivered outcome. It is not an implementation summary.
+The body describes the delivered outcome, not an implementation summary.
 
-`category` is one of `added`, `changed`, `fixed`, `deprecated`, `removed` or `security`.
+`category` is `added`, `changed`, `fixed`, `deprecated`, `removed`, or `security`.
 
-New completed changes use `patch`, `minor` or `major`. Planning rejects an unassigned `none` change and uses the highest impact among the remaining changes. Historical release data may retain `none` for compatibility.
+New completed changes use `patch`, `minor`, or `major`. Planning rejects an unassigned `none` change and uses the highest impact among the remaining changes. Historical release data may retain `none` for compatibility.
 
 `visibility: public` publishes the entry in `CHANGELOG.md`. `internal` keeps the change in release state without publishing its prose.
 
-`components` lists one or more stable affected surfaces, such as `cli`, `catalog`, `repository-adoption` or `skill:<name>`.
+`components` lists one or more stable affected Arcantry surfaces, such as `cli`, `catalog`, `docs`, `repository-adoption`, or `skill:<name>`.
 
 ## Manifest
 
-A release manifest contains only identity and grouping data:
+An Arcantry release manifest contains only identity and grouping data:
 
 ```yaml
 version: 1.4.0
@@ -45,7 +47,7 @@ changes:
   - fix-save-corruption
 ```
 
-Change IDs must resolve to `openspec/changes/archive/` and may belong to only one release.
+Change ids must resolve to `openspec/changes/archive/` and may belong to only one release.
 
 ## Flow
 
@@ -79,11 +81,13 @@ just ci
 
 `release-cut` creates the manifest from the computed plan. It does not ask commits what changed.
 
-`release-check` rejects active changes, unassigned archives, distribution version drift, stale generated changelog content, uncommitted work and commits after the latest release manifest. `just check` runs it automatically.
+`release-check` rejects active changes, unassigned archives, distribution version drift, stale generated changelog content, uncommitted work, and commits after the latest release manifest. `just check` runs it automatically.
 
-The commit that introduces the newest release manifest is the release seal. It must also contain the archived OpenSpec changes, aligned distribution versions and generated changelog. A later commit opens a new change cycle and requires a newer internal release before the repository can pass final validation again.
+The commit that introduces the newest release manifest is the Arcantry release seal. It must also contain the archived OpenSpec changes, aligned distribution versions, and generated changelog. A later commit opens a new Arcantry change cycle and requires a newer internal release before final validation can pass again.
 
 ## Changelog provenance
+
+Arcantry's public release adapter renders Keep a Changelog 2.0 with its preamble, `Unreleased`, dated bracketed versions, and standard categories. It can compose archived meaning from one or several explicit OpenSpec paths in a monorepo. Existing release prose is never reconstructed from Git.
 
 Published entries carry an invisible OpenSpec source marker:
 
@@ -95,6 +99,28 @@ This keeps generated output traceable without adding noise for readers.
 
 ## Git history
 
-Commits remain the implementation audit trail. A change can contain exploratory commits, refactors, test fixes and corrections without any of them becoming release notes. The archived OpenSpec change is the release unit.
+Commits remain Arcantry's implementation audit trail. A change can contain exploratory commits, refactors, test fixes, and corrections without any of them becoming release notes. The archived OpenSpec change is the release unit.
 
-Release validation uses Git only to prove that no repository work follows the newest release seal. It never derives release prose, category, impact, visibility or components from a commit message or diff.
+Arcantry release validation uses Git only to prove that no repository work follows the newest release seal. It never derives release prose, category, impact, visibility, or components from a commit message or diff.
+
+Projects using Arcantry can observe a changelog without OpenSpec. Only a changelog configured for Arcantry management must derive new release meaning from explicit OpenSpec authorities.
+
+## npm publication
+
+The public package is `@arcantry/arcantry`. npm publication consumes an already sealed Arcantry release; it does not create or reinterpret one.
+
+For normal releases:
+
+1. Complete the internal release flow and push the seal commit.
+2. Create a protected `v<version>` tag that points exactly to that commit.
+3. Let the `Publish npm` workflow verify the tag, manifest, package version, repository metadata and exact package archive.
+4. The workflow publishes through npm trusted publishing from the protected `npm` GitHub environment. It does not use a stored npm write token.
+
+The first publication is a one-time bootstrap because npm requires a package to exist before it can trust a CI publisher:
+
+1. Build and verify the release archive from the exact seal commit.
+2. As an `@arcantry` organization maintainer with 2FA, run `npm publish <archive> --access public`.
+3. In the package settings on npmjs.com, add the GitHub Actions trusted publisher for repository `MrMaxie/arcantry`, workflow `publish-npm.yml`, environment `npm`, and the `npm publish` action.
+4. Require 2FA and disallow token-based publication after the trusted publisher has been verified.
+
+Do not create the first version tag before bootstrap is complete. Automated tag publication starts with the next sealed version.

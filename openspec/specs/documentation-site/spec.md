@@ -25,9 +25,29 @@ Adoption, repository workflow, CLI, and skills overview pages MUST be authored f
 
 ### Requirement: Arcantry documents its own conformance
 
-The documentation MUST state that Arcantry validates its repository through the same commands and contracts it exposes to adopters. It MUST NOT claim a verification path that CI and local contributors cannot run.
+The contributor documentation MUST state that Arcantry validates its own repository through documented project commands and contracts. It MUST NOT present Arcantry's mandatory OpenSpec change and release lifecycle as a universal requirement for projects that only use Arcantry.
 
 #### Scenario: A contributor checks Arcantry itself
 
-- **WHEN** the contributor runs the documented repository verification surface
-- **THEN** it exercises the public Arcantry validation commands as part of the repository checks
+- **WHEN** the contributor follows the Contributing to Arcantry section
+- **THEN** they can identify the repository verification surface and Arcantry-specific lifecycle rules
+
+### Requirement: Documentation links and presentation remain stable
+
+The sidebar MUST use grouped Start, Guides, Concepts, Reference, and Contributing to Arcantry sections. Internal links and fragments from the overview and sidebar MUST resolve in the built site. This content change MUST preserve the existing Starlight shell, typography, animation, and visual composition except for copy, information order, commands, and links required by the new documentation architecture.
+
+#### Scenario: A reader navigates the rebuilt documentation
+
+- **WHEN** they follow an overview action or sidebar item
+- **THEN** the intended page or section exists
+- **AND** the established documentation shell remains visually unchanged
+
+### Requirement: Public package commands use the canonical npm identity
+
+Documentation and interactive copy surfaces MUST derive or validate package launcher commands against the canonical package manifest name.
+
+#### Scenario: The npm package identity changes
+
+- **WHEN** documentation generation and checks run
+- **THEN** npm, pnpm and supported launcher examples use `@arcantry/arcantry`
+- **AND** stale package scopes fail validation instead of remaining in public copy

@@ -1,0 +1,58 @@
+name: Publish npm
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24.19.0"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Verify npm trusted-publishing support
+        run: |
+          node -e "const { execFileSync } = require('node:child_process'); const [major, minor] = execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim().split('.').map(Number); if (major < 11 || (major === 11 && minor < 5)) throw new Error('npm 11.5.1 or newer is required');"
+      - run: pnpm install --frozen-lockfile
+      - run: just ci
+      - run: pnpm run publish:check -- --tag "$GITHUB_REF_NAME"
+      - name: Build and verify the publication archive
+        id: archive
+        run: |
+          mkdir -p .artifacts/npm
+          pnpm --dir packages/arcantry run prepack
+          node packages/arcantry/scripts/check-package.mjs --output .artifacts/npm
+          archive="$(find .artifacts/npm -maxdepth 1 -name '*.tgz' -print -quit)"
+          test -n "$archive"
+          echo "path=$archive" >> "$GITHUB_OUTPUT"
+      - name: Read package identity
+        id: package
+        run: |
+          node -e "const manifest = require('./packages/arcantry/package.json'); console.log('name=' + manifest.name); console.log('version=' + manifest.version);" >> "$GITHUB_OUTPUT"
+      - name: Reject an existing registry version
+        run: |
+          if npm view "${{ steps.package.outputs.name }}@${{ steps.package.outputs.version }}" version --json >/dev/null 2>&1; then
+            echo "${{ steps.package.outputs.name }}@${{ steps.package.outputs.version }} already exists" >&2
+            exit 1
+          fi
+      - name: Publish verified archive
+        run: npm publish "${{ steps.archive.outputs.path }}" --access public

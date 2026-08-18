@@ -7,7 +7,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'Arcantry',
-      description: 'Repository foundations for spec-driven delivery.',
+      description: 'Composable, versioned project knowledge without a required repository shape.',
       customCss: ['./src/styles/arcantry.css', './src/styles/arcantry-concept.css'],
       components: {
         Head: './src/components/ArcantryHead.astro',
@@ -18,22 +18,40 @@ export default defineConfig({
         Hero: './src/components/ArcantryHero.astro'
       },
       sidebar: [
-        { label: 'Start', items: [{ label: 'Overview', slug: 'index' }, { label: 'Adoption', slug: 'adoption' }] },
         {
-          label: 'Use Arcantry',
+          label: 'Start',
           items: [
-            { label: 'Skills', slug: 'skills' },
-            { label: 'Skill catalog', slug: 'skills/catalog' },
-            { label: 'CLI', slug: 'reference/cli' },
-            { label: 'Repository workflow', slug: 'reference/repository-workflow' }
+            { label: 'Overview', slug: 'index' },
+            { label: 'Get started', slug: 'getting-started' },
+            { label: 'Adoption paths', slug: 'adoption' }
           ]
         },
-        { label: 'Lifecycle', items: [{ label: 'Changes', slug: 'lifecycle/changes' }, { label: 'Releases', slug: 'lifecycle/releases' }] },
+        {
+          label: 'Guides',
+          items: [
+            { label: 'Inspect, plan and apply', slug: 'reference/repository-workflow' },
+            { label: 'todo.txt queues', slug: 'guides/todo-txt' },
+            { label: 'Skills', slug: 'skills' }
+          ]
+        },
+        {
+          label: 'Concepts',
+          items: [{ label: 'Project knowledge stack', slug: 'reference/repository-contract' }]
+        },
         {
           label: 'Reference',
           items: [
-            { label: 'Contributor commands', slug: 'reference/commands' },
-            { label: 'Repository contract', slug: 'reference/repository-contract' }
+            { label: 'CLI', slug: 'reference/cli' },
+            { label: 'Configuration', slug: 'reference/configuration' },
+            { label: 'Skill catalog', slug: 'skills/catalog' }
+          ]
+        },
+        {
+          label: 'Contributing to Arcantry',
+          items: [
+            { label: 'Change lifecycle', slug: 'lifecycle/changes' },
+            { label: 'Release lifecycle', slug: 'lifecycle/releases' },
+            { label: 'Contributor commands', slug: 'reference/commands' }
           ]
         }
       ]

@@ -1,42 +1,51 @@
 ---
 name: adopt-arcantry
-description: Integrate Arcantry into an existing Git repository through the Arcantry CLI while preserving project instructions, existing OpenSpec history, private local state, and user-owned tooling. Use when Codex needs to initialize, update, validate, diagnose, or remove Arcantry-managed repository artifacts safely.
+description: Inspect, plan, apply, validate, or remove an Arcantry project knowledge stack while preserving project-owned sources, private state, and native tooling. Use for configured or configuration-free adoption in existing repositories, new projects, monorepos, or directories without Git.
 ---
 
 # Adopt Arcantry
 
-Integrate Arcantry through its CLI. Preserve repository-owned files and stop when an operation reports a conflict.
+Treat greenfield and brownfield as properties of each discovered source, not as product modes. Preserve project-owned content and stop when a plan reports a conflict.
 
 ## Inspect
 
-1. Read the applicable `AGENTS.md` and private operational instructions.
-2. Inspect Git status and existing `.local/arcantry.json`, `openspec/`, `justfile`, and `mise.toml`.
-3. Run `arcantry repo doctor` when an installation already exists.
-4. Determine the requested agents, operational source, ordered sources, and documentation mode.
+1. Read the applicable repository and private instructions.
+2. Run `arcantry repo inspect` before proposing changes.
+3. Identify each OpenSpec, changelog, and todo.txt source, including its adapter, visibility, management level, and dependencies.
+4. Treat `.local/` as a privacy boundary. Do not classify or manage `.docs/`.
 
-## Require explicit choices
+Use `--config <path>` only when the user supplies or authorizes an explicit configuration. Otherwise accept the nearest `arcantry.toml` or configuration-free discovery. Do not merge configuration layers.
 
-Before initialization, obtain an explicit `docs` choice:
+## Choose responsibility
 
-- `shared`: keep reusable non-specification knowledge in tracked `.docs/`.
-- `local`: keep `.docs/` private through `.git/info/exclude`.
-- `none`: do not create `.docs/`.
+Choose `ignore`, `observe`, `validate`, or `manage` independently for each source. A configured capability does not authorize an external write.
 
-Default `operationalSource` to `local` only when the user did not select another configured source. Never infer an external write authorization from a `readwrite` or `operational` source mode.
+Choose an explicit transition when structure must change:
 
-## Apply
+- `preserve`: leave data and responsibility unchanged.
+- `adopt`: manage an existing source in place.
+- `rebind`: connect the role to another existing source.
+- `cutover`: preserve earlier history and manage only a new boundary.
+- `migrate`: convert only meaning that can be recovered without guessing.
+- `relocate`: copy and verify a target before a separately planned deletion.
 
-1. Run `arcantry repo init --docs <shared|local|none>` for a new adoption. Add repeatable `--agent <codex|claude|cursor>`, `--source <name=readonly|readwrite|operational>`, and `--operational-source <name>` flags only for explicitly selected values. Use global `--cwd <path>` when targeting another repository.
-2. When no agent or source is supplied, accept the CLI defaults of `codex` and `local=operational`. Use `arcantry repo update` for an existing adoption; it must preserve the complete existing source configuration.
-3. Let the CLI create only missing managed artifacts.
-4. Stop and report any conflict involving an existing `justfile`, `mise.toml`, incompatible OpenSpec layout, or user-owned file.
-5. Do not replace a regular directory, remove an unknown artifact, or edit project instructions unless the user explicitly authorizes that exact change.
+Never migrate automatically after an Arcantry or adapter update.
 
-Use `arcantry repo remove` only when the user explicitly requests removal. It may remove only artifacts recognized as Arcantry-generated; preserve specifications, operational data, and unknown files.
+## Plan and apply
+
+1. Run `arcantry repo plan --source <id> --transition <strategy> --json`.
+2. Review conflicts, input hashes, visibility, adapter versions, and ordered operations.
+3. Apply only with explicit user authorization using `arcantry repo apply --plan <path|->`.
+4. If an input changed after planning, inspect again and create a new plan.
+
+Todo commands are previews unless `--apply` is present. When both root and private queues exist, select the source explicitly. Do not invent inbox or outbox tags.
+
+Use legacy `arcantry repo init --docs none`, `update`, and `remove` only for an existing legacy contract. Never select `shared` or `local`; existing `.docs/` content remains project-owned.
 
 ## Verify
 
-1. Run `arcantry repo validate`.
-2. Run `arcantry repo doctor`.
-3. Inspect Git status and confirm `.local/` remains private.
-4. Report created or updated behavior, conflicts, and checks that were not run.
+1. Run `arcantry repo inspect` again.
+2. Run `arcantry repo validate` and, when repair guidance is useful, `arcantry repo doctor`.
+3. Confirm private content did not enter previews, logs, tracked files, or packages.
+4. Confirm unrelated project files and native build tooling remain unchanged.
+5. Report applied transitions, preserved boundaries, conflicts, and checks not run.

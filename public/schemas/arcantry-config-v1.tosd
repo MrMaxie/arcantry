@@ -1,0 +1,95 @@
+[toml-schema]
+version = "1.0.0"
+
+[toml-schema.meta]
+title = "Arcantry project configuration"
+application_version = 1
+
+[types.schema_reference]
+type = "table"
+description = "Optional TOML Schema discovery metadata."
+
+[types.schema_reference.location]
+type = "string"
+minlength = 1
+
+[types.schema_reference.version]
+type = "string"
+pattern = "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"
+optional = true
+
+[types.tool]
+type = "table"
+description = "Compatibility requirements for the Arcantry CLI."
+
+[types.tool.requires]
+type = "string"
+minlength = 1
+
+[types.project]
+type = "table"
+description = "Project resolution relative to this configuration file."
+
+[types.project.root]
+type = "string"
+minlength = 1
+
+[types.source]
+type = "table"
+description = "One independently managed project knowledge source."
+
+[types.source.kind]
+type = "string"
+allowedvalues = ["openspec", "changelog", "todo-txt"]
+
+[types.source.path]
+type = "string"
+minlength = 1
+
+[types.source.management]
+type = "string"
+allowedvalues = ["ignore", "observe", "validate", "manage"]
+optional = true
+
+[types.source.adapter]
+type = "string"
+pattern = "^[a-z][a-z0-9-]*@[0-9]+$"
+
+[types.source.from]
+type = "array"
+arraytype = "string"
+optional = true
+
+[types.source.managed_from]
+type = "string"
+pattern = "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+optional = true
+
+[types.source.visibility]
+type = "string"
+allowedvalues = ["shared", "private"]
+optional = true
+
+[types.source.scope]
+type = "string"
+minlength = 1
+optional = true
+
+[elements.config_version]
+type = "integer"
+min = 1
+max = 1
+
+[elements.tool]
+type = "types.tool"
+optional = true
+
+[elements.project]
+type = "types.project"
+optional = true
+
+[elements.sources]
+type = "collection"
+itemtype = "types.source"
+keypattern = "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+optional = true

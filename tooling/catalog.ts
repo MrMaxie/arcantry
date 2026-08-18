@@ -22,6 +22,14 @@ export interface SkillMetadata {
   $schema?: string;
   summary: string;
   scenarios: SkillScenario[];
+  compatibility?: {
+    sourceKinds: Array<'openspec' | 'changelog' | 'todo-txt'>;
+    adapters?: Array<{ name: string; versions: string }>;
+  };
+  learning?: {
+    prerequisites?: string[];
+    outcomes: string[];
+  };
 }
 
 export interface SkillAgent {
@@ -124,7 +132,7 @@ export function validateCatalog(root = process.cwd()): string[] {
     if (metadata.$schema !== skillMetadataSchemaPath) {
       errors.push(`skills/${entry.name} metadata $schema must be ${skillMetadataSchemaPath}`);
     }
-    if (Object.keys(metadata).some((key) => key !== '$schema' && key !== 'summary' && key !== 'scenarios')) {
+    if (Object.keys(metadata).some((key) => !['$schema', 'summary', 'scenarios', 'compatibility', 'learning'].includes(key))) {
       errors.push(`skills/${entry.name} metadata must not contain unsupported fields`);
     }
     if (typeof metadata.summary !== 'string' || metadata.summary.length < 30 || metadata.summary.length > 180) {
@@ -150,6 +158,41 @@ export function validateCatalog(root = process.cwd()): string[] {
         if (Object.keys(scenario).some((key) => key !== 'title' && key !== 'prompt' && key !== 'outcome')) {
           errors.push(`skills/${entry.name} scenario ${index + 1} must not contain unsupported fields`);
         }
+      }
+    }
+    if (metadata.compatibility !== undefined) {
+      const allowedKinds = new Set(['openspec', 'changelog', 'todo-txt']);
+      if (
+        Object.keys(metadata.compatibility).some((key) => key !== 'sourceKinds' && key !== 'adapters') ||
+        !Array.isArray(metadata.compatibility.sourceKinds) ||
+        metadata.compatibility.sourceKinds.length === 0 ||
+        new Set(metadata.compatibility.sourceKinds).size !== metadata.compatibility.sourceKinds.length ||
+        !metadata.compatibility.sourceKinds.every((kind) => allowedKinds.has(kind))
+      ) {
+        errors.push(`skills/${entry.name} compatibility sourceKinds are invalid`);
+      }
+      if (metadata.compatibility.adapters !== undefined && (
+        !Array.isArray(metadata.compatibility.adapters) ||
+        !metadata.compatibility.adapters.every((adapter) =>
+          Object.keys(adapter).every((key) => key === 'name' || key === 'versions') &&
+          skillNamePattern.test(adapter.name) &&
+          typeof adapter.versions === 'string' &&
+          /\d/.test(adapter.versions)
+        )
+      )) {
+        errors.push(`skills/${entry.name} compatibility adapters are invalid`);
+      }
+    }
+    if (metadata.learning !== undefined) {
+      const validStatements = (values: unknown, required: boolean): boolean =>
+        (!required && values === undefined) ||
+        (Array.isArray(values) && values.length > 0 && values.every((value) => typeof value === 'string' && value.trim().length >= 5 && value.trim().length <= 160));
+      if (
+        Object.keys(metadata.learning).some((key) => key !== 'prerequisites' && key !== 'outcomes') ||
+        !validStatements(metadata.learning.prerequisites, false) ||
+        !validStatements(metadata.learning.outcomes, true)
+      ) {
+        errors.push(`skills/${entry.name} learning metadata is invalid`);
       }
     }
 

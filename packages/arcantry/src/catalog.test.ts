@@ -24,6 +24,14 @@ const createCatalogFixture = async (): Promise<string> => {
     `${JSON.stringify({
       $schema: '../../schemas/skill-metadata.schema.json',
       summary: 'Perform a concrete example task with predictable and verifiable results.',
+      compatibility: {
+        sourceKinds: ['openspec', 'todo-txt'],
+        adapters: [{ name: 'openspec', versions: '>=1 <3' }],
+      },
+      learning: {
+        prerequisites: ['Know which project source is authoritative.'],
+        outcomes: ['Choose a compatible adapter without mutating project data.'],
+      },
       scenarios: [
         { title: 'First case', prompt: 'Use $example-skill for the first case.', outcome: 'The first case is handled.' },
         { title: 'Second case', prompt: 'Use $example-skill for the second case.', outcome: 'The second case is handled.' },
@@ -38,7 +46,9 @@ describe('skill catalog', () => {
   it('validates and inspects canonical skill packages', async () => {
     const root = await createCatalogFixture();
     expect((await validateCatalog(root)).valid).toBe(true);
-    expect((await inspectSkill(root, 'example-skill')).metadata.scenarios).toHaveLength(2);
+    const metadata = (await inspectSkill(root, 'example-skill')).metadata;
+    expect(metadata.scenarios).toHaveLength(2);
+    expect(metadata.compatibility?.adapters?.[0]?.versions).toBe('>=1 <3');
   });
 
   it('links idempotently and unlinks only the exact source', async () => {

@@ -1,6 +1,7 @@
 ---
 import type {} from '@astrojs/starlight';
 import { Icon } from '@astrojs/starlight/components';
+import packageManifest from '../../packages/arcantry/package.json';
 import ArcantryAmbientCanvas from './ArcantryAmbientCanvas.astro';
 
 const hero = Astro.locals.starlightRoute.entry.data.hero;
@@ -9,10 +10,11 @@ const heroTitle = String(hero.title);
 const titleBreak = heroTitle.lastIndexOf(' ');
 const titleLead = titleBreak > -1 ? heroTitle.slice(0, titleBreak + 1) : '';
 const titleAccent = titleBreak > -1 ? heroTitle.slice(titleBreak + 1) : heroTitle;
+const packageName = packageManifest.name;
 const commandOptions = [
-  { id: 'npm', label: 'npm', executable: 'npx', packageCommand: '@maxiedev/arcantry', value: 'npx @maxiedev/arcantry repo init --docs none' },
-  { id: 'pnpm', label: 'pnpm', executable: 'pnpm dlx', packageCommand: '@maxiedev/arcantry', value: 'pnpm dlx @maxiedev/arcantry repo init --docs none' },
-  { id: 'nub', label: 'Nub', executable: 'nubx', packageCommand: '@maxiedev/arcantry', value: 'nubx @maxiedev/arcantry repo init --docs none' },
+  { id: 'npm', label: 'npm', executable: 'npx', packageCommand: packageName, value: `npx ${packageName} repo inspect` },
+  { id: 'pnpm', label: 'pnpm', executable: 'pnpm dlx', packageCommand: packageName, value: `pnpm dlx ${packageName} repo inspect` },
+  { id: 'nub', label: 'Nub', executable: 'nubx', packageCommand: packageName, value: `nubx ${packageName} repo inspect` },
 ] as const;
 ---
 
@@ -53,7 +55,7 @@ const commandOptions = [
             data-label={option.label}
             data-copy={option.value}
           >
-            <code><span class="prompt">$</span> <span class="executable">{option.executable}</span> <span class="package">{option.packageCommand}</span> <span class="arguments">repo init <span class="flag">--docs</span> none</span></code>
+            <code><span class="prompt">$</span> <span class="executable">{option.executable}</span> <span class="package">{option.packageCommand}</span> <span class="arguments">repo inspect</span></code>
             <span class="copy-state" aria-hidden="true">
               <span class="copy-idle"><Icon name="document" /></span>
               <span class="copy-done"><Icon name="approve-check" /></span>

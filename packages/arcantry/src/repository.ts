@@ -107,7 +107,7 @@ const localGuidanceBody = [
   '',
   'Treat `.local/` as private operational state. Read `.local/arcantry.json` for configured agents and ordered task sources.',
   'A source configured as `readwrite` still requires explicit authorization before each external write.',
-  'Keep product specifications and release intent in `openspec/`; never create `.docs/spec`.',
+  'Keep product specifications and release intent in `openspec/`.',
 ].join('\n');
 
 const sharedGuidanceBody = [
@@ -115,7 +115,6 @@ const sharedGuidanceBody = [
   '',
   'Use `openspec/` as the only source of product and engineering specifications.',
   'Read `.local/arcantry.json` when present for private operational configuration.',
-  'Keep meetings, templates, and durable non-specification knowledge in `.docs/` only when that mode is configured.',
 ].join('\n');
 
 const cursorRuleBody = [
@@ -167,9 +166,6 @@ export const planRepositoryInit = async (cwd: string, input: CreateArcantryConfi
   }
   await planSection(plan, '.local/AGENTS.md', localGuidanceBody, false);
   await planConfiguredEntrypoints(plan, config.agents, false);
-  if (config.docs !== 'none') {
-    await planSection(plan, '.docs/AGENTS.md', sharedGuidanceBody, false);
-  }
   await planGitExcludes(plan, config);
 
   return plan;
@@ -191,9 +187,6 @@ export const planRepositoryUpdate = async (cwd: string): Promise<RepositoryPlan>
   }
   await planSection(plan, '.local/AGENTS.md', localGuidanceBody, true);
   await planConfiguredEntrypoints(plan, config.agents, true);
-  if (config.docs !== 'none') {
-    await planSection(plan, '.docs/AGENTS.md', sharedGuidanceBody, true);
-  }
   await planGitExcludes(plan, config);
 
   return plan;
@@ -224,7 +217,6 @@ export const planRepositoryRemove = async (cwd: string): Promise<RepositoryPlan>
   }
 
   await planSectionRemoval(plan, '.local/AGENTS.md');
-  await planSectionRemoval(plan, '.docs/AGENTS.md');
   for (const artifact of agentArtifacts) {
     await planSectionRemoval(plan, artifact.path);
   }
@@ -303,14 +295,7 @@ export const validateRepository = async (cwd: string): Promise<RepositoryReport>
     for (const agent of config.agents) {
       await validateSection(root, getAgentArtifact(agent).path, sharedGuidanceBody, diagnostics);
     }
-    if (config.docs !== 'none') {
-      await validateSection(root, '.docs/AGENTS.md', sharedGuidanceBody, diagnostics);
-    }
     await validateGitExcludes(root, config, diagnostics);
-  }
-
-  if (await pathExists(join(root, '.docs/spec'))) {
-    diagnostics.push({ severity: 'error', path: '.docs/spec', message: 'Specifications belong in openspec/, not .docs/spec.' });
   }
 
   return { root, valid: diagnostics.every((diagnostic) => diagnostic.severity !== 'error'), diagnostics, config };
@@ -411,11 +396,11 @@ const readConfigForPlan = async (plan: RepositoryPlan): Promise<ArcantryConfig |
   }
 };
 
-const planGitExcludes = async (plan: RepositoryPlan, config: ArcantryConfig): Promise<void> => {
+const planGitExcludes = async (plan: RepositoryPlan, _config: ArcantryConfig): Promise<void> => {
   const gitPath = await resolveGitPath(plan.root, 'info/exclude');
   const existingContent = await readText(gitPath);
   const existing = existingContent ?? '';
-  const required = ['.local/', ...(config.docs === 'local' ? ['.docs/'] : [])];
+  const required = ['.local/'];
   const lines = new Set(existing.split(/\r?\n/));
   const missing = required.filter((line) => !lines.has(line));
   if (missing.length === 0) {
@@ -442,10 +427,10 @@ const validateSection = async (
   }
 };
 
-const validateGitExcludes = async (root: string, config: ArcantryConfig, diagnostics: RepositoryDiagnostic[]): Promise<void> => {
+const validateGitExcludes = async (root: string, _config: ArcantryConfig, diagnostics: RepositoryDiagnostic[]): Promise<void> => {
   const path = await resolveGitPath(root, 'info/exclude');
   const lines = new Set(((await readText(path)) ?? '').split(/\r?\n/));
-  for (const pattern of ['.local/', ...(config.docs === 'local' ? ['.docs/'] : [])]) {
+  for (const pattern of ['.local/']) {
     if (!lines.has(pattern)) {
       diagnostics.push({ severity: 'error', path: '.git/info/exclude', message: `${pattern} must be excluded locally.` });
     }
@@ -454,10 +439,7 @@ const validateGitExcludes = async (root: string, config: ArcantryConfig, diagnos
 
 const repairForDiagnostic = (diagnostic: RepositoryDiagnostic): string => {
   if (diagnostic.path === configPath) {
-    return 'Run `arcantry repo init --docs <shared|local|none>` after choosing the documentation mode.';
-  }
-  if (diagnostic.path === '.docs/spec') {
-    return 'Move specifications to `openspec/` and remove `.docs/spec`.';
+    return 'Run `arcantry repo init --docs none` to create the legacy private contract.';
   }
   if (diagnostic.message.includes('missing or outdated') || diagnostic.message.includes('excluded locally')) {
     return 'Run `arcantry repo update`.';
@@ -473,7 +455,7 @@ const resolveGitPath = async (root: string, gitPath: string): Promise<string> =>
   return resolve(root, result.stdout.trim());
 };
 
-const getOpenSpecAssetFiles = async (): Promise<Record<string, string>> => {
+export const getOpenSpecAssetFiles = async (): Promise<Record<string, string>> => {
   const moduleDirectory = dirname(fileURLToPath(import.meta.url));
   const packageRoot = ['src', 'dist'].includes(basename(moduleDirectory)) ? dirname(moduleDirectory) : moduleDirectory;
   const candidates = [join(packageRoot, 'assets', 'openspec'), resolve(packageRoot, '..', '..', 'openspec', 'schemas', 'arcantry')];

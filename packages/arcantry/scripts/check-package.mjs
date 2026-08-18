@@ -1,10 +1,13 @@
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execa } from 'execa';
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url));
+const outputFlag = process.argv.indexOf('--output');
+if (outputFlag !== -1 && !process.argv[outputFlag + 1]) throw new Error('usage: check-package.mjs [--output <directory>]');
+const retainedOutput = outputFlag === -1 ? undefined : resolve(process.argv[outputFlag + 1]);
 let smokeRoot;
 
 try {
@@ -29,23 +32,47 @@ try {
   smokeRoot = await mkdtemp(join(tmpdir(), 'arcantry-package-smoke-'));
   const installRoot = join(smokeRoot, 'install');
   const repositoryRoot = join(smokeRoot, 'repository');
+  const wildRoot = join(smokeRoot, 'wild');
   const linkRoot = join(smokeRoot, 'links');
-  await Promise.all([mkdir(installRoot), mkdir(repositoryRoot), mkdir(linkRoot)]);
+  await Promise.all([mkdir(installRoot), mkdir(repositoryRoot), mkdir(wildRoot), mkdir(linkRoot)]);
+  if (retainedOutput) await mkdir(retainedOutput, { recursive: true });
 
-  const packed = await execa('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', smokeRoot], { cwd: packageRoot });
+  const packDestination = retainedOutput ?? smokeRoot;
+  const packed = await execa('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', packDestination], { cwd: packageRoot });
   const packedOutput = JSON.parse(packed.stdout);
   const filename = packedOutput[0]?.filename;
   if (typeof filename !== 'string') throw new Error('Package smoke could not resolve the packed archive.');
 
-  await execa('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--prefix', installRoot, join(smokeRoot, filename)]);
-  const cli = join(installRoot, 'node_modules', '@maxiedev', 'arcantry', 'dist', 'cli.js');
-  const runCli = (args, cwd = smokeRoot) => execa(process.execPath, [cli, ...args], { cwd });
   const packageManifest = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'));
+  const packagePath = packageManifest.name.split('/');
+  const archivePath = join(packDestination, filename);
+  await execa('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--prefix', installRoot, archivePath]);
+  const cli = join(installRoot, 'node_modules', ...packagePath, 'dist', 'cli.js');
+  const runCli = (args, cwd = smokeRoot) => execa(process.execPath, [cli, ...args], { cwd });
 
   await execa('git', ['init', '--quiet'], { cwd: repositoryRoot });
   const versionResult = await runCli(['--version']);
   if (versionResult.stdout.trim() !== packageManifest.version) {
     throw new Error(`Packed CLI version ${versionResult.stdout.trim()} does not match package ${packageManifest.version}.`);
+  }
+  const subpaths = ['project', 'release'].map((subpath) => `${packageManifest.name}/${subpath}`);
+  await execa(process.execPath, ['--input-type=module', '-e', `await Promise.all(${JSON.stringify(subpaths)}.map((specifier) => import(specifier)));`], { cwd: installRoot });
+  await runCli(['--cwd', wildRoot, 'repo', 'inspect', '--json']);
+  await runCli(['--cwd', wildRoot, 'todo', 'add', 'Package smoke +Arcantry', '--source', 'root', '--apply']);
+  const transition = await runCli([
+    '--cwd', wildRoot,
+    'repo', 'plan',
+    '--source', 'todo-root',
+    '--transition', 'relocate',
+    '--to-path', '.local/todo.txt',
+    '--delete-source',
+    '--json',
+  ]);
+  const planPath = join(smokeRoot, 'plan.json');
+  await writeFile(planPath, transition.stdout, 'utf8');
+  await runCli(['--cwd', wildRoot, 'repo', 'apply', '--plan', planPath]);
+  if ((await readFile(join(wildRoot, '.local', 'todo.txt'), 'utf8')) !== 'Package smoke +Arcantry\n') {
+    throw new Error('Packed CLI did not preserve todo.txt content during relocation.');
   }
   await runCli(['--cwd', repositoryRoot, 'repo', 'init', '--docs', 'none']);
   await runCli(['--cwd', repositoryRoot, 'repo', 'update']);
@@ -58,7 +85,7 @@ try {
   await runCli(['skills', 'doctor', '--target', linkRoot]);
   await runCli(['skills', 'unlink', 'adopt-arcantry', '--target', linkRoot]);
 
-  process.stdout.write(`Package allowlist and packed CLI smoke passed (${files.length} files).\n`);
+  process.stdout.write(`Package allowlist and packed CLI smoke passed (${files.length} files): ${archivePath}\n`);
 } catch (error) {
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
   process.exitCode = 1;

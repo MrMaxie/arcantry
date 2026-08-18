@@ -1,7 +1,13 @@
-<arcantry-copy-commands aria-hidden="true"></arcantry-copy-commands>
+---
+import packageManifest from '../../packages/arcantry/package.json';
+---
+
+<arcantry-copy-commands aria-hidden="true" data-package={packageManifest.name}></arcantry-copy-commands>
 
 <script>
-  const commandPattern = /^(?:arcantry\b|npx\s+@maxiedev\/arcantry\b|pnpm\s+dlx\s+@maxiedev\/arcantry\b|nubx\s+@maxiedev\/arcantry\b)/i;
+  const packageName = document.querySelector<HTMLElement>('arcantry-copy-commands')?.dataset.package ?? '';
+  const escapedPackageName = packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const commandPattern = new RegExp(`^(?:arcantry\\b|npx\\s+${escapedPackageName}\\b|pnpm\\s+dlx\\s+${escapedPackageName}\\b|nubx\\s+${escapedPackageName}\\b)`, 'i');
 
   async function copyCommandText(text: string): Promise<boolean> {
     try {
