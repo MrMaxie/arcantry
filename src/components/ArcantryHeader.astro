@@ -133,8 +133,8 @@ const { currentRelease } = buildVersionModel();
       align-content: center;
       justify-items: start;
       gap: .14rem;
-      width: calc(var(--sl-sidebar-width) - 1.25rem);
-      min-width: calc(var(--sl-sidebar-width) - 1.25rem);
+      width: calc(var(--sl-sidebar-width) - 2.5rem);
+      min-width: calc(var(--sl-sidebar-width) - 2.5rem);
       height: 3.2rem;
       text-decoration: none;
       color: var(--ar-text);
@@ -143,7 +143,7 @@ const { currentRelease } = buildVersionModel();
     .brand-wordmark { display: block; width: 6.5rem; height: 1.38rem; object-fit: contain; object-position: left center; }
     .brand-symbol { display: none; width: 1.45rem; height: 1.38rem; object-fit: contain; }
     .brand-version { color: var(--ar-text-soft); font-size: .56rem; font-weight: 700; letter-spacing: .08em; line-height: 1; }
-    .header-search { flex: 1 1 auto; min-width: 0; max-width: 44rem; }
+    .header-search { flex: 0 0 18.75rem; width: 18.75rem; min-width: 0; max-width: 18.75rem; }
     .header-actions { margin-left: auto; display: flex; align-items: center; gap: .5rem; }
     .github-link {
       width: 2rem;
@@ -207,7 +207,7 @@ const { currentRelease } = buildVersionModel();
       width: 100% !important;
       height: 2.55rem !important;
       border-radius: .25rem !important;
-      border-color: var(--ar-border) !important;
+      border-color: var(--ar-control-border) !important;
       background: transparent !important;
       box-shadow: none !important;
       color: var(--ar-text-muted) !important;
@@ -223,12 +223,6 @@ const { currentRelease } = buildVersionModel();
       max-width: 72rem;
       padding-inline: 0;
     }
-    :global(html[data-has-hero]) .header-search {
-      flex: 0 1 18.75rem;
-      width: 18.75rem;
-      max-width: 18.75rem;
-    }
-
     @media (max-width: 49.99rem) {
       .header-shell {
         gap: .7rem;

@@ -3,7 +3,7 @@
 - [x] Align the global wordmark, version, action icons, and automatic-theme icon.
 - [x] Rewrite the overview and implement the remembered npm, pnpm, and Nub command picker.
 - [x] Apply the restrained blue, violet, and pink accent palette to functional details.
-- [x] Clarify the three-command adoption path and remove decorative icon frames.
+- [x] Clarify the inspect-first adoption path and remove decorative icon frames.
 - [x] Keep the released version under the brand and add the shared authorship and GitHub footer.
 - [x] Verify type checks, documentation checks, build output, and browser interactions.
 - [x] Review the completed change and release metadata.

@@ -13,17 +13,19 @@ The published documentation MUST use Arcantry's shell rather than Starlight's de
 
 ### Requirement: Overview page presents the developer path
 
-The overview MUST state a concrete repository outcome, then present product value, a directional with-and-without comparison, and navigable product areas before the three-command setup. Each directional comparison MUST use a single connected line-and-arrow graphic rather than visually separate connector pieces. Expected repository outcomes MUST follow setup as an additional, hierarchically composed set of observable benefits. Its explanatory map MUST act as navigation to adoption, skill selection, change definition, release preparation, and information-boundary guidance rather than as a decorative summary. It MUST explain private workspace behavior without assuming that a new reader already understands project-specific directory names. It MUST offer equivalent npm, pnpm, and Nub commands for running the released Arcantry package. The selected runner MUST persist locally, the active command row MUST be the copy target, and recognized inline Arcantry commands across documentation MUST be selectable and copyable by pointer or keyboard. Command examples MUST explain the action they perform rather than appearing without context. Benefits MUST describe observable product behavior rather than broad feature labels or local checkout details. The overview's next-page action MUST preserve the standard pager shape and MAY animate a blue-violet-pink gradient border, while documentation routes retain the compact standard pager.
+The overview MUST state a concrete project outcome, then present product value, a directional with-and-without comparison, navigable product areas, and inspect-first adoption choices. Each directional comparison MUST use a single connected line-and-arrow graphic rather than visually separate connector pieces. Expected project outcomes MUST follow the adoption choices as an additional, hierarchically composed set of observable benefits. Its explanatory map MUST act as navigation to getting started, adoption paths, project knowledge, todo.txt queues, and skill selection rather than as a decorative summary. It MUST explain private workspace behavior without assuming that a new reader already understands project-specific directory names. It MUST offer equivalent npm, pnpm, and Nub commands for running `repo inspect` from the released Arcantry package. The selected runner MUST persist locally, the active command row MUST be the copy target, and recognized inline Arcantry commands across documentation MUST be selectable and copyable by pointer or keyboard. Command examples MUST explain the action they perform rather than appearing without context. Benefits MUST describe observable product behavior rather than broad feature labels or local checkout details. The overview's next-page action MUST preserve the standard pager shape and MAY animate a blue-violet-pink gradient border, while documentation routes retain the compact standard pager.
 
 #### Scenario: A new developer opens the overview
 
 - **WHEN** they scan the first content region
-- **THEN** they can identify what Arcantry changes, choose their package runner, copy the command, and find the validation path
+- **THEN** they can identify what Arcantry composes, choose their package runner, copy the read-only inspection command, and find an adoption path
 
 #### Scenario: A developer returns to the overview
 
 - **WHEN** they previously selected npm, pnpm, or Nub
 - **THEN** the overview restores that runner without changing the command's Arcantry behavior
+
+## ADDED Requirements
 
 ### Requirement: Visual language combines clarity with selective expression
 
