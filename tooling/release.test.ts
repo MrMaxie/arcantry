@@ -106,6 +106,12 @@ describe('release artifact', () => {
       'non-empty array of component identifiers',
     );
   });
+
+  it('rejects a long whitespace-only title without ambiguous regular-expression work', () => {
+    const malformed = release().replace('# Better release history', `# ${' '.repeat(100_000)}`);
+
+    expect(() => parseReleaseArtifact(malformed)).toThrow('level-one title');
+  });
 });
 
 describe('SemVer planning', () => {

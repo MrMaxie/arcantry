@@ -79,10 +79,13 @@ export function parseReleaseArtifact(source: string): ReleaseArtifact {
   if (new Set(components).size !== components.length) throw new Error('release components must be unique');
 
   const content = match[2].trim();
-  const heading = content.match(/^#\s+(.+)$/m);
-  if (!heading) throw new Error('release.md must contain a level-one title');
-  const title = heading[1].trim();
-  const body = content.replace(/^#\s+.+\r?\n?/, '').trim();
+  const firstLineEnd = content.indexOf('\n');
+  const firstLine = firstLineEnd === -1 ? content : content.slice(0, firstLineEnd);
+  let titleStart = 1;
+  while (firstLine[titleStart] === ' ' || firstLine[titleStart] === '\t') titleStart += 1;
+  const title = firstLine.startsWith('#') && titleStart > 1 ? firstLine.slice(titleStart).trim() : '';
+  if (!title) throw new Error('release.md must contain a level-one title');
+  const body = firstLineEnd === -1 ? '' : content.slice(firstLineEnd + 1).trim();
   if (!body) throw new Error('release.md must describe the delivered outcome');
   return { category, impact, visibility, components, title, body };
 }
