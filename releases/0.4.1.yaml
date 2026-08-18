@@ -1,0 +1,4 @@
+version: 0.4.1
+date: 2026-08-18
+changes:
+  - fix-cross-platform-config-test
