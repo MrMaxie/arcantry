@@ -20,3 +20,5 @@ jobs:
       - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4
       - run: pnpm install --frozen-lockfile
       - run: just ci
+        env:
+          ARCANTRY_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}

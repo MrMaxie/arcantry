@@ -37,6 +37,10 @@ export interface ReleaseAdapterOptions {
   distributionManifestPaths?: string[];
 }
 
+export interface ReleaseSealValidationOptions {
+  pullRequestHead?: string;
+}
+
 export interface NpmPublicationIdentity {
   packageName: string;
   version: string;
@@ -241,14 +245,28 @@ function gitOutput(root: string, args: string[]): string {
   }
 }
 
-export function validateReleaseSeal(root = process.cwd(), options: ReleaseAdapterOptions = {}): void {
+export function validateReleaseSeal(
+  root = process.cwd(),
+  options: ReleaseAdapterOptions = {},
+  validation: ReleaseSealValidationOptions = {},
+): void {
   const latest = readManifests(root, options.releasesPath).at(-1);
   if (!latest) throw new Error('release sealing requires at least one release manifest');
   if (gitOutput(root, ['status', '--porcelain=v1', '--untracked-files=all'])) throw new Error('repository contains unsealed working tree changes');
   const manifestPath = `${options.releasesPath ?? 'releases'}/${latest.version}.yaml`.replaceAll('\\', '/');
   const manifestCommit = gitOutput(root, ['log', '--diff-filter=A', '-1', '--format=%H', '--', manifestPath]);
   if (!manifestCommit) throw new Error(`latest release manifest is not committed: ${manifestPath}`);
-  if (gitOutput(root, ['rev-parse', 'HEAD']) !== manifestCommit) throw new Error(`repository HEAD is not sealed by release ${latest.version}`);
+  const repositoryHead = gitOutput(root, ['rev-parse', 'HEAD']);
+  const releaseHead = validation.pullRequestHead
+    ? gitOutput(root, ['rev-parse', '--verify', `${validation.pullRequestHead}^{commit}`])
+    : repositoryHead;
+  if (releaseHead !== manifestCommit) throw new Error(`repository HEAD is not sealed by release ${latest.version}`);
+  if (releaseHead !== repositoryHead) {
+    const parents = gitOutput(root, ['show', '-s', '--format=%P', repositoryHead]).split(' ').filter(Boolean);
+    if (parents.length !== 2 || !parents.includes(releaseHead)) {
+      throw new Error('pull request release head is not a direct parent of the checked-out merge commit');
+    }
+  }
 }
 
 export function validateNpmPublication(
@@ -287,14 +305,18 @@ export function validateNpmPublication(
   return { packageName: packageManifest.name, version, tag, repositoryUrl };
 }
 
-export function checkRelease(root = process.cwd(), options: ReleaseAdapterOptions = {}): void {
+export function checkRelease(
+  root = process.cwd(),
+  options: ReleaseAdapterOptions = {},
+  validation: ReleaseSealValidationOptions = {},
+): void {
   const { archived, assigned } = validateReleaseState(root, options);
   const active = readActiveChangeIds(root, options.openSpecPaths);
   if (active.length > 0) throw new Error(`active OpenSpec changes are not release-complete: ${active.join(', ')}`);
   const unassigned = [...archived.keys()].filter((id) => !assigned.has(id)).sort();
   if (unassigned.length > 0) throw new Error(`archived OpenSpec changes are not assigned to a release: ${unassigned.join(', ')}`);
   checkChangelog(root, options);
-  validateReleaseSeal(root, options);
+  validateReleaseSeal(root, options, validation);
 }
 
 export function validateDistributionVersions(
