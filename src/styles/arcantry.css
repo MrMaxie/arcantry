@@ -116,6 +116,51 @@ textarea {
   background: var(--ar-surface);
 }
 
+.sl-markdown-content table:not(.comparison-flow):not(:where(.not-content *)) {
+  width: 100%;
+  border: 1px solid var(--ar-border);
+  border-radius: .2rem;
+  background: var(--ar-bg);
+}
+
+.sl-markdown-content table:not(.comparison-flow) thead:not(:where(.not-content *)) {
+  background: color-mix(in srgb, var(--ar-accent-violet) 9%, var(--ar-bg-subtle));
+}
+
+.sl-markdown-content table:not(.comparison-flow) th:not(:where(.not-content *)) {
+  padding: .75rem .9rem;
+  border-bottom-color: color-mix(in srgb, var(--ar-accent-violet) 42%, var(--ar-border));
+  background: color-mix(in srgb, var(--ar-accent-violet) 9%, var(--ar-bg-subtle));
+  color: var(--ar-text);
+  font-size: .78rem;
+  letter-spacing: .01em;
+}
+
+.sl-markdown-content table:not(.comparison-flow) td:not(:where(.not-content *)) {
+  padding: .75rem .9rem;
+  border-bottom-color: var(--ar-border-soft);
+}
+
+.sl-markdown-content table:not(.comparison-flow) :is(th, td):not(:last-child):not(:where(.not-content *)) {
+  border-inline-end: 1px solid var(--ar-border-soft);
+}
+
+.sl-markdown-content table:not(.comparison-flow) tbody tr:nth-child(odd) > td:nth-child(even):not(:where(.not-content *)) {
+  background: color-mix(in srgb, var(--ar-accent-violet) 2.5%, var(--ar-bg));
+}
+
+.sl-markdown-content table:not(.comparison-flow) tbody tr:nth-child(even) > td:nth-child(odd):not(:where(.not-content *)) {
+  background: color-mix(in srgb, var(--ar-text) 1.8%, var(--ar-bg));
+}
+
+.sl-markdown-content table:not(.comparison-flow) tbody tr:nth-child(even) > td:nth-child(even):not(:where(.not-content *)) {
+  background: color-mix(in srgb, var(--ar-accent-violet) 4.5%, var(--ar-bg));
+}
+
+.sl-markdown-content table:not(.comparison-flow) tbody tr:last-child > td:not(:where(.not-content *)) {
+  border-bottom: 0;
+}
+
 .expressive-code .frame {
   border: 1px solid transparent;
   border-radius: .25rem;

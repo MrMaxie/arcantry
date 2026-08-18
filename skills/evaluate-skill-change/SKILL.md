@@ -1,6 +1,6 @@
 ---
 name: evaluate-skill-change
-description: Compare a baseline and candidate Codex skill on synthetic routing and behavior cases before adoption. Use only when explicitly invoked with $evaluate-skill-change; do not edit or install the live skill and never auto-adopt a candidate.
+description: Compare a baseline and candidate skill on synthetic routing and behavior cases. Use only when explicitly invoked with $evaluate-skill-change; do not edit, install, or automatically adopt the candidate.
 ---
 
 # Evaluate Skill Change

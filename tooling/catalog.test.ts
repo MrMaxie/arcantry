@@ -8,7 +8,13 @@ function fixture(name = 'example-skill'): string {
   const root = mkdtempSync(join(tmpdir(), 'arcantry-catalog-'));
   const skill = join(root, 'skills', name);
   mkdirSync(join(skill, 'agents'), { recursive: true });
-  writeFileSync(join(root, 'catalog.json'), `${JSON.stringify({ $schema: './schemas/catalog.schema.json', skills: [{ name, tags: ['example'] }] })}\n`);
+  writeFileSync(
+    join(root, 'catalog.json'),
+    `${JSON.stringify({
+      $schema: './schemas/catalog.schema.json',
+      skills: [{ name, family: 'repo-safely', tags: ['example'] }],
+    })}\n`,
+  );
   writeFileSync(
     join(skill, 'SKILL.md'),
     `---\nname: ${name}\ndescription: Use this example skill for a concrete catalog validation task.\n---\n\n# Example\n`,

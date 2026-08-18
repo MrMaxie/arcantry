@@ -185,7 +185,10 @@ html[data-has-hero] .footer-heart svg {
 }
 
 .right-sidebar-panel :where(starlight-toc a) {
-  padding-block: .18rem;
+  display: block;
+  margin-block: .08rem;
+  padding-block: .38rem;
+  line-height: 1.35;
 }
 
 .value-grid article + article { border-left: 1px solid var(--ar-border); }

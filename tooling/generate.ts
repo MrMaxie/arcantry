@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { readCatalog, readSkillAgent, readSkillFrontmatter, readSkillMetadata, validateCatalog } from './catalog.js';
-import { readArchivedChanges, readManifests } from './release.js';
 import { buildVersionModel } from './version.js';
 
 const root = process.cwd();
@@ -38,17 +37,10 @@ if (validationErrors.length > 0) throw new Error(validationErrors.join('\n'));
 const catalog = readCatalog(root);
 const versionModel = buildVersionModel(root);
 const version = versionModel.currentRelease;
-const archivedChanges = readArchivedChanges(root);
-const releaseManifests = readManifests(root);
-
-function skillReleaseVersion(name: string): string | undefined {
-  return versionModel.skillReleases[name];
-}
-
 const plugin = {
   name: 'arcantry',
   version,
-  description: 'Repository lifecycle, adoption tooling, and focused agent skills.',
+  description: 'Local-first project knowledge and focused agent skills.',
   author: { name: 'Maxie', url: 'https://github.com/MrMaxie' },
   homepage: 'https://maxie.dev/arcantry/',
   repository: 'https://github.com/MrMaxie/arcantry',
@@ -58,7 +50,7 @@ const plugin = {
   interface: {
     displayName: 'Arcantry',
     shortDescription: 'Intent-led repositories and focused agent skills',
-    longDescription: 'Adopt a reproducible repository contract and install focused skills from one versioned Arcantry catalog.',
+    longDescription: 'Coordinate project knowledge and install focused skills for self-improvement, repository safety, and content safety.',
     developerName: 'Maxie',
     category: 'Developer Tools',
     capabilities: ['Skills', 'Read', 'Write'],
@@ -68,42 +60,40 @@ const plugin = {
   },
 };
 project(join(root, '.codex-plugin', 'plugin.json'), `${JSON.stringify(plugin, null, 2)}\n`);
+project(
+  join(root, '.claude-plugin', 'plugin.json'),
+  `${JSON.stringify({
+    name: plugin.name,
+    version: plugin.version,
+    description: plugin.description,
+    author: plugin.author,
+    homepage: plugin.homepage,
+    repository: plugin.repository,
+    license: plugin.license,
+    keywords: ['agent-skills', 'claude-code', 'repository-lifecycle'],
+  }, null, 2)}\n`,
+);
+project(
+  join(root, 'gemini-extension.json'),
+  `${JSON.stringify({
+    name: plugin.name,
+    version: plugin.version,
+    description: plugin.description,
+  }, null, 2)}\n`,
+);
 
 const detailsRoot = join(root, 'src', 'content', 'docs', 'skills');
 if (!check) mkdirSync(detailsRoot, { recursive: true });
 const expected = new Set<string>();
 const catalogCards = new Map<string, string>();
 const catalogSections = [
-  {
-    title: 'Start with your repository',
-    skills: ['adopt-arcantry'],
-  },
-  {
-    title: 'Build and improve skills',
-    skills: [
-      'agent-self-improve',
-      'audit-skill-portfolio',
-      'capture-repeatable-work',
-      'evaluate-skill-change',
-      'forge-skill-from-conversations',
-      'productize-repeatable-work',
-      'select-task-skills',
-    ],
-  },
-  {
-    title: 'Design for people',
-    skills: ['audience-scope-discipline', 'design-terminal-ux'],
-  },
-  {
-    title: 'Coordinate delivery',
-    skills: [
-      'intake-linear-work',
-      'intake-repository-work',
-      'promote-meeting-notes',
-      'stage-code-review-findings',
-    ],
-  },
-] as const;
+  { family: 'self-improvement', title: 'Self improvement' },
+  { family: 'repo-safely', title: 'Repo safely' },
+  { family: 'content-safely', title: 'Content safely' },
+].map((section) => ({
+  ...section,
+  skills: catalog.skills.filter((entry) => entry.family === section.family).map((entry) => entry.name),
+}));
 
 for (const entry of catalog.skills) {
   const metadata = readSkillMetadata(root, entry.name);
@@ -115,7 +105,7 @@ for (const entry of catalog.skills) {
     entry.name,
     [
       `<a class="skill-catalog-card" href="/arcantry/skills/${entry.name}/">`,
-      `  <p class="skill-catalog-version">${skillReleaseVersion(entry.name) ?? 'Unreleased'}</p>`,
+      `  <p class="skill-catalog-version">Arcantry ${version}</p>`,
       `  <h3>${escapeHtml(agent.displayName)}</h3>`,
       `  <p class="skill-catalog-summary">${escapeHtml(agent.shortDescription)}</p>`,
       `  <p class="skill-catalog-command"><code>$${escapeHtml(entry.name)}</code></p>`,
@@ -138,20 +128,7 @@ for (const entry of catalog.skills) {
   const learning = metadata.learning === undefined
     ? ''
     : `## Learning outcomes\n\n${metadata.learning.outcomes.map((outcome) => `- ${outcome}`).join('\n')}\n\n`;
-  const history = releaseManifests
-    .flatMap((manifest) =>
-      manifest.changes.flatMap((changeId) => {
-        const artifact = archivedChanges.get(changeId);
-        return artifact?.components.includes(`skill:${entry.name}`)
-          ? [`- **${manifest.version}** — ${artifact.title}`]
-          : [];
-      }),
-    )
-    .reverse();
-  const firstRelease = skillReleaseVersion(entry.name);
-  const releaseState = firstRelease ? `Included since Arcantry ${firstRelease}` : 'Unreleased';
-  const historySection = history.length > 0 ? history.join('\n') : 'This skill is not part of a released Arcantry version yet.';
-  const content = `---\ntitle: ${agent.displayName}\ndescription: ${JSON.stringify(metadata.summary)}\n---\n\n<!-- Generated by tooling/generate.ts. Do not edit directly. -->\n\n<p class="skill-reference-meta"><span>${releaseState}</span><code>$${entry.name}</code></p>\n\n${frontmatter.description}\n\n## Link this skill\n\n\`\`\`text\narcantry skills link ${entry.name}\n\`\`\`\n\n${compatibility}${learning}## Examples\n\n${scenarios}\n\n## Release history\n\n${historySection}\n`;
+  const content = `---\ntitle: ${agent.displayName}\ndescription: ${JSON.stringify(metadata.summary)}\n---\n\n<!-- Generated by tooling/generate.ts. Do not edit directly. -->\n\n<p class="skill-reference-meta"><span>Arcantry ${version}</span><code>$${entry.name}</code></p>\n\n${frontmatter.description}\n\n## Link this skill\n\n\`\`\`text\narcantry skills link ${entry.name} --scope user\narcantry skills link ${entry.name} --scope user --agent claude\narcantry skills link ${entry.name} --scope user --agent gemini\n\`\`\`\n\nThe default target is the Codex-compatible Agent Skills directory. Use the explicit agent profile for Claude Code or Gemini CLI.\n\n${compatibility}${learning}## Examples\n\n${scenarios}\n`;
   project(join(detailsRoot, filename), content);
 }
 
@@ -186,7 +163,7 @@ const catalogSectionsContent = catalogSections
 expected.add('catalog.md');
 project(
   join(detailsRoot, 'catalog.md'),
-  `---\ntitle: Skill catalog\ndescription: Choose a focused Arcantry skill for the work at hand.\n---\n\n<!-- Generated by tooling/generate.ts. Do not edit directly. -->\n\n<p class="skill-catalog-lead">Choose the job. Each page shows when the skill shipped and how to link it.</p>\n\n${catalogSectionsContent}\n`,
+  `---\ntitle: Skill catalog\ndescription: Choose a focused Arcantry skill for the work at hand.\n---\n\n<!-- Generated by tooling/generate.ts. Do not edit directly. -->\n\n<p class="skill-catalog-lead">Choose the job. Each page explains the outcome, compatibility, and link command.</p>\n\n${catalogSectionsContent}\n`,
 );
 
 if (existsSync(detailsRoot)) {

@@ -53,7 +53,7 @@ Because trusted publishing configuration requires an existing npm package, the f
 
 ### Requirement: The public npm package uses the global Arcantry name
 
-The existing combined CLI and library package MUST use the unscoped public name `arcantry`, expose the `arcantry` binary and retain its declared public subpath exports. The private workspace root MUST use a distinct non-publishable name so package-manager filters resolve the public package unambiguously. The package MAY be governed by the Arcantry npm organization without using its scope in the consumer-facing name.
+The combined CLI and library package MUST use the unscoped public name `arcantry`, expose the `arcantry` binary and retain its declared public subpath exports. The private workspace root MUST use a distinct non-publishable name so package-manager filters resolve the public package unambiguously. The package MAY be governed by the Arcantry npm organization without using its scope in the consumer-facing name.
 
 #### Scenario: A consumer runs the CLI without installing it
 
@@ -69,4 +69,4 @@ The existing combined CLI and library package MUST use the unscoped public name 
 
 - **WHEN** package, workspace, test and public documentation surfaces are checked
 - **THEN** they resolve the canonical `arcantry` package identity
-- **AND** no shipped or documented command refers to the previous scoped identities
+- **AND** every shipped or documented command uses that canonical identity

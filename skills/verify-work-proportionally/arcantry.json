@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Select verification layers by impact and uncertainty, then report exact evidence without overstating coverage.",
+  "learning": {
+    "outcomes": [
+      "Map material risks to static, automated, live, independent, or user verification.",
+      "Separate verified behavior from plans, assumptions, and unverified acceptance."
+    ]
+  },
+  "scenarios": [
+    {
+      "title": "Verify a risky implementation",
+      "prompt": "Use $verify-work-proportionally to choose and run appropriate checks for this cross-cutting implementation.",
+      "outcome": "Each material risk has an observable check and the final report states exact verified coverage."
+    },
+    {
+      "title": "Decide whether user approval is needed",
+      "prompt": "Use $verify-work-proportionally to determine which remaining acceptance points require the user's judgment.",
+      "outcome": "Only irreducible product, taste, privacy, or authorization decisions are returned to the user."
+    }
+  ]
+}

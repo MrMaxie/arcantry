@@ -1,18 +1,18 @@
 ---
 import { Icon } from '@astrojs/starlight/components';
-import markSvg from '../assets/arcantry-mark.svg?raw';
+import wordmarkSvg from '../assets/arcantry-wordmark-approved.svg?raw';
 
-const markPath = (markSvg.match(/<path[^>]*\/>/)?.[0] ?? '').replace('fill="currentColor"', 'fill="url(#configuration-engine-text)"');
+const wordmarkPath = (wordmarkSvg.match(/<path[^>]*\/>/)?.[0] ?? '').replace('fill="currentColor"', 'fill="url(#configuration-engine-text)"');
 
 const presets = [
-  { id: 'private', label: 'Private in an existing project', description: 'Use Arcantry without changing the repository.', icon: 'padlock' },
-  { id: 'selective', label: 'Selective adoption', description: 'Connect a few capabilities in different scopes.', icon: 'puzzle' },
-  { id: 'full', label: 'Complete integration', description: 'Adopt the full model in a new or existing project.', icon: 'rocket', status: 'Recommended' },
+  { id: 'private', label: 'Private project scope', description: 'Keep configuration and guidance untracked.', icon: 'padlock' },
+  { id: 'selective', label: 'Selected capabilities', description: 'Connect only the sources and skills you need.', icon: 'puzzle' },
+  { id: 'full', label: 'Shared and private model', description: 'Track the team contract and keep local sources independent.', icon: 'rocket', status: 'Recommended' },
 ] as const;
 
 const fields = [
-  { id: 'skills', label: 'Skills', description: 'Reusable procedures that teach an agent how to perform a task.', icon: 'puzzle', options: [{ value: 'global', label: 'Global', icon: 'laptop' }, { value: 'repo', label: 'Project', icon: 'code-branch' }, { value: 'both', label: 'Both', icon: 'link' }, { value: 'none', label: 'Off', icon: 'close' }] },
-  { id: 'settings', label: 'Agent settings', description: 'Defaults that shape agent behavior across projects or for this project.', icon: 'setting', options: [{ value: 'global', label: 'Global', icon: 'laptop' }, { value: 'repo', label: 'Project', icon: 'code-branch' }, { value: 'both', label: 'Both', icon: 'link' }, { value: 'none', label: 'Off', icon: 'close' }] },
+  { id: 'skills', label: 'Skills', description: 'Reusable procedures available to one user, one repository, or both.', icon: 'puzzle', options: [{ value: 'global', label: 'User', icon: 'laptop' }, { value: 'repo', label: 'Project', icon: 'code-branch' }, { value: 'both', label: 'Both', icon: 'link' }, { value: 'none', label: 'Off', icon: 'close' }] },
+  { id: 'settings', label: 'Agent guidance', description: 'Instructions scoped to one user, repository, or private project context.', icon: 'setting', options: [{ value: 'global', label: 'User', icon: 'laptop' }, { value: 'repo', label: 'Project', icon: 'code-branch' }, { value: 'both', label: 'Both', icon: 'link' }, { value: 'none', label: 'Off', icon: 'close' }] },
   { id: 'local', label: '.local', description: 'A private, Git-ignored workspace for project-specific configuration.', icon: 'padlock', options: [{ value: 'use', label: 'Use', icon: 'approve-check' }, { value: 'omit', label: 'Skip', icon: 'close' }] },
   { id: 'todo', label: 'todo.txt', description: 'A plain-text task queue that can be private, shared, or both.', icon: 'notes', options: [{ value: 'repo', label: 'Project', icon: 'code-branch' }, { value: 'local', label: 'Private', icon: 'padlock' }, { value: 'both', label: 'Both', icon: 'link' }, { value: 'none', label: 'Off', icon: 'close' }] },
   { id: 'openspec', label: 'OpenSpec', description: 'Versioned product requirements and approved changes.', icon: 'open-book', options: [{ value: 'observe', label: 'Read', icon: 'open-book' }, { value: 'manage', label: 'Manage', icon: 'pencil' }, { value: 'omit', label: 'Off', icon: 'close' }] },
@@ -110,15 +110,15 @@ const fields = [
           </defs>
 
           <g class="engine-node">
-            <rect x="410" y="18" width="220" height="92" rx="5" />
-            <g class="engine-mark" transform="translate(493 25) scale(.1534)" set:html={markPath} />
-            <text class="engine-role" x="520" y="82" text-anchor="middle">your configured knowledge map</text>
+            <rect x="420" y="8" width="200" height="72" rx="5" />
+            <g class="engine-wordmark" transform="translate(451 16) scale(.121)" set:html={wordmarkPath} />
+            <text class="engine-role" x="520" y="66" text-anchor="middle">your configured knowledge map</text>
           </g>
 
           <g class="scope-edges" filter="url(#configuration-edge-glow)">
-            <path data-scope-edge="global" d="M465 110 V145 H170 V175" />
-            <path data-scope-edge="repository" d="M520 110 V175" />
-            <path data-scope-edge="local" d="M575 110 V145 H870 V175" />
+            <path data-scope-edge="global" d="M465 80 V140 H170 V175" />
+            <path data-scope-edge="repository" d="M520 80 V175" />
+            <path data-scope-edge="local" d="M575 80 V140 H870 V175" />
           </g>
 
           <g class="scope" data-scope="global">
@@ -126,8 +126,8 @@ const fields = [
             <circle class="scope-hub" cx="170" cy="175" r="5" />
             <text class="boundary-label" x="40" y="202">COMPUTER</text>
           </g>
-          <g class="source-node" data-source="global-skills"><rect x="50" y="225" width="240" height="54" rx="4" /><use href="#source-icon-skill" x="64" y="244" width="16" height="16" /><text class="source-name" x="92" y="257">Global skills</text></g>
-          <g class="source-node" data-source="global-settings"><rect x="50" y="299" width="240" height="54" rx="4" /><use href="#source-icon-settings" x="64" y="318" width="16" height="16" /><text class="source-name" x="92" y="331">Global settings</text></g>
+          <g class="source-node" data-source="global-skills"><rect x="50" y="225" width="240" height="54" rx="4" /><use href="#source-icon-skill" x="64" y="244" width="16" height="16" /><text class="source-name" x="92" y="257">User skills</text></g>
+          <g class="source-node" data-source="global-settings"><rect x="50" y="299" width="240" height="54" rx="4" /><use href="#source-icon-settings" x="64" y="318" width="16" height="16" /><text class="source-name" x="92" y="331">User guidance</text></g>
 
           <g class="scope" data-scope="repository">
             <rect class="scope-boundary" x="370" y="175" width="300" height="225" rx="6" />
@@ -135,7 +135,7 @@ const fields = [
             <text class="boundary-label" x="390" y="202">REPOSITORY</text>
           </g>
           <g class="source-node compact" data-source="repo-skills"><rect x="390" y="221" width="126" height="48" rx="4" /><use href="#source-icon-skill" x="400" y="237" width="16" height="16" /><text class="source-name" x="425" y="250">Skills</text></g>
-          <g class="source-node compact" data-source="repo-settings"><rect x="528" y="221" width="122" height="48" rx="4" /><use href="#source-icon-settings" x="538" y="237" width="16" height="16" /><text class="source-name" x="563" y="250">Settings</text></g>
+          <g class="source-node compact" data-source="repo-settings"><rect x="528" y="221" width="122" height="48" rx="4" /><use href="#source-icon-settings" x="538" y="237" width="16" height="16" /><text class="source-name" x="563" y="250">Guidance</text></g>
           <g class="source-node compact" data-source="repo-todo"><rect x="390" y="283" width="126" height="48" rx="4" /><use href="#source-icon-todo" x="400" y="299" width="16" height="16" /><text class="source-name" x="425" y="312">todo.txt</text></g>
           <g class="source-node compact" data-source="openspec"><rect x="528" y="283" width="122" height="48" rx="4" /><use href="#source-icon-book" x="538" y="299" width="16" height="16" /><text class="source-name" x="563" y="312">OpenSpec</text></g>
           <g class="source-node compact" data-source="changelog"><rect x="459" y="345" width="142" height="42" rx="4" /><use href="#source-icon-document" x="469" y="358" width="16" height="16" /><text class="source-name" x="494" y="371">Changelog</text></g>
@@ -184,22 +184,22 @@ const fields = [
     { skills: 'none', settings: 'repo', local: 'use', todo: 'both', openspec: 'observe', changelog: 'omit' },
   ];
   const presetCopy: Record<PresetId, { title: string; description: string }> = {
-    private: { title: 'Private in an existing project', description: 'The repository stays untouched while this computer keeps private project context and tasks.' },
-    selective: { title: 'Selective adoption', description: 'Only the capabilities shown below are connected. The rest of the project stays independent.' },
-    full: { title: 'Complete integration', description: 'Arcantry manages the complete shared model while .local keeps private project context.' },
+    private: { title: 'Private project scope', description: 'Configuration, guidance, and tasks stay private and excluded from Git.' },
+    selective: { title: 'Selected capabilities', description: 'Only the sources and skills shown below are connected.' },
+    full: { title: 'Shared and private model', description: 'The repository carries the shared contract while .local keeps private sources independent.' },
   };
   const fieldConsequences: Record<ConfigurationField, Record<string, string>> = {
     skills: {
-      global: 'The same procedures are available on this computer across projects.',
+      global: 'The same procedures are available to this user across projects.',
       repo: 'The project carries and versions its own procedures.',
       both: 'Computer-wide and project-owned procedures are both available.',
       none: 'Arcantry does not connect agent procedures.',
     },
     settings: {
-      global: 'Computer-wide defaults shape agent behavior in this project.',
-      repo: 'The repository carries project-specific agent defaults.',
-      both: 'Computer defaults and repository settings are combined.',
-      none: 'Arcantry does not add agent settings.',
+      global: 'User guidance shapes agent behavior across projects.',
+      repo: 'The repository carries shared project guidance.',
+      both: 'User and repository guidance both apply at their scopes.',
+      none: 'Arcantry does not connect agent guidance.',
     },
     local: {
       use: 'Private project context stays outside Git on this computer.',
@@ -345,7 +345,7 @@ const fields = [
     }
 
     private describeConfiguration(): string {
-      return `Skills: ${this.configuration.skills}; agent settings: ${this.configuration.settings}; .local: ${this.configuration.local}; todo.txt: ${this.configuration.todo}; OpenSpec: ${this.configuration.openspec}; Changelog: ${this.configuration.changelog}.`;
+      return `Skills: ${this.configuration.skills}; agent guidance: ${this.configuration.settings}; .local: ${this.configuration.local}; todo.txt: ${this.configuration.todo}; OpenSpec: ${this.configuration.openspec}; Changelog: ${this.configuration.changelog}.`;
     }
 
     private start = (): void => {
@@ -435,7 +435,7 @@ const fields = [
     .field-consequence { min-height: 1.25rem; max-width: 34rem; margin: 0 !important; color: var(--ar-text-muted); font-size: .61rem; line-height: 1.45; text-align: right; transition: color 300ms ease; }
     .field-consequence::after { content: ''; display: inline-block; width: 1.1rem; height: 1px; margin: 0 0 .2rem .45rem; background: linear-gradient(90deg, var(--ar-accent-blue), var(--ar-accent-violet), var(--ar-accent-pink)); }
     .field-options button:focus-visible { outline: 2px solid var(--ar-accent-violet); outline-offset: 1px; }
-    .configuration-graph { display: grid; align-content: center; min-width: 0; overflow: hidden; padding: 1.2rem; }
+    .configuration-graph { display: grid; align-content: center; min-width: 0; overflow: hidden; padding: .5rem 1.2rem 1.2rem; }
     .configuration-graph svg { display: block; width: 100%; height: auto; max-height: 29rem; overflow: visible; }
     .scope { opacity: 1; transition: opacity 500ms ease; }
     .scope[data-scope='global'], .scope-edges [data-scope-edge='global'] { --scope-color: var(--ar-accent-blue); }
@@ -449,7 +449,7 @@ const fields = [
     .boundary-label { fill: var(--ar-text-soft); font-family: var(--ar-font-sans); font-size: 12px; font-weight: 700; letter-spacing: 1.5px; transition: fill 500ms ease; }
     .scope[data-active] .boundary-label { fill: var(--scope-color); }
     .engine-node rect { fill: var(--ar-bg-subtle); stroke: url(#configuration-engine-stroke); stroke-width: 1.5; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--ar-accent-violet) 18%, transparent)); }
-    .engine-mark { fill: url(#configuration-engine-text); filter: drop-shadow(0 0 7px color-mix(in srgb, var(--ar-accent-violet) 34%, transparent)); }
+    .engine-wordmark { fill: url(#configuration-engine-text); filter: drop-shadow(0 0 7px color-mix(in srgb, var(--ar-accent-violet) 34%, transparent)); }
     .engine-role { fill: var(--ar-text-soft); font-family: var(--ar-font-sans); font-size: 11px; letter-spacing: .5px; }
     .scope-edges path { fill: none; stroke: var(--ar-border); stroke-width: 2.5; opacity: .12; transition: stroke 350ms ease, opacity 350ms ease, stroke-dasharray 350ms ease; }
     .scope-edges path[data-active] { stroke: var(--scope-color); stroke-dasharray: 8 7; opacity: .82; }

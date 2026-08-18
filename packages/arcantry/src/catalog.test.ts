@@ -2,7 +2,15 @@ import { mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { inspectSkill, linkSkill, unlinkSkill, validateCatalog } from './catalog.js';
+import {
+  inspectSkill,
+  linkSkill,
+  repositorySkillTargetRoot,
+  skillAgentSchema,
+  unlinkSkill,
+  userSkillTargetRoot,
+  validateCatalog,
+} from './catalog.js';
 import { createFixtureDirectory, removeFixtures } from './testHelpers.js';
 
 afterEach(removeFixtures);
@@ -13,7 +21,7 @@ const createCatalogFixture = async (): Promise<string> => {
   await mkdir(join(skillRoot, 'agents'), { recursive: true });
   await writeFile(
     join(root, 'catalog.json'),
-    `${JSON.stringify({ $schema: './schemas/catalog.schema.json', skills: [{ name: 'example-skill', tags: ['quality'] }] }, null, 2)}\n`,
+    `${JSON.stringify({ $schema: './schemas/catalog.schema.json', skills: [{ name: 'example-skill', family: 'repo-safely', tags: ['quality'] }] }, null, 2)}\n`,
   );
   await writeFile(
     join(skillRoot, 'SKILL.md'),
@@ -43,6 +51,14 @@ const createCatalogFixture = async (): Promise<string> => {
 };
 
 describe('skill catalog', () => {
+  it('maps supported agents to their native skill directories', () => {
+    expect(userSkillTargetRoot('codex')).toMatch(/[\\/]\.agents[\\/]skills$/);
+    expect(userSkillTargetRoot('claude')).toMatch(/[\\/]\.claude[\\/]skills$/);
+    expect(userSkillTargetRoot('gemini')).toMatch(/[\\/]\.gemini[\\/]skills$/);
+    expect(repositorySkillTargetRoot('/project', 'claude')).toMatch(/[\\/]project[\\/]\.claude[\\/]skills$/);
+    expect(skillAgentSchema.safeParse('cursor').success).toBe(false);
+  });
+
   it('validates and inspects canonical skill packages', async () => {
     const root = await createCatalogFixture();
     expect((await validateCatalog(root)).valid).toBe(true);

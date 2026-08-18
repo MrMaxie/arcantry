@@ -12,8 +12,8 @@ check:
 build:
     pnpm run build
 
-docs port="4321":
-    pnpm exec astro dev --host 127.0.0.1 --port {{port}}
+docs port="9796":
+    pnpm exec astro dev --host 127.0.0.1 --port {{port}} --force
 
 generate:
     pnpm run generate
@@ -31,7 +31,7 @@ arcantry-build:
     pnpm --filter ./packages/arcantry run build
 
 arcantry-init: arcantry-build
-    node packages/arcantry/dist/cli.js --cwd . repo init --docs none
+    node packages/arcantry/dist/cli.js --cwd . repo init --scope private
 
 arcantry-doctor: arcantry-build
     node packages/arcantry/dist/cli.js --cwd . repo doctor

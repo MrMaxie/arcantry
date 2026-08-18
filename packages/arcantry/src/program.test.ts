@@ -22,54 +22,43 @@ const run = async (cwd: string, args: string[]) => {
 };
 
 describe('CLI', () => {
-  it('requires an explicit docs mode for repository initialization', async () => {
+  it('requires an explicit repository scope for initialization', async () => {
     const root = await createFixtureRepository();
     const result = await run(root, ['repo', 'init']);
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("required option '--docs <mode>' not specified");
+    expect(result.stderr).toContain("required option '--scope <scope>' not specified");
   });
 
-  it('rejects legacy docs modes before writing anything', async () => {
+  it('rejects unsupported repository scopes before writing anything', async () => {
     const root = await createFixtureRepository();
 
-    const result = await run(root, ['repo', 'init', '--docs', 'shared']);
+    const result = await run(root, ['repo', 'init', '--scope', 'team']);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain('Existing .docs content remains project-owned');
-    await expect(readFile(join(root, '.local/arcantry.json'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
-    await expect(readFile(join(root, '.docs/AGENTS.md'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(result.stderr).toContain('Invalid option');
+    await expect(readFile(join(root, '.local/arcantry.toml'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('initializes, validates, updates, and removes through the stable command surface', async () => {
     const root = await createFixtureRepository();
 
-    expect((await run(root, ['repo', 'init', '--docs', 'none'])).exitCode).toBe(0);
+    expect((await run(root, ['repo', 'init', '--scope', 'private'])).exitCode).toBe(0);
     expect((await run(root, ['repo', 'validate'])).stdout).toContain('Repository adoption is valid.');
     expect((await run(root, ['repo', 'doctor'])).exitCode).toBe(0);
-    expect((await run(root, ['repo', 'update'])).stdout).toContain('No changes required.');
-    expect((await run(root, ['repo', 'remove'])).exitCode).toBe(0);
-    await expect(readFile(join(root, '.local/arcantry.json'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    expect((await run(root, ['repo', 'update', '--scope', 'private'])).stdout).toContain('No changes required.');
+    expect((await run(root, ['repo', 'remove', '--scope', 'private'])).exitCode).toBe(0);
+    await expect(readFile(join(root, '.local/arcantry.toml'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
-  it('accepts ordered source and agent selections', async () => {
+  it('keeps shared and private repository scopes independent', async () => {
     const root = await createFixtureRepository();
-    const result = await run(root, [
-      'repo',
-      'init',
-      '--docs',
-      'none',
-      '--agent',
-      'claude',
-      '--source',
-      'local=operational',
-      '--source',
-      'linear=readwrite',
-    ]);
+    expect((await run(root, ['repo', 'init', '--scope', 'shared'])).exitCode).toBe(0);
+    expect((await run(root, ['repo', 'init', '--scope', 'private'])).exitCode).toBe(0);
 
-    expect(result.exitCode).toBe(0);
-    const config = JSON.parse(await readFile(join(root, '.local/arcantry.json'), 'utf8')) as { agents: string[]; sources: unknown[] };
-    expect(config.agents).toEqual(['claude']);
-    expect(config.sources).toHaveLength(2);
+    expect(await readFile(join(root, 'arcantry.toml'), 'utf8')).toContain('config_version = 1');
+    expect(await readFile(join(root, '.local/arcantry.toml'), 'utf8')).toContain('config_version = 1');
+    expect((await run(root, ['repo', 'inspect'])).stdout).toContain('Config: private');
+    expect((await run(root, ['repo', 'inspect'])).stdout).toContain('Shadowed config:');
   });
 
   it('treats an unconfigured project as a valid wild knowledge stack', async () => {
@@ -122,10 +111,14 @@ adapter = "todo-txt@1"
 `);
 
     const result = await run(root, ['--config', configPath, 'repo', 'inspect']);
+    const validation = await run(root, ['--config', configPath, 'repo', 'validate']);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('Mode: configured');
     expect(result.stdout).toContain('tasks\ttodo-txt\tobserve\ttodo-txt@1\thigh\tmissing');
+    expect(validation.exitCode).toBe(0);
+    expect(validation.stdout).toContain('Repository adoption is valid.');
+    expect(validation.stdout).toContain('Knowledge stack is valid.');
   });
 
   it('previews todo writes and requires an explicit queue when both exist', async () => {
@@ -160,7 +153,7 @@ adapter = "todo-txt@1"
     const skill = join(root, 'skills', 'example-skill');
     const links = await createFixtureDirectory('arcantry-cli-links-');
     await mkdir(join(skill, 'agents'), { recursive: true });
-    await writeFile(join(root, 'catalog.json'), '{"$schema":"./schemas/catalog.schema.json","skills":[{"name":"example-skill","tags":["quality"]}]}\n');
+    await writeFile(join(root, 'catalog.json'), '{"$schema":"./schemas/catalog.schema.json","skills":[{"name":"example-skill","family":"repo-safely","tags":["quality"]}]}\n');
     await writeFile(
       join(skill, 'SKILL.md'),
       '---\nname: example-skill\ndescription: Execute one concrete task with safe and fully verifiable behavior.\n---\n',
@@ -183,5 +176,45 @@ adapter = "todo-txt@1"
     expect((await run(root, ['skills', 'link', 'example-skill', '--target', links])).stdout).toContain('Linked: example-skill');
     expect((await run(root, ['skills', 'doctor', '--target', links])).exitCode).toBe(0);
     expect((await run(root, ['skills', 'unlink', 'example-skill', '--target', links])).stdout).toContain('Unlinked: example-skill');
+  });
+
+  it('links skills into native Claude Code and Gemini CLI repository directories', async () => {
+    const root = await createFixtureRepository();
+    const skill = join(root, 'skills', 'example-skill');
+    await mkdir(join(skill, 'agents'), { recursive: true });
+    await writeFile(join(root, 'catalog.json'), '{"$schema":"./schemas/catalog.schema.json","skills":[{"name":"example-skill","family":"repo-safely","tags":["quality"]}]}\n');
+    await writeFile(
+      join(skill, 'SKILL.md'),
+      '---\nname: example-skill\ndescription: Execute one concrete task with safe and fully verifiable behavior.\n---\n',
+    );
+    await writeFile(
+      join(skill, 'arcantry.json'),
+      JSON.stringify({
+        $schema: '../../schemas/skill-metadata.schema.json',
+        summary: 'Execute one concrete task with safe and fully verifiable behavior.',
+        scenarios: [
+          { title: 'First case', prompt: 'Use the example skill once.', outcome: 'The first result is ready.' },
+          { title: 'Second case', prompt: 'Use the example skill twice.', outcome: 'The second result is ready.' },
+        ],
+      }),
+    );
+    await writeFile(join(skill, 'agents', 'openai.yaml'), 'interface:\n  default_prompt: Use $example-skill.\n');
+
+    expect((await run(root, ['skills', 'link', 'example-skill', '--scope', 'repo', '--agent', 'claude'])).exitCode).toBe(0);
+    expect((await run(root, ['skills', 'doctor', '--scope', 'repo', '--agent', 'claude'])).exitCode).toBe(0);
+    expect((await run(root, ['skills', 'unlink', 'example-skill', '--scope', 'repo', '--agent', 'claude'])).exitCode).toBe(0);
+    expect((await run(root, ['skills', 'link', 'example-skill', '--scope', 'repo', '--agent', 'gemini'])).exitCode).toBe(0);
+    expect((await run(root, ['skills', 'unlink', 'example-skill', '--scope', 'repo', '--agent', 'gemini'])).exitCode).toBe(0);
+  });
+
+  it('rejects agent selection without scope or with an explicit target', async () => {
+    const root = await createFixtureRepository();
+    const withoutScope = await run(root, ['skills', 'doctor', '--agent', 'claude']);
+    const withTarget = await run(root, ['skills', 'doctor', '--agent', 'claude', '--target', 'links']);
+
+    expect(withoutScope.exitCode).toBe(1);
+    expect(withoutScope.stderr).toContain('--agent requires --scope user|repo');
+    expect(withTarget.exitCode).toBe(1);
+    expect(withTarget.stderr).toContain('--target cannot be combined with --scope or --agent');
   });
 });

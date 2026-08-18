@@ -321,7 +321,12 @@ export function checkRelease(
 
 export function validateDistributionVersions(
   root = process.cwd(),
-  distributions = ['packages/arcantry/package.json', '.codex-plugin/plugin.json'],
+  distributions = [
+    'packages/arcantry/package.json',
+    '.codex-plugin/plugin.json',
+    '.claude-plugin/plugin.json',
+    'gemini-extension.json',
+  ],
   releasesPath = 'releases',
 ): void {
   const expected = readManifests(root, releasesPath).at(-1)?.version ?? '0.0.0';

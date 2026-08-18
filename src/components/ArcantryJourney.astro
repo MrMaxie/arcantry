@@ -7,25 +7,25 @@ import ArcantryKnowledgeGraph from './ArcantryKnowledgeGraph.astro';
   <div class="value-heading">
     <p>Why Arcantry</p>
     <div>
-      <h2 id="value-title">Know what the project knows before another tool changes it</h2>
-      <p>Arcantry turns specifications, changelogs, task queues, and agent skills into one inspectable source map. It keeps each source's meaning and ownership separate, so you can evaluate the whole project, validate one boundary, or plan one controlled change without forcing everything into a new repository shape.</p>
+      <h2 id="value-title">Keep project meaning clear while agents help maintain it</h2>
+      <p>Arcantry connects specifications, changelogs, task queues, agent guidance, and focused skills without confusing their roles. Inspect the whole project, automate repeated work, validate one boundary, or plan one controlled change without forcing a new repository shape.</p>
     </div>
   </div>
   <div class="value-grid">
     <article>
       <Icon name="approve-check-circle" />
-      <h3>See the full knowledge surface</h3>
-      <p>One inspection finds existing and missing sources, their paths, roles, visibility, versions, and compatibility.</p>
+      <h3>See shared and private sources</h3>
+      <p>One inspection finds active and shadowed configuration, source roles, visibility, versions, and compatibility.</p>
     </article>
     <article>
       <Icon name="puzzle" />
-      <h3>Adopt without a rewrite</h3>
-      <p>Start with no configuration, keep control outside the repository, or track one shared contract when the team is ready.</p>
+      <h3>Adopt only the boundary you need</h3>
+      <p>Start without configuration, keep setup private, control the project externally, or track one shared contract.</p>
     </article>
     <article>
       <Icon name="approve-check" />
-      <h3>Review intent before writes</h3>
-      <p>Separate discovery, decisions, and application so teammates and automation can inspect the same change boundary first.</p>
+      <h3>Scale verification with risk</h3>
+      <p>Combine static, automated, live, independent, and user checks only where they can change the decision.</p>
     </article>
   </div>
 
@@ -44,7 +44,7 @@ import ArcantryKnowledgeGraph from './ArcantryKnowledgeGraph.astro';
         <Icon name="database" />
         <div>
           <h3>Keep meaning at the source</h3>
-          <p>Specifications remain authority, changelogs remain projections, queues remain independent, and skills remain procedures.</p>
+          <p>Todo captures incoming work, specifications hold accepted intent, changelogs explain releases, and skills automate procedures.</p>
         </div>
       </article>
       <article>
@@ -130,7 +130,7 @@ import ArcantryKnowledgeGraph from './ArcantryKnowledgeGraph.astro';
       <li><a href="/arcantry/getting-started/"><Icon name="approve-check-circle" /><span><strong>Inspect a project safely</strong><small>Get the source map without creating or rewriting project files</small></span><Icon name="right-arrow" /></a></li>
       <li><a href="/arcantry/adoption/#choose-an-adoption-path"><Icon name="code-branch" /><span><strong>Choose the right footprint</strong><small>Compare zero-footprint, external, tracked, selective, and full integration</small></span><Icon name="right-arrow" /></a></li>
       <li><a href="/arcantry/guides/todo-txt/"><Icon name="document" /><span><strong>Make queues reviewable</strong><small>Preview shared or private todo.txt changes before writing them</small></span><Icon name="right-arrow" /></a></li>
-      <li><a href="/arcantry/skills/#choose-a-distribution-path"><Icon name="puzzle" /><span><strong>Give an agent one procedure</strong><small>Link one focused workflow or use the complete versioned catalog</small></span><Icon name="right-arrow" /></a></li>
+      <li><a href="/arcantry/skills/#three-families"><Icon name="puzzle" /><span><strong>Give an agent one procedure</strong><small>Choose a focused skill in user or repository scope</small></span><Icon name="right-arrow" /></a></li>
     </ol>
   </div>
 </section>
@@ -148,33 +148,33 @@ import ArcantryKnowledgeGraph from './ArcantryKnowledgeGraph.astro';
       <span class="step-icon"><Icon name="padlock" /></span>
       <div>
         <span class="step-number">01</span>
-        <span class="step-label">Recommended when the repository is off limits</span>
+        <span class="step-label">For personal or workstation-specific project context</span>
         <h3>Keep adoption private</h3>
-        <p>Use global tools and private project context when you cannot change how an established repository is managed.</p>
-        <strong class="step-outcome">Benefit: project-aware tools with no repository changes.</strong>
-        <a href="/arcantry/adoption/#external-configuration">Keep the repository untouched <Icon name="right-arrow" /></a>
+        <p>Use `.local/arcantry.toml`, private agent guidance, and independent private sources without tracking them.</p>
+        <strong class="step-outcome">Benefit: project-aware tools with private state kept off Git.</strong>
+        <a href="/arcantry/adoption/#private-setup">Adopt private scope <Icon name="right-arrow" /></a>
       </div>
     </li>
     <li>
       <span class="step-icon"><Icon name="puzzle" /></span>
       <div>
         <span class="step-number">02</span>
-        <span class="step-label">Supported when full adoption is not practical</span>
-        <h3>Connect selected capabilities</h3>
-        <p>Use only the queues, skills, requirements, or release history that help now, with independent scopes and responsibilities.</p>
-        <strong class="step-outcome">Benefit: immediate value without forcing the complete model.</strong>
-        <a href="/arcantry/adoption/#queues-or-skills-only">See selective paths <Icon name="right-arrow" /></a>
+        <span class="step-label">For focused agent-user collaboration</span>
+        <h3>Link selected skills</h3>
+        <p>Choose focused self-improvement, repository safety, or content safety procedures in user or repository scope.</p>
+        <strong class="step-outcome">Benefit: repeatable workflows consume less context and keep clear approval boundaries.</strong>
+        <a href="/arcantry/skills/#three-families">Explore the skill families <Icon name="right-arrow" /></a>
       </div>
     </li>
     <li>
       <span class="step-icon"><Icon name="star" /></span>
       <div>
         <span class="step-number">03</span>
-        <span class="step-label">Recommended for new and existing projects</span>
-        <h3>Adopt the complete model</h3>
-        <p>Connect authority, release history, queues, skills, settings, privacy, and validation boundaries as one coherent system.</p>
-        <strong class="step-outcome">Benefit: every tool starts from the same explicit project contract.</strong>
-        <a href="/arcantry/adoption/#tracked-configuration">Plan complete integration <Icon name="right-arrow" /></a>
+        <span class="step-label">For teams sharing the project contract</span>
+        <h3>Adopt shared scope</h3>
+        <p>Track configuration and agent guidance while keeping private sources independent under `.local`.</p>
+        <strong class="step-outcome">Benefit: collaborators and automation start from the same explicit boundary.</strong>
+        <a href="/arcantry/adoption/#shared-setup">Adopt shared scope <Icon name="right-arrow" /></a>
       </div>
     </li>
   </ol>

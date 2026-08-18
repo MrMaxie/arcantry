@@ -3,12 +3,24 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { Command } from 'commander';
 import { ZodError } from 'zod';
-import { doctorSkills, findCatalogRoot, inspectSkill, linkSkill, loadCatalog, unlinkSkill } from './catalog.js';
-import { type AgentName, type ArcantrySource, agentNameSchema, docsModeSchema, sourceModeSchema } from './config.js';
+import {
+  doctorSkills,
+  findCatalogRoot,
+  inspectSkill,
+  linkSkill,
+  loadCatalog,
+  repositorySkillTargetRoot,
+  skillAgentSchema,
+  type SkillAgent,
+  unlinkSkill,
+  userSkillTargetRoot,
+} from './catalog.js';
 import {
   doctorRepository,
   initRepository,
   removeRepository,
+  repositoryScopeSchema,
+  resolveRepositoryRoot,
   updateRepository,
   validateRepository,
   type RepositoryReport,
@@ -115,25 +127,11 @@ export const buildProgram = (context: CliContext): Command => {
 
   repo
     .command('init')
-    .description('Initialize Arcantry-managed repository artifacts.')
-    .requiredOption('--docs <mode>', 'Documentation mode: shared, local, or none.')
-    .option('--agent <agent>', 'Agent entrypoint to manage; repeat to select more than one.', collectAgent, [])
-    .option('--source <name=mode>', 'Ordered source and mode; repeat to select more than one.', collectSource, [])
-    .option('--operational-source <name>', 'Name of the single operational source.')
-    .action(async (options: { docs: string; agent: AgentName[]; source: ArcantrySource[]; operationalSource?: string }) => {
+    .description('Initialize minimal shared or private Arcantry repository state.')
+    .requiredOption('--scope <scope>', 'Configuration scope: shared or private.')
+    .action(async (options: { scope: string }) => {
       await execute(program, context, async () => {
-        const docs = docsModeSchema.parse(options.docs);
-        if (docs !== 'none') {
-          throw new Error('Legacy --docs shared/local modes are no longer supported. Existing .docs content remains project-owned; use --docs none.');
-        }
-        const sources = options.source.length > 0 ? options.source : undefined;
-        const inferredOperationalSource = sources?.find((source) => source.mode === 'operational')?.name;
-        const result = await initRepository(commandCwd(program, context), {
-          docs,
-          agents: options.agent.length > 0 ? options.agent : undefined,
-          sources,
-          operationalSource: options.operationalSource ?? inferredOperationalSource,
-        });
+        const result = await initRepository(commandCwd(program, context), repositoryScopeSchema.parse(options.scope));
         renderRepositoryResult(context, result);
       });
     });
@@ -141,34 +139,32 @@ export const buildProgram = (context: CliContext): Command => {
   repo
     .command('update')
     .description('Refresh owned artifacts while preserving configuration.')
-    .action(async () => execute(program, context, async () => renderRepositoryResult(context, await updateRepository(commandCwd(program, context)))));
+    .requiredOption('--scope <scope>', 'Configuration scope: shared or private.')
+    .action(async (options: { scope: string }) => execute(program, context, async () =>
+      renderRepositoryResult(context, await updateRepository(commandCwd(program, context), repositoryScopeSchema.parse(options.scope)))));
 
   repo
     .command('doctor')
     .description('Diagnose repository adoption without changing it.')
     .action(async () => execute(program, context, async () => {
-      if (await shouldUseLegacyRepository(program, context)) {
-        renderRepositoryReport(program, context, await doctorRepository(commandCwd(program, context)));
-      } else {
-        await renderKnowledgeValidation(program, context, true);
-      }
+      renderRepositoryReport(program, context, await doctorRepository(commandCwd(program, context), commandConfigPath(program, context)));
+      await renderKnowledgeValidation(program, context, true);
     }));
 
   repo
     .command('validate')
     .description('Validate repository adoption without changing it.')
     .action(async () => execute(program, context, async () => {
-      if (await shouldUseLegacyRepository(program, context)) {
-        renderRepositoryReport(program, context, await validateRepository(commandCwd(program, context)));
-      } else {
-        await renderKnowledgeValidation(program, context, false);
-      }
+      renderRepositoryReport(program, context, await validateRepository(commandCwd(program, context), false, commandConfigPath(program, context)));
+      await renderKnowledgeValidation(program, context, false);
     }));
 
   repo
     .command('remove')
     .description('Remove only verified Arcantry-owned artifacts and sections.')
-    .action(async () => execute(program, context, async () => renderRepositoryResult(context, await removeRepository(commandCwd(program, context)))));
+    .requiredOption('--scope <scope>', 'Configuration scope: shared or private.')
+    .action(async (options: { scope: string }) => execute(program, context, async () =>
+      renderRepositoryResult(context, await removeRepository(commandCwd(program, context), repositoryScopeSchema.parse(options.scope)))));
 
   const todo = program.command('todo').description('Use root or private todo.txt queues without imposing a workflow taxonomy.');
   todo
@@ -279,7 +275,7 @@ export const buildProgram = (context: CliContext): Command => {
       await execute(program, context, async () => {
         const root = await catalogRoot(program, context, options.catalogRoot);
         const catalog = await loadCatalog(root);
-        for (const entry of catalog.skills) context.stdout(`${entry.name}\t${entry.tags.join(', ')}\n`);
+        for (const entry of catalog.skills) context.stdout(`${entry.name}\t${entry.family}\t${entry.tags.join(', ')}\n`);
       });
     });
 
@@ -290,23 +286,25 @@ export const buildProgram = (context: CliContext): Command => {
     .action(async (name: string, options: { catalogRoot?: string }) => {
       await execute(program, context, async () => {
         const inspection = await inspectSkill(await catalogRoot(program, context, options.catalogRoot), name);
-        context.stdout(`${inspection.entry.name}\n${inspection.metadata.summary}\nTags: ${inspection.entry.tags.join(', ')}\n`);
+        context.stdout(`${inspection.entry.name}\n${inspection.metadata.summary}\nFamily: ${inspection.entry.family}\nTags: ${inspection.entry.tags.join(', ')}\n`);
         for (const scenario of inspection.metadata.scenarios) context.stdout(`- ${scenario.title}: ${scenario.outcome}\n`);
       });
     });
 
   skills
     .command('link <name>')
-    .description('Link one catalog skill into an agent skill directory.')
+    .description('Link one catalog skill into a supported agent skill directory.')
     .option('--catalog-root <path>', 'Directory containing catalog.json and skills/.')
-    .option('--target <path>', 'Agent skill directory.')
+    .option('--scope <scope>', 'Skill scope: user or repo.')
+    .option('--agent <agent>', 'Agent host: codex, claude, or gemini.')
+    .option('--target <path>', 'Advanced explicit Agent Skills directory.')
     .option('--replace', 'Back up an ordinary target or replace a different link before linking.')
-    .action(async (name: string, options: { catalogRoot?: string; target?: string; replace?: boolean }) => {
+    .action(async (name: string, options: { catalogRoot?: string; scope?: string; agent?: string; target?: string; replace?: boolean }) => {
       await execute(program, context, async () => {
         const result = await linkSkill({
           catalogRoot: await catalogRoot(program, context, options.catalogRoot),
           name,
-          targetRoot: options.target,
+          targetRoot: await resolveSkillTarget(program, context, options),
           replace: options.replace,
         });
         context.stdout(result.status === 'unchanged' ? `Already linked: ${name}\n` : `Linked: ${name}\n`);
@@ -318,10 +316,16 @@ export const buildProgram = (context: CliContext): Command => {
     .command('unlink <name>')
     .description('Remove only an exact link to one catalog skill.')
     .option('--catalog-root <path>', 'Directory containing catalog.json and skills/.')
-    .option('--target <path>', 'Agent skill directory.')
-    .action(async (name: string, options: { catalogRoot?: string; target?: string }) => {
+    .option('--scope <scope>', 'Skill scope: user or repo.')
+    .option('--agent <agent>', 'Agent host: codex, claude, or gemini.')
+    .option('--target <path>', 'Advanced explicit Agent Skills directory.')
+    .action(async (name: string, options: { catalogRoot?: string; scope?: string; agent?: string; target?: string }) => {
       await execute(program, context, async () => {
-        await unlinkSkill({ catalogRoot: await catalogRoot(program, context, options.catalogRoot), name, targetRoot: options.target });
+        await unlinkSkill({
+          catalogRoot: await catalogRoot(program, context, options.catalogRoot),
+          name,
+          targetRoot: await resolveSkillTarget(program, context, options),
+        });
         context.stdout(`Unlinked: ${name}\n`);
       });
     });
@@ -330,10 +334,15 @@ export const buildProgram = (context: CliContext): Command => {
     .command('doctor')
     .description('Validate catalog packages and optionally inspect a skill link directory.')
     .option('--catalog-root <path>', 'Directory containing catalog.json and skills/.')
-    .option('--target <path>', 'Agent skill directory to inspect.')
-    .action(async (options: { catalogRoot?: string; target?: string }) => {
+    .option('--scope <scope>', 'Skill scope to inspect: user or repo.')
+    .option('--agent <agent>', 'Agent host: codex, claude, or gemini.')
+    .option('--target <path>', 'Advanced explicit Agent Skills directory to inspect.')
+    .action(async (options: { catalogRoot?: string; scope?: string; agent?: string; target?: string }) => {
       await execute(program, context, async () => {
-        const report = await doctorSkills(await catalogRoot(program, context, options.catalogRoot), options.target);
+        const target = options.scope === undefined && options.agent === undefined && options.target === undefined
+          ? undefined
+          : await resolveSkillTarget(program, context, options);
+        const report = await doctorSkills(await catalogRoot(program, context, options.catalogRoot), target);
         for (const error of report.errors) context.stderr(`ERROR: ${error}\n`);
         for (const warning of report.warnings) context.stdout(`WARNING: ${warning}\n`);
         if (report.valid) context.stdout('Skill catalog is valid.\n');
@@ -371,6 +380,11 @@ const execute = async (program: Command, context: CliContext, action: () => Prom
 
 const commandCwd = (program: Command, context: CliContext): string => resolve(program.opts<{ cwd?: string }>().cwd ?? context.cwd);
 
+const commandConfigPath = (program: Command, context: CliContext): string | undefined => {
+  const config = program.opts<{ config?: string }>().config;
+  return config === undefined ? undefined : resolve(commandCwd(program, context), config);
+};
+
 const commandProject = async (program: Command, context: CliContext) => {
   const options = program.opts<{ cwd?: string; config?: string }>();
   return resolveProject({
@@ -407,7 +421,8 @@ const renderRepositoryReport = (program: Command, context: CliContext, report: R
 
 const renderKnowledgeInspection = (context: CliContext, inspection: KnowledgeInspection): void => {
   context.stdout(`Mode: ${inspection.mode}\n`);
-  context.stdout(`Config: ${inspection.configPath === null ? 'none' : 'arcantry.toml'}\n`);
+  context.stdout(`Config: ${inspection.configPath === null ? 'none' : `${inspection.configScope ?? 'external'} (${inspection.configPath})`}\n`);
+  for (const path of inspection.shadowedConfigPaths) context.stdout(`Shadowed config: ${path}\n`);
   if (inspection.sources.length === 0) context.stdout('No knowledge sources detected.\n');
   for (const source of inspection.sources) {
     context.stdout(
@@ -431,18 +446,6 @@ const renderKnowledgeValidation = async (program: Command, context: CliContext, 
   }
   if (report.valid) context.stdout('Knowledge stack is valid.\n');
   else exitCodes.set(program, 1);
-};
-
-const shouldUseLegacyRepository = async (program: Command, context: CliContext): Promise<boolean> => {
-  const options = program.opts<{ config?: string }>();
-  if (options.config !== undefined) return false;
-  try {
-    await readFile(resolve(commandCwd(program, context), '.local', 'arcantry.json'), 'utf8');
-    return (await commandProject(program, context)).config === null;
-  } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return false;
-    throw error;
-  }
 };
 
 const handleTodoPlan = async (program: Command, context: CliContext, plan: ReturnType<typeof parseProjectPlan>, apply: boolean): Promise<void> => {
@@ -503,14 +506,25 @@ const localDate = (): string => {
   return `${year}-${month}-${day}`;
 };
 
-const collectAgent = (value: string, previous: AgentName[]): AgentName[] => [...previous, agentNameSchema.parse(value)];
-
-const collectSource = (value: string, previous: ArcantrySource[]): ArcantrySource[] => {
-  const parts = value.split('=');
-  if (parts.length !== 2 || parts[0]?.trim() === '' || parts[1]?.trim() === '') {
-    throw new Error('--source must use <name=readonly|readwrite|operational>.');
+const resolveSkillTarget = async (
+  program: Command,
+  context: CliContext,
+  options: { scope?: string; agent?: string; target?: string },
+): Promise<string> => {
+  if (options.target !== undefined && (options.scope !== undefined || options.agent !== undefined)) {
+    throw new Error('--target cannot be combined with --scope or --agent.');
   }
-  return [...previous, { name: parts[0].trim(), mode: sourceModeSchema.parse(parts[1].trim()) }];
+  if (options.target !== undefined) return resolve(commandCwd(program, context), options.target);
+  if (options.agent !== undefined && options.scope === undefined) {
+    throw new Error('--agent requires --scope user|repo.');
+  }
+  const agent: SkillAgent = options.agent === undefined ? 'codex' : skillAgentSchema.parse(options.agent);
+  if (options.scope === 'user') return userSkillTargetRoot(agent);
+  if (options.scope === 'repo') {
+    return repositorySkillTargetRoot(await resolveRepositoryRoot(commandCwd(program, context)), agent);
+  }
+  if (options.scope !== undefined) throw new Error('--scope must be user or repo.');
+  throw new Error('Choose --scope user|repo or provide --target.');
 };
 
 const formatError = (error: unknown): string => {

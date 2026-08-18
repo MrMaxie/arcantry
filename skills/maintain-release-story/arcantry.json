@@ -1,0 +1,25 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Keep OpenSpec release intent, SemVer, native manifests, and consumer-facing changelog text aligned.",
+  "compatibility": {
+    "sourceKinds": ["openspec", "changelog"]
+  },
+  "learning": {
+    "outcomes": [
+      "Derive release impact and consumer-facing notes from accepted OpenSpec release artifacts.",
+      "Verify one version across release manifests and native package metadata."
+    ]
+  },
+  "scenarios": [
+    {
+      "title": "Prepare a product release",
+      "prompt": "Use $maintain-release-story to prepare the next release from completed OpenSpec changes without publishing it.",
+      "outcome": "A verified release set aligns SemVer, manifests, components, and consumer-facing changelog entries."
+    },
+    {
+      "title": "Audit release consistency",
+      "prompt": "Use $maintain-release-story to check whether package versions and release notes match the accepted product changes.",
+      "outcome": "Version or release-story drift is reported with its authoritative source and exact repair boundary."
+    }
+  ]
+}

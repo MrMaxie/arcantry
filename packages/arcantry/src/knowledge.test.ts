@@ -7,7 +7,14 @@ import { createFixtureDirectory, removeFixtures } from './testHelpers.js';
 
 afterEach(removeFixtures);
 
-const wild = (root: string): ResolvedProject => ({ root, configPath: null, config: null, mode: 'wild' });
+const wild = (root: string): ResolvedProject => ({
+  root,
+  configPath: null,
+  config: null,
+  mode: 'wild',
+  scope: null,
+  shadowedConfigPaths: [],
+});
 
 describe('knowledge source discovery', () => {
   it('accepts an empty non-Git project without creating a source', async () => {

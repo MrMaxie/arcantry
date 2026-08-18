@@ -1,7 +1,7 @@
 {
   "name": "arcantry",
-  "version": "0.4.3",
-  "description": "Repository lifecycle, adoption tooling, and focused agent skills.",
+  "version": "1.0.0",
+  "description": "Local-first project knowledge and focused agent skills.",
   "author": {
     "name": "Maxie",
     "url": "https://github.com/MrMaxie"
@@ -18,7 +18,7 @@
   "interface": {
     "displayName": "Arcantry",
     "shortDescription": "Intent-led repositories and focused agent skills",
-    "longDescription": "Adopt a reproducible repository contract and install focused skills from one versioned Arcantry catalog.",
+    "longDescription": "Coordinate project knowledge and install focused skills for self-improvement, repository safety, and content safety.",
     "developerName": "Maxie",
     "category": "Developer Tools",
     "capabilities": [

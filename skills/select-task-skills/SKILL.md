@@ -1,6 +1,6 @@
 ---
 name: select-task-skills
-description: Choose up to three installed or project-installable Codex skills for a complex, multi-domain, or unfamiliar task. Use implicitly before such tasks or explicitly when the user asks which skills apply; do not use for simple single-domain work or install anything.
+description: Choose up to three available skills for a complex, multi-domain, or unfamiliar task. Use implicitly before such tasks or explicitly when asked which skills apply; do not use for simple work or install anything.
 ---
 
 # Select Task Skills

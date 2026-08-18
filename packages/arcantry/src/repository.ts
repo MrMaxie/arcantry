@@ -2,18 +2,20 @@ import { lstat, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execa } from 'execa';
-import { ZodError } from 'zod';
-import { agentArtifacts, getAgentArtifact } from './agents.js';
+import { z } from 'zod';
+import { removeManagedSection, upsertManagedSection } from './managedContent.js';
 import {
-  type AgentName,
-  type ArcantryConfig,
-  type CreateArcantryConfigInput,
-  arcantryConfigSchema,
-  createArcantryConfig,
-  renderArcantryConfig,
-} from './config.js';
-import { containsManagedSection, removeManagedSection, renderManagedSection, upsertManagedSection } from './managedContent.js';
+  type ProjectConfig,
+  parseProjectConfig,
+  privateProjectConfigPath,
+  projectConfigFilename,
+  projectConfigVersion,
+  renderProjectConfig,
+  resolveProject,
+} from './projectConfig.js';
 
+export const repositoryScopeSchema = z.enum(['shared', 'private']);
+export type RepositoryScope = z.infer<typeof repositoryScopeSchema>;
 export type RepositoryOperation = 'init' | 'update' | 'remove';
 export type RepositoryChangeAction = 'create' | 'update' | 'remove';
 
@@ -28,6 +30,7 @@ export type RepositoryConflict = { path: string; reason: string };
 
 export type RepositoryPlan = {
   operation: RepositoryOperation;
+  scope: RepositoryScope;
   root: string;
   changes: RepositoryChange[];
   conflicts: RepositoryConflict[];
@@ -44,87 +47,26 @@ export type RepositoryReport = {
   root: string;
   valid: boolean;
   diagnostics: RepositoryDiagnostic[];
-  config: ArcantryConfig | null;
+  configPath: string | null;
+  scope: RepositoryScope | null;
+  config: ProjectConfig | null;
 };
 
 export type RepositoryResult = { root: string; applied: RepositoryChange[] };
 
-const configPath = '.local/arcantry.json';
-
-const generatedScaffoldContents = {
-  justfile: [
-    '# arcantry:generated',
-    'set dotenv-load := false',
-    '',
-    'setup:',
-    '    pnpm install',
-    '',
-    'check:',
-    '    pnpm run check',
-    '',
-    'build:',
-    '    pnpm run build',
-    '',
-    'ci: check build',
-    '',
-  ].join('\n'),
-  'mise.toml': [
-    '# arcantry:generated',
-    '[tools]',
-    'node = "24"',
-    'pnpm = "10"',
-    'just = "1"',
-    '',
-  ].join('\n'),
-  'openspec/config.yaml': [
-    '# arcantry:generated',
-    'schema: arcantry',
-    '',
-    'context: |',
-    '  OpenSpec is the only source of product and engineering specifications in this repository.',
-    '',
-  ].join('\n'),
-};
-
-const generatedScaffolds: Record<string, { content: string; compatible: (content: string) => boolean }> = {
-  justfile: {
-    content: generatedScaffoldContents.justfile,
-    compatible: (content) =>
-      ['setup', 'check', 'build', 'ci'].every((recipe) => new RegExp(`^${recipe}(?:\\s[^:]*)?:`, 'm').test(content)),
-  },
-  'mise.toml': {
-    content: generatedScaffoldContents['mise.toml'],
-    compatible: (content) => hasToolMajor(content, 'node', 24) && hasToolMajor(content, 'pnpm', 10) && hasTool(content, 'just'),
-  },
-  'openspec/config.yaml': {
-    content: generatedScaffoldContents['openspec/config.yaml'],
-    compatible: (content) => /^schema:\s*arcantry\s*$/m.test(content),
-  },
-};
-
-const localGuidanceBody = [
-  '## Arcantry local context',
-  '',
-  'Treat `.local/` as private operational state. Read `.local/arcantry.json` for configured agents and ordered task sources.',
-  'A source configured as `readwrite` still requires explicit authorization before each external write.',
-  'Keep product specifications and release intent in `openspec/`.',
-].join('\n');
-
 const sharedGuidanceBody = [
   '## Arcantry',
   '',
-  'Use `openspec/` as the only source of product and engineering specifications.',
-  'Read `.local/arcantry.json` when present for private operational configuration.',
+  'Use `arcantry.toml` for shared Arcantry configuration.',
+  'Treat configured OpenSpec sources as accepted product and engineering intent.',
+  'Use configured todo.txt sources for quick intake and changelog sources for consumer-facing release history.',
 ].join('\n');
 
-const cursorRuleBody = [
-  '---',
-  'description: Arcantry repository guidance',
-  'alwaysApply: true',
-  '---',
+const privateGuidanceBody = [
+  '## Arcantry local context',
   '',
-  renderManagedSection(sharedGuidanceBody),
-  '',
+  'Treat `.local/` as private operational state and read `.local/arcantry.toml` for private Arcantry configuration.',
+  'Keep private and shared sources independent. Promote or relocate content only through an explicit reviewed operation.',
 ].join('\n');
 
 export const detectRepository = async (cwd: string): Promise<{ cwd: string; root: string | null; isRepository: boolean }> => {
@@ -138,89 +80,66 @@ export const detectRepository = async (cwd: string): Promise<{ cwd: string; root
 
 export const resolveRepositoryRoot = async (cwd: string): Promise<string> => {
   const repository = await detectRepository(cwd);
-  if (repository.root === null) {
-    throw new Error(`No Git repository found from ${cwd}.`);
-  }
+  if (repository.root === null) throw new Error(`No Git repository found from ${cwd}.`);
   return repository.root;
 };
 
-export const readArcantryConfig = async (root: string): Promise<ArcantryConfig | null> => {
-  const content = await readText(join(root, configPath));
-  if (content === null) {
-    return null;
-  }
-  return arcantryConfigSchema.parse(JSON.parse(content));
+export const repositoryConfigPath = (scope: RepositoryScope): string =>
+  scope === 'private' ? privateProjectConfigPath : projectConfigFilename;
+
+export const repositoryGuidancePath = (scope: RepositoryScope): string =>
+  scope === 'private' ? join('.local', 'AGENTS.md') : 'AGENTS.md';
+
+export const createRepositoryConfig = (): ProjectConfig => ({
+  configVersion: projectConfigVersion,
+  sources: {},
+});
+
+export const readArcantryConfig = async (root: string, scope: RepositoryScope): Promise<ProjectConfig | null> => {
+  const content = await readText(join(root, repositoryConfigPath(scope)));
+  return content === null ? null : parseProjectConfig(content);
 };
 
-export const planRepositoryInit = async (cwd: string, input: CreateArcantryConfigInput): Promise<RepositoryPlan> => {
-  const root = await resolveRepositoryRoot(cwd);
-  const config = createArcantryConfig(input);
-  const plan: RepositoryPlan = { operation: 'init', root, changes: [], conflicts: [] };
-
-  await planExactFile(plan, configPath, renderArcantryConfig(config), 'Existing Arcantry configuration differs from the requested setup.');
-  for (const [path, scaffold] of Object.entries(generatedScaffolds)) {
-    await planCompatibleFile(plan, path, scaffold, `Existing ${path} is incompatible with the Arcantry repository contract.`);
-  }
-  for (const [path, content] of Object.entries(await getOpenSpecAssetFiles())) {
-    await planExactFile(plan, path, content, `Existing ${path} differs from the Arcantry OpenSpec schema.`);
-  }
-  await planSection(plan, '.local/AGENTS.md', localGuidanceBody, false);
-  await planConfiguredEntrypoints(plan, config.agents, false);
-  await planGitExcludes(plan, config);
-
-  return plan;
-};
-
-export const planRepositoryUpdate = async (cwd: string): Promise<RepositoryPlan> => {
-  const root = await resolveRepositoryRoot(cwd);
-  const plan: RepositoryPlan = { operation: 'update', root, changes: [], conflicts: [] };
-  const config = await readConfigForPlan(plan);
-  if (config === null) {
-    return plan;
-  }
-
-  for (const [path, scaffold] of Object.entries(generatedScaffolds)) {
-    await planCompatibleFile(plan, path, scaffold, `Existing ${path} is incompatible with the Arcantry repository contract.`);
-  }
-  for (const [path, content] of Object.entries(await getOpenSpecAssetFiles())) {
-    await planExactFile(plan, path, content, `Existing ${path} differs from the Arcantry OpenSpec schema.`);
-  }
-  await planSection(plan, '.local/AGENTS.md', localGuidanceBody, true);
-  await planConfiguredEntrypoints(plan, config.agents, true);
-  await planGitExcludes(plan, config);
-
-  return plan;
-};
-
-export const planRepositoryRemove = async (cwd: string): Promise<RepositoryPlan> => {
-  const root = await resolveRepositoryRoot(cwd);
-  const plan: RepositoryPlan = { operation: 'remove', root, changes: [], conflicts: [] };
-
-  const configContent = await readText(join(root, configPath));
-  if (configContent !== null) {
+export const planRepositoryInit = async (cwd: string, scope: RepositoryScope): Promise<RepositoryPlan> => {
+  const plan = await createPlan(cwd, 'init', scope);
+  const path = repositoryConfigPath(scope);
+  const existing = await readText(join(plan.root, path));
+  if (existing === null) {
+    plan.changes.push({ action: 'create', path, content: renderProjectConfig(createRepositoryConfig()), expectedContent: null });
+  } else {
     try {
-      arcantryConfigSchema.parse(JSON.parse(configContent));
-      plan.changes.push({ action: 'remove', path: configPath, content: null, expectedContent: configContent });
+      parseProjectConfig(existing);
     } catch {
-      plan.conflicts.push({ path: configPath, reason: 'Invalid configuration is preserved because ownership cannot be verified.' });
+      plan.conflicts.push({ path, reason: 'Existing Arcantry configuration is invalid and will not be replaced.' });
     }
   }
 
-  for (const [path, scaffold] of Object.entries(generatedScaffolds)) {
-    if (path.startsWith('openspec/')) {
-      continue;
-    }
-    const existing = await readText(join(root, path));
-    if (existing === scaffold.content) {
+  await planSection(plan, repositoryGuidancePath(scope), guidanceFor(scope));
+  if (scope === 'private') await planGitExclude(plan);
+  return plan;
+};
+
+export const planRepositoryUpdate = async (cwd: string, scope: RepositoryScope): Promise<RepositoryPlan> => {
+  const plan = await createPlan(cwd, 'update', scope);
+  if (!(await validatePlanConfig(plan))) return plan;
+  await planSection(plan, repositoryGuidancePath(scope), guidanceFor(scope));
+  if (scope === 'private') await planGitExclude(plan);
+  return plan;
+};
+
+export const planRepositoryRemove = async (cwd: string, scope: RepositoryScope): Promise<RepositoryPlan> => {
+  const plan = await createPlan(cwd, 'remove', scope);
+  const path = repositoryConfigPath(scope);
+  const existing = await readText(join(plan.root, path));
+  if (existing !== null) {
+    try {
+      parseProjectConfig(existing);
       plan.changes.push({ action: 'remove', path, content: null, expectedContent: existing });
+    } catch {
+      plan.conflicts.push({ path, reason: 'Invalid configuration is preserved because ownership cannot be verified.' });
     }
   }
-
-  await planSectionRemoval(plan, '.local/AGENTS.md');
-  for (const artifact of agentArtifacts) {
-    await planSectionRemoval(plan, artifact.path);
-  }
-
+  await planSectionRemoval(plan, repositoryGuidancePath(scope));
   return plan;
 };
 
@@ -230,187 +149,129 @@ export const applyRepositoryPlan = async (plan: RepositoryPlan): Promise<Reposit
   }
 
   for (const change of plan.changes) {
-    const current = await readText(resolvePlanPath(plan.root, change.path));
-    if (current !== change.expectedContent) {
+    if ((await readText(resolvePlanPath(plan.root, change.path))) !== change.expectedContent) {
       throw new Error(`Refusing to change ${change.path}; it changed after the plan was created.`);
     }
   }
 
   for (const change of plan.changes) {
     const absolutePath = resolvePlanPath(plan.root, change.path);
-    if (change.content === null) {
-      await rm(absolutePath, { force: true });
-      continue;
+    if (change.content === null) await rm(absolutePath, { force: true });
+    else {
+      await mkdir(dirname(absolutePath), { recursive: true });
+      await writeFile(absolutePath, change.content);
     }
-    await mkdir(dirname(absolutePath), { recursive: true });
-    await writeFile(absolutePath, change.content);
   }
-
   return { root: plan.root, applied: plan.changes };
 };
 
-export const initRepository = async (cwd: string, input: CreateArcantryConfigInput): Promise<RepositoryResult> =>
-  applyRepositoryPlan(await planRepositoryInit(cwd, input));
+export const initRepository = async (cwd: string, scope: RepositoryScope): Promise<RepositoryResult> =>
+  applyRepositoryPlan(await planRepositoryInit(cwd, scope));
 
-export const updateRepository = async (cwd: string): Promise<RepositoryResult> =>
-  applyRepositoryPlan(await planRepositoryUpdate(cwd));
+export const updateRepository = async (cwd: string, scope: RepositoryScope): Promise<RepositoryResult> =>
+  applyRepositoryPlan(await planRepositoryUpdate(cwd, scope));
 
-export const removeRepository = async (cwd: string): Promise<RepositoryResult> =>
-  applyRepositoryPlan(await planRepositoryRemove(cwd));
+export const removeRepository = async (cwd: string, scope: RepositoryScope): Promise<RepositoryResult> =>
+  applyRepositoryPlan(await planRepositoryRemove(cwd, scope));
 
-export const validateRepository = async (cwd: string): Promise<RepositoryReport> => {
-  const root = await resolveRepositoryRoot(cwd);
+export const validateRepository = async (cwd: string, doctor = false, configPath?: string): Promise<RepositoryReport> => {
+  const repository = await detectRepository(cwd);
+  const root = repository.root ?? resolve(cwd);
   const diagnostics: RepositoryDiagnostic[] = [];
-  let config: ArcantryConfig | null = null;
-
-  try {
-    config = await readArcantryConfig(root);
-    if (config === null) {
-      diagnostics.push({ severity: 'error', path: configPath, message: 'Arcantry configuration is missing.' });
-    }
-  } catch (error) {
-    const detail = error instanceof ZodError ? error.issues.map((issue) => issue.message).join(' ') : 'Configuration is not valid JSON.';
-    diagnostics.push({ severity: 'error', path: configPath, message: detail });
+  const project = await resolveProject({ cwd: root, configPath, cwdExplicit: true });
+  if (project.configPath === null || project.config === null) {
+    return { root, valid: true, diagnostics, configPath: null, scope: null, config: null };
   }
 
-  for (const [path, scaffold] of Object.entries(generatedScaffolds)) {
-    const content = await readText(join(root, path));
-    if (content === null) {
-      diagnostics.push({ severity: 'error', path, message: 'Required repository artifact is missing.' });
-    } else if (!scaffold.compatible(content)) {
-      diagnostics.push({ severity: 'error', path, message: 'Repository artifact is incompatible with the Arcantry contract.' });
-    }
+  const scope = project.scope === 'private' || project.scope === 'shared' ? project.scope : null;
+  for (const shadowed of project.shadowedConfigPaths) {
+    diagnostics.push({
+      severity: 'warning',
+      path: relativePath(root, shadowed),
+      message: `Configuration is shadowed by ${relativePath(root, project.configPath)}.`,
+    });
   }
-  for (const [path, expected] of Object.entries(await getOpenSpecAssetFiles())) {
-    const content = await readText(join(root, path));
-    if (content === null) {
-      diagnostics.push({ severity: 'error', path, message: 'Required Arcantry OpenSpec schema asset is missing.' });
-    } else if (content !== expected) {
-      diagnostics.push({ severity: 'error', path, message: 'OpenSpec schema asset differs from the installed Arcantry version.' });
-    }
+  if (scope !== null) {
+    await validateSection(root, repositoryGuidancePath(scope), guidanceFor(scope), diagnostics, doctor, scope);
+    if (scope === 'private' && repository.isRepository) await validateGitExclude(root, diagnostics, doctor);
   }
-
-  if (config !== null) {
-    await validateSection(root, '.local/AGENTS.md', localGuidanceBody, diagnostics);
-    for (const agent of config.agents) {
-      await validateSection(root, getAgentArtifact(agent).path, sharedGuidanceBody, diagnostics);
-    }
-    await validateGitExcludes(root, config, diagnostics);
-  }
-
-  return { root, valid: diagnostics.every((diagnostic) => diagnostic.severity !== 'error'), diagnostics, config };
-};
-
-export const doctorRepository = async (cwd: string): Promise<RepositoryReport> => {
-  const report = await validateRepository(cwd);
   return {
-    ...report,
-    diagnostics: report.diagnostics.map((diagnostic) => ({
-      ...diagnostic,
-      repair: repairForDiagnostic(diagnostic),
-    })),
+    root,
+    valid: diagnostics.every((diagnostic) => diagnostic.severity !== 'error'),
+    diagnostics,
+    configPath: project.configPath,
+    scope,
+    config: project.config,
   };
 };
 
-const planExactFile = async (plan: RepositoryPlan, path: string, desired: string, conflictReason: string): Promise<void> => {
+export const doctorRepository = async (cwd: string, configPath?: string): Promise<RepositoryReport> =>
+  validateRepository(cwd, true, configPath);
+
+const createPlan = async (cwd: string, operation: RepositoryOperation, scope: RepositoryScope): Promise<RepositoryPlan> => ({
+  operation,
+  scope,
+  root: await resolveRepositoryRoot(cwd),
+  changes: [],
+  conflicts: [],
+});
+
+const validatePlanConfig = async (plan: RepositoryPlan): Promise<boolean> => {
+  const path = repositoryConfigPath(plan.scope);
   const existing = await readText(join(plan.root, path));
   if (existing === null) {
-    plan.changes.push({ action: 'create', path, content: desired, expectedContent: null });
-  } else if (existing !== desired) {
-    plan.conflicts.push({ path, reason: conflictReason });
+    plan.conflicts.push({ path, reason: `Run repo init --scope ${plan.scope} before repo update.` });
+    return false;
+  }
+  try {
+    parseProjectConfig(existing);
+    return true;
+  } catch {
+    plan.conflicts.push({ path, reason: 'Configuration is invalid and will not be replaced.' });
+    return false;
   }
 };
 
-const planCompatibleFile = async (
-  plan: RepositoryPlan,
-  path: string,
-  scaffold: { content: string; compatible: (content: string) => boolean },
-  conflictReason: string,
-): Promise<void> => {
-  const existing = await readText(join(plan.root, path));
-  if (existing === null) {
-    plan.changes.push({ action: 'create', path, content: scaffold.content, expectedContent: null });
-  } else if (!scaffold.compatible(existing)) {
-    plan.conflicts.push({ path, reason: conflictReason });
-  }
-};
-
-const planConfiguredEntrypoints = async (plan: RepositoryPlan, agents: AgentName[], update: boolean): Promise<void> => {
-  for (const agent of agents) {
-    const artifact = getAgentArtifact(agent);
-    if (artifact.kind === 'cursor-rule') {
-      if (update && containsManagedSection((await readText(join(plan.root, artifact.path))) ?? '')) {
-        await planSection(plan, artifact.path, sharedGuidanceBody, true);
-      } else {
-        await planExactFile(plan, artifact.path, cursorRuleBody, 'Existing Cursor rule is not owned by Arcantry.');
-      }
-    } else {
-      await planSection(plan, artifact.path, sharedGuidanceBody, update);
-    }
-  }
-};
-
-const planSection = async (plan: RepositoryPlan, path: string, body: string, update: boolean): Promise<void> => {
+const planSection = async (plan: RepositoryPlan, path: string, body: string): Promise<void> => {
   const existingContent = await readText(join(plan.root, path));
-  const existing = existingContent ?? '';
-  const result = upsertManagedSection(existing, body);
-  if (result.status === 'conflict') {
-    plan.conflicts.push({ path, reason: result.reason });
-  } else if (result.status === 'changed') {
-    if (!update && containsManagedSection(existing)) {
-      plan.conflicts.push({ path, reason: 'Existing Arcantry section differs; run repo update.' });
-    } else {
-      plan.changes.push({
-        action: existingContent === null ? 'create' : 'update',
-        path,
-        content: result.content,
-        expectedContent: existingContent,
-      });
-    }
+  const result = upsertManagedSection(existingContent ?? '', body);
+  if (result.status === 'conflict') plan.conflicts.push({ path, reason: result.reason });
+  else if (result.status === 'changed') {
+    plan.changes.push({
+      action: existingContent === null ? 'create' : 'update',
+      path,
+      content: result.content,
+      expectedContent: existingContent,
+    });
   }
 };
 
 const planSectionRemoval = async (plan: RepositoryPlan, path: string): Promise<void> => {
   const existing = await readText(join(plan.root, path));
-  if (existing === null) {
-    return;
-  }
+  if (existing === null) return;
   const result = removeManagedSection(existing);
-  if (result.status === 'conflict') {
-    plan.conflicts.push({ path, reason: result.reason });
-  } else if (result.status === 'changed') {
-    plan.changes.push({ action: result.content.length === 0 ? 'remove' : 'update', path, content: result.content || null, expectedContent: existing });
+  if (result.status === 'conflict') plan.conflicts.push({ path, reason: result.reason });
+  else if (result.status === 'changed') {
+    plan.changes.push({
+      action: result.content.length === 0 ? 'remove' : 'update',
+      path,
+      content: result.content || null,
+      expectedContent: existing,
+    });
   }
 };
 
-const readConfigForPlan = async (plan: RepositoryPlan): Promise<ArcantryConfig | null> => {
-  try {
-    const config = await readArcantryConfig(plan.root);
-    if (config === null) {
-      plan.conflicts.push({ path: configPath, reason: 'Run repo init before repo update.' });
-    }
-    return config;
-  } catch {
-    plan.conflicts.push({ path: configPath, reason: 'Configuration is invalid and will not be replaced.' });
-    return null;
-  }
-};
-
-const planGitExcludes = async (plan: RepositoryPlan, _config: ArcantryConfig): Promise<void> => {
-  const gitPath = await resolveGitPath(plan.root, 'info/exclude');
-  const existingContent = await readText(gitPath);
+const planGitExclude = async (plan: RepositoryPlan): Promise<void> => {
+  const path = await resolveGitPath(plan.root, 'info/exclude');
+  const existingContent = await readText(path);
   const existing = existingContent ?? '';
-  const required = ['.local/'];
   const lines = new Set(existing.split(/\r?\n/));
-  const missing = required.filter((line) => !lines.has(line));
-  if (missing.length === 0) {
-    return;
-  }
+  if (lines.has('.local/')) return;
   const separator = existing.length > 0 && !existing.endsWith('\n') ? '\n' : '';
   plan.changes.push({
     action: existingContent === null ? 'create' : 'update',
-    path: gitPath,
-    content: `${existing}${separator}${missing.join('\n')}\n`,
+    path,
+    content: `${existing}${separator}.local/\n`,
     expectedContent: existingContent,
   });
 };
@@ -420,35 +281,34 @@ const validateSection = async (
   path: string,
   body: string,
   diagnostics: RepositoryDiagnostic[],
+  doctor: boolean,
+  scope: RepositoryScope,
 ): Promise<void> => {
   const content = await readText(join(root, path));
   if (content === null || upsertManagedSection(content, body).status !== 'unchanged') {
-    diagnostics.push({ severity: 'error', path, message: 'Arcantry managed section is missing or outdated.' });
+    diagnostics.push({
+      severity: 'error',
+      path,
+      message: 'Arcantry managed section is missing or outdated.',
+      ...(doctor ? { repair: `Run \`arcantry repo update --scope ${scope}\`.` } : {}),
+    });
   }
 };
 
-const validateGitExcludes = async (root: string, _config: ArcantryConfig, diagnostics: RepositoryDiagnostic[]): Promise<void> => {
+const validateGitExclude = async (root: string, diagnostics: RepositoryDiagnostic[], doctor: boolean): Promise<void> => {
   const path = await resolveGitPath(root, 'info/exclude');
   const lines = new Set(((await readText(path)) ?? '').split(/\r?\n/));
-  for (const pattern of ['.local/']) {
-    if (!lines.has(pattern)) {
-      diagnostics.push({ severity: 'error', path: '.git/info/exclude', message: `${pattern} must be excluded locally.` });
-    }
+  if (!lines.has('.local/')) {
+    diagnostics.push({
+      severity: 'error',
+      path: '.git/info/exclude',
+      message: '.local/ must be excluded locally.',
+      ...(doctor ? { repair: 'Run `arcantry repo update --scope private`.' } : {}),
+    });
   }
 };
 
-const repairForDiagnostic = (diagnostic: RepositoryDiagnostic): string => {
-  if (diagnostic.path === configPath) {
-    return 'Run `arcantry repo init --docs none` to create the legacy private contract.';
-  }
-  if (diagnostic.message.includes('missing or outdated') || diagnostic.message.includes('excluded locally')) {
-    return 'Run `arcantry repo update`.';
-  }
-  if (diagnostic.message.includes('incompatible')) {
-    return 'Resolve the project-owned conflict, then run `arcantry repo update`.';
-  }
-  return 'Restore the required artifact, then run `arcantry repo validate`.';
-};
+const guidanceFor = (scope: RepositoryScope): string => scope === 'private' ? privateGuidanceBody : sharedGuidanceBody;
 
 const resolveGitPath = async (root: string, gitPath: string): Promise<string> => {
   const result = await execa('git', ['rev-parse', '--git-path', gitPath], { cwd: root, reject: true });
@@ -460,9 +320,7 @@ export const getOpenSpecAssetFiles = async (): Promise<Record<string, string>> =
   const packageRoot = ['src', 'dist'].includes(basename(moduleDirectory)) ? dirname(moduleDirectory) : moduleDirectory;
   const candidates = [join(packageRoot, 'assets', 'openspec'), resolve(packageRoot, '..', '..', 'openspec', 'schemas', 'arcantry')];
   const assetRoot = (await firstDirectory(candidates)) ?? null;
-  if (assetRoot === null) {
-    throw new Error('Arcantry OpenSpec assets are missing from the package.');
-  }
+  if (assetRoot === null) throw new Error('Arcantry OpenSpec assets are missing from the package.');
 
   const files: Record<string, string> = {};
   for (const absolutePath of await listFiles(assetRoot)) {
@@ -483,40 +341,21 @@ const listFiles = async (root: string): Promise<string[]> => {
 };
 
 const firstDirectory = async (paths: string[]): Promise<string | undefined> => {
-  for (const path of paths) {
-    if ((await pathKind(path)) === 'directory') return path;
-  }
+  for (const path of paths) if ((await pathKind(path)) === 'directory') return path;
   return undefined;
 };
 
-const hasTool = (content: string, tool: string): boolean => new RegExp(`^\\s*${tool}\\s*=\\s*["'][^"']+["']\\s*$`, 'm').test(content);
-
-const hasToolMajor = (content: string, tool: string, major: number): boolean => {
-  const match = content.match(new RegExp(`^\\s*${tool}\\s*=\\s*["']([^"']+)["']\\s*$`, 'm'));
-  return match?.[1]?.split('.')[0] === String(major);
+const resolvePlanPath = (root: string, path: string): string => isAbsolute(path) ? path : join(root, path);
+const relativePath = (root: string, path: string): string => {
+  const value = relative(root, path).replaceAll('\\', '/');
+  return value.startsWith('../') || value === '..' ? path : value;
 };
-
-const resolvePlanPath = (root: string, path: string): string => (isAbsolute(path) ? path : join(root, path));
 
 const readText = async (path: string): Promise<string | null> => {
   try {
     return await readFile(path, 'utf8');
   } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-      return null;
-    }
-    throw error;
-  }
-};
-
-const pathExists = async (path: string): Promise<boolean> => {
-  try {
-    await lstat(path);
-    return true;
-  } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-      return false;
-    }
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null;
     throw error;
   }
 };

@@ -14,10 +14,6 @@ const commandOptions = [
   { id: 'pnpm', label: 'pnpm', executable: 'pnpm dlx', packageCommand: packageName, arguments: 'repo inspect', value: `pnpm dlx ${packageName} repo inspect` },
   { id: 'bun', label: 'Bun', executable: 'bunx', packageCommand: packageName, arguments: 'repo inspect', value: `bunx ${packageName} repo inspect` },
   { id: 'nub', label: 'Nub', executable: 'nubx', packageCommand: packageName, arguments: 'repo inspect', value: `nubx ${packageName} repo inspect` },
-  { id: 'powershell', label: 'PowerShell', platform: 'windows', executable: 'irm', packageCommand: 'https://raw.githubusercontent.com/MrMaxie/arcantry/master/install.ps1', arguments: '| iex', value: 'irm https://raw.githubusercontent.com/MrMaxie/arcantry/master/install.ps1 | iex' },
-  { id: 'scoop', label: 'Scoop', platform: 'windows', executable: 'scoop install', packageCommand: 'MrMaxie/arcantry/arcantry', arguments: '', value: 'scoop install MrMaxie/arcantry/arcantry' },
-  { id: 'homebrew', label: 'Homebrew', platform: 'macos', executable: 'brew install', packageCommand: 'MrMaxie/tap/arcantry', arguments: '', value: 'brew install MrMaxie/tap/arcantry' },
-  { id: 'shell', label: 'Shell', platform: 'linux', executable: 'curl -fsSL', packageCommand: 'https://raw.githubusercontent.com/MrMaxie/arcantry/master/install.sh', arguments: '| sh', value: 'curl -fsSL https://raw.githubusercontent.com/MrMaxie/arcantry/master/install.sh | sh' },
 ] as const;
 ---
 
@@ -25,7 +21,6 @@ const commandOptions = [
   <div class="command-tabs" role="tablist" aria-label="Run or install Arcantry">
     {commandOptions.map((option, index) => (
       <>
-        {option.id === 'powershell' && <span class="command-tab-separator" role="presentation"></span>}
         <button
           type="button"
           role="tab"
@@ -35,13 +30,6 @@ const commandOptions = [
           tabindex={index === 0 ? 0 : -1}
           data-runner={option.id}
         >
-          {'platform' in option && option.platform === 'windows' && (
-            <svg class="platform-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M2 4.4 10.6 3v8H2V4.4Zm9.6-1.6L22 1v10H11.6V2.8ZM2 12h8.6v8L2 18.6V12Zm9.6 0H22v10l-10.4-1.8V12Z"></path>
-            </svg>
-          )}
-          {'platform' in option && option.platform === 'macos' && <Icon name="apple" class="platform-icon" />}
-          {'platform' in option && option.platform === 'linux' && <Icon name="linux" class="platform-icon" />}
           <span>{option.label}</span>
         </button>
       </>
@@ -74,10 +62,10 @@ const commandOptions = [
 </arcantry-command-picker>
 
 <script>
-  type CommandRunner = 'npm' | 'pnpm' | 'bun' | 'nub' | 'powershell' | 'scoop' | 'homebrew' | 'shell';
+  type CommandRunner = 'npm' | 'pnpm' | 'bun' | 'nub';
 
   const commandStorageKey = 'arcantry:command-runner';
-  const commandRunners: CommandRunner[] = ['npm', 'pnpm', 'bun', 'nub', 'powershell', 'scoop', 'homebrew', 'shell'];
+  const commandRunners: CommandRunner[] = ['npm', 'pnpm', 'bun', 'nub'];
 
   async function copyText(text: string): Promise<boolean> {
     try {

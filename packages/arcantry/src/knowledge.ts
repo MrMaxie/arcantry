@@ -34,6 +34,8 @@ export type KnowledgeInspection = {
   root: string;
   mode: ResolvedProject['mode'];
   configPath: string | null;
+  configScope: ResolvedProject['scope'];
+  shadowedConfigPaths: string[];
   sources: ProjectSource[];
   diagnostics: string[];
 };
@@ -114,6 +116,8 @@ export const inspectKnowledge = async (project: ResolvedProject): Promise<Knowle
     root: project.root,
     mode: project.mode,
     configPath: project.configPath,
+    configScope: project.scope,
+    shadowedConfigPaths: project.shadowedConfigPaths,
     sources: sources.sort((left, right) => left.id.localeCompare(right.id)),
     diagnostics,
   };
