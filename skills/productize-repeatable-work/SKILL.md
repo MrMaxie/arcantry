@@ -1,6 +1,6 @@
 ---
 name: productize-repeatable-work
-description: Implement one accepted repeatable-work candidate as the smallest durable artifact. Use only when explicitly invoked with $productize-repeatable-work and an accepted stable candidate ID; do not rediscover or broaden scope.
+description: Implement one approved repeatable-work candidate in its chosen durable carrier without reopening its scope. Use only with an accepted stable candidate id.
 ---
 
 # Productize Repeatable Work
@@ -19,19 +19,19 @@ Stop and return a revised proposal when the target preimage drifted, the accepte
 2. Read [references/productization-rules.md](references/productization-rules.md) and confirm the narrowest artifact.
 3. Preserve unrelated files and existing user changes.
 4. Use the owning companion:
-   - `$maintain-agent-guidance` for `AGENTS.md` or `.local/AGENTS.md`;
-   - `$skill-creator` for a skill;
+   - `maintain-agent-guidance` for `AGENTS.md` or `.local/AGENTS.md`;
+   - the host's `skill-creator` capability for a skill;
    - the automation tool for scheduled work;
-   - applicable Codex configuration guidance for a hook;
+   - applicable host configuration guidance for a hook;
    - the target catalog's documented workflow for an approved catalog operation.
 5. Add deterministic scripts only when stable inputs, outputs, and failure behavior are defined. Test every added script.
-6. Run `$evaluate-skill-change` before adopting a new or changed skill.
+6. Run `evaluate-skill-change` before adopting a new or changed skill.
 7. Validate the resulting artifact and report the accepted ID, target, checks, and remaining gaps.
 
 ## Safety
 
 - Put private paths, personal workflow, and machine setup only under `.local` or a private global skill.
-- When `.local` or private `.agents` content is created, add only `/.local/`, `/.agents/`, and `/skills-lock.json` to `.git/info/exclude` as applicable; never edit shared `.gitignore` for this purpose.
+- Keep a private repository skill under `.local/skills/<name>`, expose it through the universal `.agents/skills/<name>` link, and exclude `.local/` plus each private link in `.git/info/exclude`; never edit shared `.gitignore` for this purpose.
 - Keep a global personal skill's canonical source in its approved version-controlled catalog and use the catalog's supported install or link workflow.
 - Refuse to overwrite locally modified generated artifacts unless the accepted candidate explicitly authorizes replacement.
 - Do not commit, push, publish, send messages, or enable automatic adoption without separate authorization.

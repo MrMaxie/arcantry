@@ -1,6 +1,6 @@
 ---
 name: promote-todo-to-openspec
-description: Review a todo.txt file and propose approval-gated transformations into existing or new OpenSpec changes without assuming one-to-one mapping. Use when the user asks to promote todo.txt work into OpenSpec; do not use for general notes or implementation.
+description: Group and transform selected todo.txt items into approval-gated OpenSpec changes while preserving privacy and avoiding one-to-one promotion assumptions.
 ---
 
 # Promote todo.txt to OpenSpec

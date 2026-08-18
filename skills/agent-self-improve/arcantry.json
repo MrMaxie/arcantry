@@ -1,15 +1,15 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
-  "summary": "Find recurring agent communication failures in Codex conversations and propose the smallest guidance fixes for approval.",
+  "summary": "Diagnose recurring communication failures in agent conversations and stage the smallest durable corrections for approval.",
   "scenarios": [
     {
       "title": "Review a frustrating project task",
-      "prompt": "Use $agent-self-improve to review this project's recent tasks. Focus on why the agent kept asking questions the repository already answered.",
+      "prompt": "Use the agent-self-improve skill to review this project's recent tasks. Focus on why the agent kept asking questions the repository already answered.",
       "outcome": "A diagnosis tied to conversation evidence and numbered, approval-gated edits for the narrowest guidance layer."
     },
     {
       "title": "Evaluate a supplied transcript",
-      "prompt": "Use $agent-self-improve on this transcript and explain whether the failure came from execution, a skill, or project instructions.",
+      "prompt": "Use the agent-self-improve skill on this transcript and explain whether the failure came from execution, a skill, or project instructions.",
       "outcome": "A scoped cause analysis that does not blame prompt wording or edit agent configuration without approval."
     }
   ]

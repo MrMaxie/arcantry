@@ -1,15 +1,15 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
-  "summary": "Compare a baseline and candidate Codex skill on repeatable routing and behavior cases before deciding whether to adopt it.",
+  "summary": "Measure a candidate skill against its baseline on repeatable routing and behavior cases before deciding on adoption.",
   "scenarios": [
     {
       "title": "Gate a proposed skill rewrite",
-      "prompt": "Use $evaluate-skill-change with this baseline, candidate, and case file. Tell me whether the candidate should be adopted.",
+      "prompt": "Use the evaluate-skill-change skill with this baseline, candidate, and case file. Tell me whether the candidate should be adopted.",
       "outcome": "An accept, reject, or needs-review decision based on identical cases, held-out coverage, validation, and regressions."
     },
     {
       "title": "Check a trigger change",
-      "prompt": "Use $evaluate-skill-change to compare these skill descriptions for routing precision without installing either candidate.",
+      "prompt": "Use the evaluate-skill-change skill to compare these skill descriptions for routing precision without installing either candidate.",
       "outcome": "Comparable routing and behavior evidence with the live skill left untouched and no automatic adoption."
     }
   ]

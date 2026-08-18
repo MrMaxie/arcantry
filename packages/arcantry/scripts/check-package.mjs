@@ -14,9 +14,9 @@ try {
   const dryRun = await execa('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], { cwd: packageRoot });
   const output = JSON.parse(dryRun.stdout);
   const files = output[0]?.files?.map((entry) => entry.path) ?? [];
-  const allowedFiles = new Set(['package.json', 'catalog.json', 'gemini-extension.json', 'README.md', 'LICENSE']);
+  const allowedFiles = new Set(['package.json', 'catalog.json', 'README.md', 'LICENSE']);
   const allowedPrefixes = ['.claude-plugin/', '.codex-plugin/', 'dist/', 'skills/', 'assets/', 'schemas/'];
-  const requiredFiles = ['.claude-plugin/plugin.json', '.codex-plugin/plugin.json', 'gemini-extension.json'];
+  const requiredFiles = ['.claude-plugin/plugin.json', '.codex-plugin/plugin.json'];
   const unexpected = files.filter((path) => !allowedFiles.has(path) && !allowedPrefixes.some((prefix) => path.startsWith(prefix)));
   const missing = requiredFiles.filter((path) => !files.includes(path));
   const forbidden = files.filter((path) =>
@@ -54,7 +54,6 @@ try {
   const agentManifests = await Promise.all([
     readFile(join(installedPackageRoot, '.codex-plugin', 'plugin.json'), 'utf8').then(JSON.parse),
     readFile(join(installedPackageRoot, '.claude-plugin', 'plugin.json'), 'utf8').then(JSON.parse),
-    readFile(join(installedPackageRoot, 'gemini-extension.json'), 'utf8').then(JSON.parse),
   ]);
   for (const manifest of agentManifests) {
     if (manifest.name !== packageManifest.name || manifest.version !== packageManifest.version) {
@@ -98,11 +97,9 @@ try {
   await runCli(['skills', 'link', 'adopt-arcantry', '--target', linkRoot]);
   await runCli(['skills', 'doctor', '--target', linkRoot]);
   await runCli(['skills', 'unlink', 'adopt-arcantry', '--target', linkRoot]);
-  await runCli(['--cwd', repositoryRoot, 'skills', 'link', 'adopt-arcantry', '--scope', 'repo', '--agent', 'claude']);
-  await runCli(['--cwd', repositoryRoot, 'skills', 'doctor', '--scope', 'repo', '--agent', 'claude']);
-  await runCli(['--cwd', repositoryRoot, 'skills', 'unlink', 'adopt-arcantry', '--scope', 'repo', '--agent', 'claude']);
-  await runCli(['--cwd', repositoryRoot, 'skills', 'link', 'adopt-arcantry', '--scope', 'repo', '--agent', 'gemini']);
-  await runCli(['--cwd', repositoryRoot, 'skills', 'unlink', 'adopt-arcantry', '--scope', 'repo', '--agent', 'gemini']);
+  await runCli(['--cwd', repositoryRoot, 'skills', 'link', 'adopt-arcantry', '--scope', 'repo', '--compat', 'claude']);
+  await runCli(['--cwd', repositoryRoot, 'skills', 'doctor', '--scope', 'repo', '--compat', 'claude']);
+  await runCli(['--cwd', repositoryRoot, 'skills', 'unlink', 'adopt-arcantry', '--scope', 'repo', '--compat', 'claude']);
 
   process.stdout.write(`Package allowlist and packed CLI smoke passed (${files.length} files): ${archivePath}\n`);
 } catch (error) {

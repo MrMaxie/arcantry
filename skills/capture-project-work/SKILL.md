@@ -1,6 +1,6 @@
 ---
 name: capture-project-work
-description: Capture one project thought at its current commitment level. Use for hot notes, follow-ups, accepted intent, release meaning, or repeatable workflow observations that must enter todo, OpenSpec, changelog, or the skill pipeline without duplication.
+description: Route one project thought to todo, OpenSpec, changelog, or skill improvement at its current commitment level without duplication or premature promotion.
 ---
 
 # Capture Project Work
@@ -10,10 +10,10 @@ Preserve the thought quickly, then place it according to its current level of co
 ## Choose the source
 
 - Use a configured todo.txt source for an unrefined thought, follow-up, question, or task.
-- Use OpenSpec only for accepted product or engineering intent that needs observable requirements.
-- Use a changelog only for verified consumer-facing release meaning derived from completed OpenSpec changes.
+- Use shared or private OpenSpec only for accepted product or engineering intent that needs observable requirements.
+- Use a shared or private changelog only for verified release meaning derived from completed OpenSpec changes at a compatible privacy level.
 - Use the skill improvement pipeline for a repeated workflow with evidence across tasks.
-- Use `.local/` when the content is private to one user or workstation.
+- Use `.local/openspec`, `.local/CHANGELOG.md`, `.local/todo.txt`, or `.local/skills` when the corresponding content is private to one user or workstation.
 
 When both shared and private sources can accept the item, ask for the scope only if the content or collaboration boundary does not make it clear.
 

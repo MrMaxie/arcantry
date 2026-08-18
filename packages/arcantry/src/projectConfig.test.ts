@@ -58,6 +58,46 @@ adapter = "todo-txt@1"
     expect(() => parseProjectConfig(configured(), { toolVersion: '2.0.0' })).toThrow('does not satisfy');
   });
 
+  it('keeps private release meaning private while allowing independent authorities', () => {
+    expect(() => parseProjectConfig(`config_version = 1
+
+[sources.private_intent]
+kind = "openspec"
+path = ".local/openspec"
+management = "manage"
+adapter = "openspec@1"
+
+[sources.shared_history]
+kind = "changelog"
+path = "CHANGELOG.md"
+management = "manage"
+adapter = "keep-a-changelog@2"
+from = ["private_intent"]
+`)).toThrow('shared changelog sources cannot depend on private OpenSpec sources');
+
+    expect(() => parseProjectConfig(`config_version = 1
+
+[sources.shared_intent]
+kind = "openspec"
+path = "openspec"
+management = "manage"
+adapter = "openspec@1"
+
+[sources.private_intent]
+kind = "openspec"
+path = ".local/openspec"
+management = "manage"
+adapter = "openspec@1"
+
+[sources.private_history]
+kind = "changelog"
+path = ".local/CHANGELOG.md"
+management = "manage"
+adapter = "keep-a-changelog@2"
+from = ["shared_intent", "private_intent"]
+`)).not.toThrow();
+  });
+
   it('rejects unknown fields and nested managed OpenSpec authorities', () => {
     expect(() => parseProjectConfig(configured().replace('path = "openspec"', 'path = "openspec"\nmanagment = "manage"'))).toThrow(
       'Unrecognized key',

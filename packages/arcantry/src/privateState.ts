@@ -4,6 +4,14 @@ import { execa } from 'execa';
 import { createWriteOperation, type PlanOperation } from './projectPlan.js';
 
 export const planLocalGitExclude = async (root: string, operations: PlanOperation[]): Promise<void> => {
+  await planLocalGitExcludeEntries(root, ['.local/'], operations);
+};
+
+export const planLocalGitExcludeEntries = async (
+  root: string,
+  entries: string[],
+  operations: PlanOperation[],
+): Promise<void> => {
   let excludePath: string;
   try {
     const result = await execa('git', ['rev-parse', '--git-path', 'info/exclude'], { cwd: root });
@@ -18,10 +26,17 @@ export const planLocalGitExclude = async (root: string, operations: PlanOperatio
   } catch (error) {
     if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
   }
-  if (new Set(content.split(/\r?\n/)).has('.local/')) return;
+  const lines = new Set(content.split(/\r?\n/));
+  const missingEntries = entries.filter((entry) => !lines.has(entry));
+  if (missingEntries.length === 0) return;
   const separator = content.length > 0 && !content.endsWith('\n') ? '\n' : '';
   operations.push(
-    await createWriteOperation(root, planPath(root, excludePath), `${content}${separator}.local/\n`, 'private'),
+    await createWriteOperation(
+      root,
+      planPath(root, excludePath),
+      `${content}${separator}${missingEntries.map((entry) => `${entry}\n`).join('')}`,
+      'private',
+    ),
   );
 };
 

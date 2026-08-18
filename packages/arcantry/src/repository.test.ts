@@ -40,6 +40,28 @@ describe('repository adoption', () => {
     await expect(readFile(join(root, '.local/arcantry.toml'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
+  it('adds Claude compatibility as an import without duplicating guidance', async () => {
+    const root = await createFixtureRepository();
+    await writeFile(join(root, 'CLAUDE.md'), '# Claude-specific note\n');
+
+    await initRepository(root, 'shared', 'claude');
+
+    const content = await readFile(join(root, 'CLAUDE.md'), 'utf8');
+    expect(content).toContain('@AGENTS.md');
+    expect(content).toContain('# Claude-specific note');
+    expect(await readFile(join(root, 'AGENTS.md'), 'utf8')).toContain('Use `arcantry.toml`');
+  });
+
+  it('keeps the private Claude adapter locally excluded', async () => {
+    const root = await createFixtureRepository();
+
+    await initRepository(root, 'private', 'claude');
+
+    expect(await readFile(join(root, 'CLAUDE.local.md'), 'utf8')).toContain('@.local/AGENTS.md');
+    expect(await readFile(join(root, '.git/info/exclude'), 'utf8')).toContain('CLAUDE.local.md');
+    expect((await validateRepository(root)).valid).toBe(true);
+  });
+
   it('preserves an existing valid configuration during initialization', async () => {
     const root = await createFixtureRepository();
     const config = `config_version = 1
@@ -100,5 +122,15 @@ adapter = "todo-txt@1"
     expect(await readFile(join(root, 'AGENTS.md'), 'utf8')).toContain('# User rules');
     expect(await readFile(join(root, 'todo.txt'), 'utf8')).toBe('Keep me\n');
     await expect(readFile(join(root, '.local/arcantry.toml'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('removes only the managed Claude adapter content', async () => {
+    const root = await createFixtureRepository();
+    await writeFile(join(root, 'CLAUDE.md'), '# Claude-specific note\n');
+    await initRepository(root, 'shared', 'claude');
+
+    await removeRepository(root, 'shared');
+
+    expect(await readFile(join(root, 'CLAUDE.md'), 'utf8')).toBe('# Claude-specific note\n');
   });
 });

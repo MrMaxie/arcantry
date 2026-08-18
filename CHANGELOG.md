@@ -17,9 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content.
 
 <!-- openspec: support-multiple-agent-hosts -->
-#### Use Arcantry skills in Codex, Claude Code, and Gemini CLI
+#### Use universal Agent Skills with Claude compatibility
 
-Arcantry now links individual skills to each supported agent's native directory and exposes the complete catalog through aligned Codex, Claude Code, and Gemini CLI package manifests.
+Arcantry links individual skills through the universal `.agents` directory, lets Codex consume that standard directly, and can add Claude Code compatibility aliases to the same canonical packages.
 
 ### Changed
 

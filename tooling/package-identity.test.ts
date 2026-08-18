@@ -24,7 +24,6 @@ const publicIdentitySurfaces = [
 const agentManifestPaths = [
   '.codex-plugin/plugin.json',
   '.claude-plugin/plugin.json',
-  'gemini-extension.json',
 ];
 
 describe('npm package identity', () => {

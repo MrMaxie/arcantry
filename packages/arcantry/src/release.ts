@@ -325,7 +325,6 @@ export function validateDistributionVersions(
     'packages/arcantry/package.json',
     '.codex-plugin/plugin.json',
     '.claude-plugin/plugin.json',
-    'gemini-extension.json',
   ],
   releasesPath = 'releases',
 ): void {

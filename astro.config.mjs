@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import skillSidebar from './src/generated/skill-sidebar.mjs';
 
 export default defineConfig({
   site: 'https://mrmaxie.github.io',
@@ -48,41 +49,7 @@ export default defineConfig({
               collapsed: true,
               items: [
                 { label: 'Catalog overview', slug: 'skills/catalog' },
-                {
-                  label: 'Self improvement',
-                  collapsed: true,
-                  items: [
-                    { label: 'Agent Self Improve', slug: 'skills/agent-self-improve' },
-                    { label: 'Audit Skill Portfolio', slug: 'skills/audit-skill-portfolio' },
-                    { label: 'Capture Repeatable Work', slug: 'skills/capture-repeatable-work' },
-                    { label: 'Evaluate Skill Change', slug: 'skills/evaluate-skill-change' },
-                    { label: 'Forge Skill from Conversations', slug: 'skills/forge-skill-from-conversations' },
-                    { label: 'Maintain Agent Guidance', slug: 'skills/maintain-agent-guidance' },
-                    { label: 'Productize Repeatable Work', slug: 'skills/productize-repeatable-work' },
-                    { label: 'Select Task Skills', slug: 'skills/select-task-skills' },
-                    { label: 'Stage Code Review Findings', slug: 'skills/stage-code-review-findings' }
-                  ]
-                },
-                {
-                  label: 'Repo safely',
-                  collapsed: true,
-                  items: [
-                    { label: 'Adopt Arcantry', slug: 'skills/adopt-arcantry' },
-                    { label: 'Capture Project Work', slug: 'skills/capture-project-work' },
-                    { label: 'Maintain Release Story', slug: 'skills/maintain-release-story' },
-                    { label: 'Reconcile Project Sources', slug: 'skills/reconcile-project-sources' },
-                    { label: 'Verify Work Proportionally', slug: 'skills/verify-work-proportionally' }
-                  ]
-                },
-                {
-                  label: 'Content safely',
-                  collapsed: true,
-                  items: [
-                    { label: 'Audience and Scope Discipline', slug: 'skills/audience-scope-discipline' },
-                    { label: 'Design Terminal UX', slug: 'skills/design-terminal-ux' },
-                    { label: 'Write Product Content', slug: 'skills/write-product-content' }
-                  ]
-                }
+                ...skillSidebar
               ]
             }
           ]

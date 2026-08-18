@@ -1,6 +1,6 @@
 ---
 name: stage-code-review-findings
-description: Perform an approval-gated code review whose findings stay in chat until selected. Use for local, draft, or pre-publication review, or when only accepted findings may be translated and sent to a named destination.
+description: Hold evidence-backed code-review findings in chat until the user selects what may become an external draft. Use for local, draft, or pre-publication review.
 ---
 
 # Stage Code Review Findings

@@ -13,56 +13,56 @@ description: Choose a focused Arcantry skill for the work at hand.
 <a class="skill-catalog-card" href="/arcantry/skills/agent-self-improve/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Agent Self Improve</h3>
-  <p class="skill-catalog-summary">Review conversations and improve agent guidance</p>
-  <p class="skill-catalog-command"><code>$agent-self-improve</code></p>
+  <p class="skill-catalog-summary">Diagnose recurring communication failures in agent conversations and stage the smallest durable corrections for approval.</p>
+  <p class="skill-catalog-command"><code>agent-self-improve</code></p>
 </a>
 <a class="skill-catalog-card" href="/arcantry/skills/audit-skill-portfolio/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Audit Skill Portfolio</h3>
-  <p class="skill-catalog-summary">Audit skill catalog routing, scope, and overlap</p>
-  <p class="skill-catalog-command"><code>$audit-skill-portfolio</code></p>
+  <p class="skill-catalog-summary">Inventory installed skills, separate aliases from conflicts, and recommend evidence-backed portfolio actions without changing them.</p>
+  <p class="skill-catalog-command"><code>audit-skill-portfolio</code></p>
 </a>
 <a class="skill-catalog-card" href="/arcantry/skills/capture-repeatable-work/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Capture Repeatable Work</h3>
-  <p class="skill-catalog-summary">Find durable automation candidates</p>
-  <p class="skill-catalog-command"><code>$capture-repeatable-work</code></p>
+  <p class="skill-catalog-summary">Extract repeated workflow friction from conversation evidence and propose the smallest durable carrier without implementing it.</p>
+  <p class="skill-catalog-command"><code>capture-repeatable-work</code></p>
 </a>
 <a class="skill-catalog-card" href="/arcantry/skills/evaluate-skill-change/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Evaluate Skill Change</h3>
-  <p class="skill-catalog-summary">Compare skill candidates safely</p>
-  <p class="skill-catalog-command"><code>$evaluate-skill-change</code></p>
+  <p class="skill-catalog-summary">Measure a candidate skill against its baseline on repeatable routing and behavior cases before deciding on adoption.</p>
+  <p class="skill-catalog-command"><code>evaluate-skill-change</code></p>
 </a>
 <a class="skill-catalog-card" href="/arcantry/skills/forge-skill-from-conversations/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Forge Skill from Conversations</h3>
-  <p class="skill-catalog-summary">Forge one evaluated skill from recurring work</p>
-  <p class="skill-catalog-command"><code>$forge-skill-from-conversations</code></p>
+  <p class="skill-catalog-summary">Build one focused skill candidate from recurring conversation evidence and evaluate it behind explicit approval gates.</p>
+  <p class="skill-catalog-command"><code>forge-skill-from-conversations</code></p>
 </a>
 <a class="skill-catalog-card" href="/arcantry/skills/maintain-agent-guidance/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Maintain Agent Guidance</h3>
-  <p class="skill-catalog-summary">Keep agent rules scoped and effective</p>
-  <p class="skill-catalog-command"><code>$maintain-agent-guidance</code></p>
+  <p class="skill-catalog-summary">Maintain universal AGENTS.md guidance at the narrowest applicable scope through exact, approval-gated edits.</p>
+  <p class="skill-catalog-command"><code>maintain-agent-guidance</code></p>
 </a>
 <a class="skill-catalog-card" href="/arcantry/skills/productize-repeatable-work/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Productize Repeatable Work</h3>
-  <p class="skill-catalog-summary">Build an accepted durable workflow</p>
-  <p class="skill-catalog-command"><code>$productize-repeatable-work</code></p>
+  <p class="skill-catalog-summary">Implement one approved repeatable-work candidate in its chosen durable carrier without rediscovery or scope expansion.</p>
+  <p class="skill-catalog-command"><code>productize-repeatable-work</code></p>
 </a>
 <a class="skill-catalog-card" href="/arcantry/skills/select-task-skills/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Select Task Skills</h3>
-  <p class="skill-catalog-summary">Choose the smallest useful skill set</p>
-  <p class="skill-catalog-command"><code>$select-task-skills</code></p>
+  <p class="skill-catalog-summary">Choose at most three available skills whose non-overlapping workflows materially improve a complex task.</p>
+  <p class="skill-catalog-command"><code>select-task-skills</code></p>
 </a>
 <a class="skill-catalog-card" href="/arcantry/skills/stage-code-review-findings/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Stage Code Review Findings</h3>
-  <p class="skill-catalog-summary">Stage review findings before publication</p>
-  <p class="skill-catalog-command"><code>$stage-code-review-findings</code></p>
+  <p class="skill-catalog-summary">Stage evidence-backed review findings in chat until the user selects exactly what may become an external draft.</p>
+  <p class="skill-catalog-command"><code>stage-code-review-findings</code></p>
 </a>
 </div>
 
@@ -72,38 +72,38 @@ description: Choose a focused Arcantry skill for the work at hand.
 <a class="skill-catalog-card" href="/arcantry/skills/adopt-arcantry/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Adopt Arcantry</h3>
-  <p class="skill-catalog-summary">Adopt Arcantry in a repository</p>
-  <p class="skill-catalog-command"><code>$adopt-arcantry</code></p>
+  <p class="skill-catalog-summary">Adopt the smallest useful Arcantry boundary while preserving repository-owned tooling, knowledge sources, and private state.</p>
+  <p class="skill-catalog-command"><code>adopt-arcantry</code></p>
 </a>
 <a class="skill-catalog-card" href="/arcantry/skills/capture-project-work/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Capture Project Work</h3>
-  <p class="skill-catalog-summary">Place project thoughts in the right source</p>
-  <p class="skill-catalog-command"><code>$capture-project-work</code></p>
+  <p class="skill-catalog-summary">Route one project thought to the correct knowledge layer without duplicating it or overstating its commitment.</p>
+  <p class="skill-catalog-command"><code>capture-project-work</code></p>
 </a>
 <a class="skill-catalog-card" href="/arcantry/skills/maintain-release-story/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Maintain Release Story</h3>
-  <p class="skill-catalog-summary">Align versions and consumer release meaning</p>
-  <p class="skill-catalog-command"><code>$maintain-release-story</code></p>
+  <p class="skill-catalog-summary">Align accepted OpenSpec outcomes, SemVer, distributable versions, and consumer-facing changelog prose without publishing.</p>
+  <p class="skill-catalog-command"><code>maintain-release-story</code></p>
 </a>
 <a class="skill-catalog-card" href="/arcantry/skills/promote-todo-to-openspec/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Promote todo.txt to OpenSpec</h3>
-  <p class="skill-catalog-summary">Propose safe todo.txt transformations into OpenSpec</p>
-  <p class="skill-catalog-command"><code>$promote-todo-to-openspec</code></p>
+  <p class="skill-catalog-summary">Group selected todo.txt items into privacy-safe OpenSpec transformations and hold every proposed change for approval.</p>
+  <p class="skill-catalog-command"><code>promote-todo-to-openspec</code></p>
 </a>
 <a class="skill-catalog-card" href="/arcantry/skills/reconcile-project-sources/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Reconcile Project Sources</h3>
-  <p class="skill-catalog-summary">Plan explicit shared and private source moves</p>
-  <p class="skill-catalog-command"><code>$reconcile-project-sources</code></p>
+  <p class="skill-catalog-summary">Explain shared and private source drift and prepare one explicit transition that preserves both sides until apply.</p>
+  <p class="skill-catalog-command"><code>reconcile-project-sources</code></p>
 </a>
 <a class="skill-catalog-card" href="/arcantry/skills/verify-work-proportionally/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Verify Work Proportionally</h3>
-  <p class="skill-catalog-summary">Match verification depth to real risk</p>
-  <p class="skill-catalog-command"><code>$verify-work-proportionally</code></p>
+  <p class="skill-catalog-summary">Match verification layers to impact and uncertainty, then separate proven behavior from assumptions and acceptance gaps.</p>
+  <p class="skill-catalog-command"><code>verify-work-proportionally</code></p>
 </a>
 </div>
 
@@ -113,19 +113,19 @@ description: Choose a focused Arcantry skill for the work at hand.
 <a class="skill-catalog-card" href="/arcantry/skills/audience-scope-discipline/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Audience and Scope Discipline</h3>
-  <p class="skill-catalog-summary">Design for the audience and protect task scope</p>
-  <p class="skill-catalog-command"><code>$audience-scope-discipline</code></p>
+  <p class="skill-catalog-summary">Protect the intended audience, authorized scope, privacy boundary, and established structure of an artifact.</p>
+  <p class="skill-catalog-command"><code>audience-scope-discipline</code></p>
 </a>
 <a class="skill-catalog-card" href="/arcantry/skills/design-terminal-ux/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Design Terminal UX</h3>
-  <p class="skill-catalog-summary">Design clear, user-centered terminal experiences</p>
-  <p class="skill-catalog-command"><code>$design-terminal-ux</code></p>
+  <p class="skill-catalog-summary">Design terminal interactions around clear navigation, state, recovery, accessibility, and constrained-screen behavior.</p>
+  <p class="skill-catalog-command"><code>design-terminal-ux</code></p>
 </a>
 <a class="skill-catalog-card" href="/arcantry/skills/write-product-content/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Write Product Content</h3>
-  <p class="skill-catalog-summary">Write concrete product copy without slop</p>
-  <p class="skill-catalog-command"><code>$write-product-content</code></p>
+  <p class="skill-catalog-summary">Write concrete reader-facing product content from verified evidence without private leakage or internal process narration.</p>
+  <p class="skill-catalog-command"><code>write-product-content</code></p>
 </a>
 </div>

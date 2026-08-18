@@ -1,6 +1,6 @@
 ---
 name: design-terminal-ux
-description: Design or audit end-user terminal experiences across TUIs, CLI workflows, prompts, status streams, and command output. Use for information hierarchy, navigation, progress, empty states, errors, destructive actions, accessibility, or small-terminal behavior.
+description: Design or audit terminal interactions when navigation, status, errors, recovery, accessibility, destructive actions, or small-screen behavior affect usability.
 ---
 
 # Design Terminal UX

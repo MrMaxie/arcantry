@@ -1,6 +1,6 @@
 ---
 name: write-product-content
-description: Write or revise product documentation, release text, README copy, UI copy, or technical explanations for a real audience. Use when content must be concrete, evidence-backed, leak-free, and free of AI slop or process narration.
+description: Write or revise reader-facing product documentation, release text, README copy, UI copy, or technical explanations using concrete evidence and no internal process narration.
 ---
 
 # Write Product Content

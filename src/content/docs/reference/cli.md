@@ -20,13 +20,15 @@ Global options appear before the command group.
 
 | Command | Contract |
 | --- | --- |
-| `repo init --scope shared|private` | Create minimal configuration and managed guidance for one scope. Private scope also ensures the local Git exclusion. |
-| `repo update --scope shared|private` | Refresh verified managed guidance without rewriting configuration. |
+| `repo init --scope shared|private [--compat claude]` | Create minimal configuration and universal managed guidance for one scope. Private scope also ensures the local Git exclusion. |
+| `repo update --scope shared|private [--compat claude]` | Refresh verified universal guidance and optionally add the Claude import adapter. |
 | `repo remove --scope shared|private` | Remove only verified configuration and managed guidance for one scope. |
 | `repo validate` | Validate the active repository boundary and configured knowledge sources without writing. |
 | `repo doctor` | Add repair guidance to the same read-only validation. |
 
 Initialization does not create package-manager, runtime, task-runner, OpenSpec, changelog, or todo artifacts.
+
+`AGENTS.md` and `.local/AGENTS.md` remain canonical. `--compat claude` creates a managed import in `CLAUDE.md` or locally excluded `CLAUDE.local.md` without copying the guidance.
 
 ## Project knowledge
 
@@ -74,13 +76,13 @@ Mutations preview unless `--apply` is present. When multiple queues exist, choos
 
 | Command | Contract |
 | --- | --- |
-| `skills list [--catalog-root <path>]` | List each skill with its family and tags. |
-| `skills inspect <name> [--catalog-root <path>]` | Show purpose, family, tags, and usage scenarios. |
-| `skills link <name> --scope user|repo [--agent codex|claude|gemini] [--replace]` | Link one canonical skill into the selected agent's native skill directory. |
+| `skills list [--scope public|private] [--catalog-root <path>]` | List public catalog skills or private repository skills. |
+| `skills inspect <name> [--scope public|private] [--catalog-root <path>]` | Show one public or private canonical package. |
+| `skills link <name> --scope user|repo|private [--compat claude] [--replace]` | Link one canonical skill into the universal directory and optionally add the Claude alias. |
 | `skills link <name> --target <path> [--replace]` | Link to one advanced explicit destination. |
-| `skills unlink <name> --scope user|repo [--agent codex|claude|gemini]` | Remove only the exact Arcantry link for that scope and agent. |
-| `skills doctor [--scope user|repo] [--agent codex|claude|gemini] [--target <path>]` | Validate packages and optionally inspect link health. |
+| `skills unlink <name> --scope user|repo|private [--compat claude]` | Remove only exact universal and requested compatibility links. |
+| `skills doctor [--scope user|repo|private] [--compat claude] [--target <path>]` | Validate packages and optionally inspect universal and compatibility links. |
 
-`--target` cannot be combined with `--scope` or `--agent`. Without `--agent`, user scope targets `~/.agents/skills` and repository scope targets `<repo>/.agents/skills`. Claude Code targets `.claude/skills`; Gemini CLI targets `.gemini/skills`. `--replace` backs up an ordinary target instead of overwriting it silently.
+`--target` cannot be combined with `--scope` or `--compat`. User scope targets `~/.agents/skills`; repository and private scopes target `<repo>/.agents/skills`. `--compat claude` also targets the corresponding `.claude/skills` directory. Private scope reads the canonical package from `.local/skills` and excludes its links locally. `--replace` backs up an ordinary target instead of overwriting it silently.
 
 Skills remain usable without project configuration. A declared tool dependency does not authorize an external write.

@@ -7,7 +7,6 @@ import { z } from 'zod';
 
 const skillNamePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const skillFamilySchema = z.enum(['self-improvement', 'repo-safely', 'content-safely']);
-export const skillAgentSchema = z.enum(['codex', 'claude', 'gemini']);
 
 export const catalogEntrySchema = z.object({
   name: z.string().regex(skillNamePattern).max(63),
@@ -50,14 +49,19 @@ export const skillMetadataSchema = z.object({
 export type CatalogEntry = z.infer<typeof catalogEntrySchema>;
 export type Catalog = z.infer<typeof catalogSchema>;
 export type SkillMetadata = z.infer<typeof skillMetadataSchema>;
-export type SkillAgent = z.infer<typeof skillAgentSchema>;
-
 export type SkillInspection = {
   entry: CatalogEntry;
   metadata: SkillMetadata;
   directory: string;
   skillFile: string;
   agentFile: string;
+};
+
+export type PrivateSkillInspection = {
+  name: string;
+  description: string;
+  directory: string;
+  skillFile: string;
 };
 
 export type CatalogValidation = { valid: boolean; errors: string[]; catalog: Catalog | null };
@@ -70,23 +74,23 @@ export type SkillLinkResult = {
 };
 
 export type SkillLinkOptions = {
-  catalogRoot: string;
+  catalogRoot?: string;
+  sourceDirectory?: string;
   name: string;
   targetRoot?: string;
   replace?: boolean;
   backupLabel?: string;
 };
 
-const skillAgentDirectory = (agent: SkillAgent): string[] => {
-  if (agent === 'claude') return ['.claude', 'skills'];
-  if (agent === 'gemini') return ['.gemini', 'skills'];
-  return ['.agents', 'skills'];
-};
-
-export const userSkillTargetRoot = (agent: SkillAgent = 'codex'): string => join(homedir(), ...skillAgentDirectory(agent));
-export const repositorySkillTargetRoot = (root: string, agent: SkillAgent = 'codex'): string =>
-  join(resolve(root), ...skillAgentDirectory(agent));
+export const userSkillTargetRoot = (): string => join(homedir(), '.agents', 'skills');
+export const repositorySkillTargetRoot = (root: string): string => join(resolve(root), '.agents', 'skills');
+export const userClaudeSkillTargetRoot = (): string => join(homedir(), '.claude', 'skills');
+export const repositoryClaudeSkillTargetRoot = (root: string): string => join(resolve(root), '.claude', 'skills');
 export const defaultSkillTargetRoot = userSkillTargetRoot;
+
+export const privateSkillRoot = (root: string): string => join(resolve(root), '.local', 'skills');
+export const privateSkillExists = async (root: string, name: string): Promise<boolean> =>
+  (await pathKind(join(privateSkillRoot(root), name))) === 'directory';
 
 export const loadCatalog = async (root: string): Promise<Catalog> => {
   const content = await readFile(join(root, 'catalog.json'), 'utf8');
@@ -109,6 +113,31 @@ export const inspectSkill = async (root: string, name: string): Promise<SkillIns
     skillFile: join(directory, 'SKILL.md'),
     agentFile: join(directory, 'agents', 'openai.yaml'),
   };
+};
+
+export const inspectPrivateSkill = async (root: string, name: string): Promise<PrivateSkillInspection> => {
+  if (!skillNamePattern.test(name)) throw new Error(`Invalid skill name: ${name}`);
+  const directory = join(privateSkillRoot(root), name);
+  const skillFile = join(directory, 'SKILL.md');
+  if ((await pathKind(directory)) !== 'directory' || (await pathKind(skillFile)) !== 'file') {
+    throw new Error(`Private skill is missing: .local/skills/${name}/SKILL.md`);
+  }
+  const frontmatter = readSkillFrontmatter(await readFile(skillFile, 'utf8'));
+  if (frontmatter.name !== name) {
+    throw new Error(`Private skill frontmatter name must match .local/skills/${name}.`);
+  }
+  return { name, description: frontmatter.description, directory, skillFile };
+};
+
+export const listPrivateSkills = async (root: string): Promise<PrivateSkillInspection[]> => {
+  const directory = privateSkillRoot(root);
+  if ((await pathKind(directory)) === 'missing') return [];
+  if ((await pathKind(directory)) !== 'directory') throw new Error('.local/skills must be a directory.');
+  const names = (await readdir(directory, { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory() || entry.isSymbolicLink())
+    .map((entry) => entry.name)
+    .sort((left, right) => left.localeCompare(right));
+  return Promise.all(names.map(async (name) => inspectPrivateSkill(root, name)));
 };
 
 export const findCatalogRoot = async (start: string): Promise<string> => {
@@ -141,6 +170,8 @@ export const validateCatalog = async (root: string): Promise<CatalogValidation> 
   }
 
   const names = catalog.skills.map((entry) => entry.name);
+  const summaries = new Map<string, string>();
+  const descriptions = new Map<string, string>();
   const sortedNames = [...names].sort((left, right) => left.localeCompare(right));
   if (JSON.stringify(names) !== JSON.stringify(sortedNames)) {
     errors.push('catalog.json skills must be sorted by name.');
@@ -180,12 +211,22 @@ export const validateCatalog = async (root: string): Promise<CatalogValidation> 
       if (frontmatter.description.length < 30) {
         errors.push(`skills/${name} description is too short.`);
       }
+      const normalizedDescription = normalizeText(frontmatter.description);
+      const existingDescription = descriptions.get(normalizedDescription);
+      if (existingDescription !== undefined) {
+        errors.push(`skills/${name} description duplicates skills/${existingDescription}.`);
+      } else descriptions.set(normalizedDescription, name);
     } catch (error) {
       errors.push(`skills/${name}/SKILL.md: ${formatError(error)}`);
     }
 
     try {
-      skillMetadataSchema.parse(JSON.parse(await readFile(join(directory, 'arcantry.json'), 'utf8')));
+      const metadata = skillMetadataSchema.parse(JSON.parse(await readFile(join(directory, 'arcantry.json'), 'utf8')));
+      const normalizedSummary = normalizeText(metadata.summary);
+      const existingSummary = summaries.get(normalizedSummary);
+      if (existingSummary !== undefined) {
+        errors.push(`skills/${name} summary duplicates skills/${existingSummary}.`);
+      } else summaries.set(normalizedSummary, name);
     } catch (error) {
       errors.push(`skills/${name}/arcantry.json: ${formatError(error)}`);
     }
@@ -204,8 +245,7 @@ export const validateCatalog = async (root: string): Promise<CatalogValidation> 
 };
 
 export const linkSkill = async (options: SkillLinkOptions): Promise<SkillLinkResult> => {
-  const inspection = await inspectSkill(options.catalogRoot, options.name);
-  const source = await realpath(inspection.directory);
+  const source = await resolveSkillSource(options);
   const targetRoot = resolve(options.targetRoot ?? defaultSkillTargetRoot());
   const target = join(targetRoot, options.name);
   const kind = await pathKind(target);
@@ -217,9 +257,15 @@ export const linkSkill = async (options: SkillLinkOptions): Promise<SkillLinkRes
     if (options.replace !== true) {
       throw new Error(`${target} links to a different target. Use --replace to replace that link.`);
     }
-    await rm(target, { force: true });
-    await createDirectoryLink(source, target);
-    return { status: 'linked', source, target, backup: null };
+    const backup = await nextBackupPath(target, options.backupLabel);
+    await rename(target, backup);
+    try {
+      await createDirectoryLink(source, target);
+    } catch (error) {
+      await rename(backup, target);
+      throw error;
+    }
+    return { status: 'linked', source, target, backup };
   }
 
   if (kind === 'file' || kind === 'directory') {
@@ -242,38 +288,151 @@ export const linkSkill = async (options: SkillLinkOptions): Promise<SkillLinkRes
 };
 
 export const unlinkSkill = async (options: Omit<SkillLinkOptions, 'replace' | 'backupLabel'>): Promise<SkillLinkResult> => {
-  const inspection = await inspectSkill(options.catalogRoot, options.name);
-  const source = await realpath(inspection.directory);
+  const source = await resolveSkillSource(options);
   const target = join(resolve(options.targetRoot ?? defaultSkillTargetRoot()), options.name);
 
-  if ((await pathKind(target)) !== 'symlink' || !(await linkPointsTo(target, source))) {
+  const kind = await pathKind(target);
+  if (kind === 'missing') return { status: 'unchanged', source, target, backup: null };
+  if (kind !== 'symlink' || !(await linkPointsTo(target, source))) {
     throw new Error(`${target} is not an exact link to the selected Arcantry skill; nothing was removed.`);
   }
   await rm(target, { force: true });
   return { status: 'unlinked', source, target, backup: null };
 };
 
-export const doctorSkills = async (root: string, targetRoot?: string): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> => {
+export const linkSkillTargets = async (
+  options: Omit<SkillLinkOptions, 'targetRoot'>,
+  targetRoots: string[],
+): Promise<SkillLinkResult[]> => {
+  const roots = uniquePaths(targetRoots);
+  await Promise.all(roots.map(async (targetRoot) => preflightLink({ ...options, targetRoot })));
+  const results: SkillLinkResult[] = [];
+  try {
+    for (const targetRoot of roots) results.push(await linkSkill({ ...options, targetRoot }));
+    return results;
+  } catch (error) {
+    for (const result of [...results].reverse()) await rollbackLink(result);
+    throw error;
+  }
+};
+
+export const unlinkSkillTargets = async (
+  options: Omit<SkillLinkOptions, 'targetRoot' | 'replace' | 'backupLabel'>,
+  targetRoots: string[],
+): Promise<SkillLinkResult[]> => {
+  const roots = uniquePaths(targetRoots);
+  const source = await resolveSkillSource(options);
+  for (const targetRoot of roots) {
+    const target = join(resolve(targetRoot), options.name);
+    const kind = await pathKind(target);
+    if (kind !== 'missing' && (kind !== 'symlink' || !(await linkPointsTo(target, source)))) {
+      throw new Error(`${target} is not an exact link to the selected Arcantry skill; nothing was removed.`);
+    }
+  }
+  const results: SkillLinkResult[] = [];
+  try {
+    for (const targetRoot of roots) results.push(await unlinkSkill({ ...options, targetRoot }));
+    return results;
+  } catch (error) {
+    for (const result of [...results].reverse()) {
+      if (result.status === 'unlinked') await createDirectoryLink(result.source, result.target);
+    }
+    throw error;
+  }
+};
+
+export const doctorSkills = async (
+  root: string,
+  targetRoots?: string | string[],
+): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> => {
   const validation = await validateCatalog(root);
   const warnings: string[] = [];
-  if (validation.catalog !== null && targetRoot !== undefined) {
-    for (const entry of validation.catalog.skills) {
-      const source = join(root, 'skills', entry.name);
-      const target = join(resolve(targetRoot), entry.name);
-      const kind = await pathKind(target);
-      if (kind === 'missing') {
-        warnings.push(`${entry.name} is not linked.`);
-      } else if (kind !== 'symlink' || !(await linkPointsTo(target, source))) {
-        warnings.push(`${entry.name} is not an exact Arcantry link.`);
+  if (validation.catalog !== null && targetRoots !== undefined) {
+    for (const targetRoot of uniquePaths(Array.isArray(targetRoots) ? targetRoots : [targetRoots])) {
+      for (const entry of validation.catalog.skills) {
+        const source = join(root, 'skills', entry.name);
+        const target = join(resolve(targetRoot), entry.name);
+        const kind = await pathKind(target);
+        if (kind === 'missing') {
+          warnings.push(`${entry.name} is not linked in ${targetRoot}.`);
+        } else if (kind !== 'symlink' || !(await linkPointsTo(target, source))) {
+          warnings.push(`${entry.name} is not an exact Arcantry link in ${targetRoot}.`);
+        }
       }
     }
   }
   return { valid: validation.valid, errors: validation.errors, warnings };
 };
 
+export const doctorPrivateSkills = async (
+  root: string,
+  targetRoots?: string[],
+  publicNames: ReadonlySet<string> = new Set(),
+): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> => {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  let skills: PrivateSkillInspection[] = [];
+  try {
+    skills = await listPrivateSkills(root);
+  } catch (error) {
+    errors.push(formatError(error));
+  }
+  for (const skill of skills) {
+    if (publicNames.has(skill.name)) {
+      errors.push(`Skill name conflict: ${skill.name} exists in both the public catalog and .local/skills.`);
+    }
+  }
+  for (const targetRoot of uniquePaths(targetRoots ?? [])) {
+    for (const skill of skills) {
+      const target = join(targetRoot, skill.name);
+      const kind = await pathKind(target);
+      if (kind === 'missing') warnings.push(`${skill.name} is not linked in ${targetRoot}.`);
+      else if (kind !== 'symlink' || !(await linkPointsTo(target, skill.directory))) {
+        warnings.push(`${skill.name} is not an exact private skill link in ${targetRoot}.`);
+      }
+    }
+  }
+  return { valid: errors.length === 0, errors, warnings };
+};
+
 const createDirectoryLink = async (source: string, target: string): Promise<void> => {
   await import('node:fs/promises').then(({ mkdir }) => mkdir(dirname(target), { recursive: true }));
   await symlink(source, target, process.platform === 'win32' ? 'junction' : 'dir');
+};
+
+const resolveSkillSource = async (options: Pick<SkillLinkOptions, 'catalogRoot' | 'sourceDirectory' | 'name'>): Promise<string> => {
+  if (options.sourceDirectory !== undefined) {
+    const skillFile = join(options.sourceDirectory, 'SKILL.md');
+    if ((await pathKind(skillFile)) !== 'file') throw new Error(`Skill package is missing SKILL.md: ${options.sourceDirectory}`);
+    const frontmatter = readSkillFrontmatter(await readFile(skillFile, 'utf8'));
+    if (frontmatter.name !== options.name) throw new Error(`Skill frontmatter name must match ${options.name}.`);
+    return realpath(options.sourceDirectory);
+  }
+  if (options.catalogRoot === undefined) throw new Error('A catalog root or source directory is required.');
+  return realpath((await inspectSkill(options.catalogRoot, options.name)).directory);
+};
+
+const preflightLink = async (options: SkillLinkOptions): Promise<void> => {
+  const source = await resolveSkillSource(options);
+  const target = join(resolve(options.targetRoot ?? defaultSkillTargetRoot()), options.name);
+  const kind = await pathKind(target);
+  if (kind === 'missing') return;
+  if (kind === 'symlink' && await linkPointsTo(target, source)) return;
+  if (options.replace !== true) {
+    throw new Error(kind === 'symlink'
+      ? `${target} links to a different target. Use --replace to replace that link.`
+      : `${target} is not a link. Use --replace to back it up before linking.`);
+  }
+};
+
+const rollbackLink = async (result: SkillLinkResult): Promise<void> => {
+  if (result.status !== 'linked') return;
+  await rm(result.target, { recursive: true, force: true });
+  if (result.backup !== null) await rename(result.backup, result.target);
+};
+
+export const rollbackSkillLinks = async (results: SkillLinkResult[]): Promise<void> => {
+  for (const result of [...results].reverse()) await rollbackLink(result);
 };
 
 const linkPointsTo = async (target: string, source: string): Promise<boolean> => {
@@ -330,4 +489,8 @@ const readFrontmatterScalar = (frontmatter: string, key: string): string => {
 };
 
 const normalizePath = (path: string): string => (process.platform === 'win32' ? path.toLowerCase() : path);
+const normalizeText = (value: string): string => value.trim().replace(/\s+/g, ' ').toLowerCase();
+const uniquePaths = (paths: string[]): string[] => Array.from(
+  new Map(paths.map((path) => [normalizePath(resolve(path)), resolve(path)])).values(),
+);
 const formatError = (error: unknown): string => (error instanceof Error ? error.message : String(error));

@@ -21,6 +21,7 @@ Inspection is read-only and works without Git, configuration, or recognized sour
 | External control | Use `--cwd` with `--config`. | None in the target project. |
 | One source transition | Inspect, plan, review, and apply. | Only the explicitly applied source change. |
 | Skills only | Inspect or link a catalog skill. | One link in a standard Agent Skills directory. |
+| Private skills | Keep packages in `.local/skills` and link them explicitly. | Locally excluded `.agents` links and optional Claude aliases. |
 
 ## Private setup
 
@@ -46,11 +47,15 @@ Arcantry manages `arcantry.toml` and only its marked section in `AGENTS.md`. Sur
 
 Both initialization paths are minimal. They do not create package manifests, lockfiles, runtime configuration, task runners, OpenSpec sources, changelogs, or todo queues.
 
+Add `--compat claude` only when Claude Code must consume the same guidance. Shared compatibility creates a managed `CLAUDE.md` import of `AGENTS.md`; private compatibility creates a locally excluded `CLAUDE.local.md` import of `.local/AGENTS.md`.
+
 ## Shared and private configuration together
 
 The two files use the same schema and remain independent. At each directory Arcantry checks `.local/arcantry.toml` before `arcantry.toml`. The first match is active, the sibling is reported as shadowed, and neither file is merged.
 
 Use an explicit reviewed promotion or relocation when content must move between shared and private sources. Do not mirror the files automatically.
+
+Configuration-free inspection recognizes `openspec`, `.local/openspec`, `CHANGELOG.md`, `.local/CHANGELOG.md`, `todo.txt`, and `.local/todo.txt` independently.
 
 ## External configuration
 
@@ -85,3 +90,5 @@ arcantry skills link <name> --scope user
 ```
 
 Todo mutations preview by default and write only with `--apply`. A linked skill remains a procedure, not project authority.
+
+For a private repository skill, create `.local/skills/<name>/SKILL.md` and use `arcantry skills link <name> --scope private`. Add `--compat claude` only for the extra branded alias.

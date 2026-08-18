@@ -1,6 +1,6 @@
 ---
 name: verify-work-proportionally
-description: Choose and run verification proportional to impact, uncertainty, reversibility, and audience. Use when tests alone are insufficient, review coverage needs proof, independent checking helps, or user acceptance is required.
+description: Match verification layers to impact, uncertainty, reversibility, and audience when tests alone cannot prove the requested outcome or acceptance boundary.
 ---
 
 # Verify Work Proportionally

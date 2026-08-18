@@ -1,9 +1,9 @@
-import { lstat, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, readlink, realpath, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execa } from 'execa';
 import { z } from 'zod';
-import { removeManagedSection, upsertManagedSection } from './managedContent.js';
+import { containsManagedSection, removeManagedSection, upsertManagedSection } from './managedContent.js';
 import {
   type ProjectConfig,
   parseProjectConfig,
@@ -15,7 +15,9 @@ import {
 } from './projectConfig.js';
 
 export const repositoryScopeSchema = z.enum(['shared', 'private']);
+export const repositoryCompatibilitySchema = z.enum(['claude']);
 export type RepositoryScope = z.infer<typeof repositoryScopeSchema>;
+export type RepositoryCompatibility = z.infer<typeof repositoryCompatibilitySchema>;
 export type RepositoryOperation = 'init' | 'update' | 'remove';
 export type RepositoryChangeAction = 'create' | 'update' | 'remove';
 
@@ -31,6 +33,7 @@ export type RepositoryConflict = { path: string; reason: string };
 export type RepositoryPlan = {
   operation: RepositoryOperation;
   scope: RepositoryScope;
+  compatibility: RepositoryCompatibility | null;
   root: string;
   changes: RepositoryChange[];
   conflicts: RepositoryConflict[];
@@ -90,6 +93,9 @@ export const repositoryConfigPath = (scope: RepositoryScope): string =>
 export const repositoryGuidancePath = (scope: RepositoryScope): string =>
   scope === 'private' ? join('.local', 'AGENTS.md') : 'AGENTS.md';
 
+export const claudeGuidancePath = (scope: RepositoryScope): string =>
+  scope === 'private' ? 'CLAUDE.local.md' : 'CLAUDE.md';
+
 export const createRepositoryConfig = (): ProjectConfig => ({
   configVersion: projectConfigVersion,
   sources: {},
@@ -100,8 +106,12 @@ export const readArcantryConfig = async (root: string, scope: RepositoryScope): 
   return content === null ? null : parseProjectConfig(content);
 };
 
-export const planRepositoryInit = async (cwd: string, scope: RepositoryScope): Promise<RepositoryPlan> => {
-  const plan = await createPlan(cwd, 'init', scope);
+export const planRepositoryInit = async (
+  cwd: string,
+  scope: RepositoryScope,
+  compatibility: RepositoryCompatibility | null = null,
+): Promise<RepositoryPlan> => {
+  const plan = await createPlan(cwd, 'init', scope, compatibility);
   const path = repositoryConfigPath(scope);
   const existing = await readText(join(plan.root, path));
   if (existing === null) {
@@ -115,20 +125,26 @@ export const planRepositoryInit = async (cwd: string, scope: RepositoryScope): P
   }
 
   await planSection(plan, repositoryGuidancePath(scope), guidanceFor(scope));
-  if (scope === 'private') await planGitExclude(plan);
+  if (compatibility === 'claude') await planClaudeCompatibility(plan);
+  if (scope === 'private') await planGitExclude(plan, compatibility === 'claude' ? ['.local/', 'CLAUDE.local.md'] : ['.local/']);
   return plan;
 };
 
-export const planRepositoryUpdate = async (cwd: string, scope: RepositoryScope): Promise<RepositoryPlan> => {
-  const plan = await createPlan(cwd, 'update', scope);
+export const planRepositoryUpdate = async (
+  cwd: string,
+  scope: RepositoryScope,
+  compatibility: RepositoryCompatibility | null = null,
+): Promise<RepositoryPlan> => {
+  const plan = await createPlan(cwd, 'update', scope, compatibility);
   if (!(await validatePlanConfig(plan))) return plan;
   await planSection(plan, repositoryGuidancePath(scope), guidanceFor(scope));
-  if (scope === 'private') await planGitExclude(plan);
+  if (compatibility === 'claude') await planClaudeCompatibility(plan);
+  if (scope === 'private') await planGitExclude(plan, compatibility === 'claude' ? ['.local/', 'CLAUDE.local.md'] : ['.local/']);
   return plan;
 };
 
 export const planRepositoryRemove = async (cwd: string, scope: RepositoryScope): Promise<RepositoryPlan> => {
-  const plan = await createPlan(cwd, 'remove', scope);
+  const plan = await createPlan(cwd, 'remove', scope, null);
   const path = repositoryConfigPath(scope);
   const existing = await readText(join(plan.root, path));
   if (existing !== null) {
@@ -140,6 +156,7 @@ export const planRepositoryRemove = async (cwd: string, scope: RepositoryScope):
     }
   }
   await planSectionRemoval(plan, repositoryGuidancePath(scope));
+  await planClaudeCompatibilityRemoval(plan);
   return plan;
 };
 
@@ -165,11 +182,17 @@ export const applyRepositoryPlan = async (plan: RepositoryPlan): Promise<Reposit
   return { root: plan.root, applied: plan.changes };
 };
 
-export const initRepository = async (cwd: string, scope: RepositoryScope): Promise<RepositoryResult> =>
-  applyRepositoryPlan(await planRepositoryInit(cwd, scope));
+export const initRepository = async (
+  cwd: string,
+  scope: RepositoryScope,
+  compatibility: RepositoryCompatibility | null = null,
+): Promise<RepositoryResult> => applyRepositoryPlan(await planRepositoryInit(cwd, scope, compatibility));
 
-export const updateRepository = async (cwd: string, scope: RepositoryScope): Promise<RepositoryResult> =>
-  applyRepositoryPlan(await planRepositoryUpdate(cwd, scope));
+export const updateRepository = async (
+  cwd: string,
+  scope: RepositoryScope,
+  compatibility: RepositoryCompatibility | null = null,
+): Promise<RepositoryResult> => applyRepositoryPlan(await planRepositoryUpdate(cwd, scope, compatibility));
 
 export const removeRepository = async (cwd: string, scope: RepositoryScope): Promise<RepositoryResult> =>
   applyRepositoryPlan(await planRepositoryRemove(cwd, scope));
@@ -193,6 +216,7 @@ export const validateRepository = async (cwd: string, doctor = false, configPath
   }
   if (scope !== null) {
     await validateSection(root, repositoryGuidancePath(scope), guidanceFor(scope), diagnostics, doctor, scope);
+    await validateClaudeCompatibility(root, scope, diagnostics, doctor);
     if (scope === 'private' && repository.isRepository) await validateGitExclude(root, diagnostics, doctor);
   }
   return {
@@ -208,13 +232,43 @@ export const validateRepository = async (cwd: string, doctor = false, configPath
 export const doctorRepository = async (cwd: string, configPath?: string): Promise<RepositoryReport> =>
   validateRepository(cwd, true, configPath);
 
-const createPlan = async (cwd: string, operation: RepositoryOperation, scope: RepositoryScope): Promise<RepositoryPlan> => ({
+const createPlan = async (
+  cwd: string,
+  operation: RepositoryOperation,
+  scope: RepositoryScope,
+  compatibility: RepositoryCompatibility | null,
+): Promise<RepositoryPlan> => ({
   operation,
   scope,
+  compatibility,
   root: await resolveRepositoryRoot(cwd),
   changes: [],
   conflicts: [],
 });
+
+const planClaudeCompatibility = async (plan: RepositoryPlan): Promise<void> => {
+  const target = claudeGuidancePath(plan.scope);
+  const source = repositoryGuidancePath(plan.scope);
+  const linkStatus = await guidanceSymlinkStatus(plan.root, target, source);
+  if (linkStatus === 'exact') return;
+  if (linkStatus === 'other') {
+    plan.conflicts.push({ path: target, reason: `Existing link does not point to ${source}.` });
+    return;
+  }
+  await planSection(plan, target, `@${source.replaceAll('\\', '/')}`);
+};
+
+const planClaudeCompatibilityRemoval = async (plan: RepositoryPlan): Promise<void> => {
+  const target = claudeGuidancePath(plan.scope);
+  const source = repositoryGuidancePath(plan.scope);
+  const linkStatus = await guidanceSymlinkStatus(plan.root, target, source);
+  if (linkStatus === 'exact') return;
+  if (linkStatus === 'other') {
+    plan.conflicts.push({ path: target, reason: 'Existing compatibility link is preserved because ownership cannot be verified.' });
+    return;
+  }
+  await planSectionRemoval(plan, target);
+};
 
 const validatePlanConfig = async (plan: RepositoryPlan): Promise<boolean> => {
   const path = repositoryConfigPath(plan.scope);
@@ -261,19 +315,51 @@ const planSectionRemoval = async (plan: RepositoryPlan, path: string): Promise<v
   }
 };
 
-const planGitExclude = async (plan: RepositoryPlan): Promise<void> => {
+const planGitExclude = async (plan: RepositoryPlan, requiredEntries: string[]): Promise<void> => {
   const path = await resolveGitPath(plan.root, 'info/exclude');
   const existingContent = await readText(path);
   const existing = existingContent ?? '';
   const lines = new Set(existing.split(/\r?\n/));
-  if (lines.has('.local/')) return;
+  const missingEntries = requiredEntries.filter((entry) => !lines.has(entry));
+  if (missingEntries.length === 0) return;
   const separator = existing.length > 0 && !existing.endsWith('\n') ? '\n' : '';
   plan.changes.push({
     action: existingContent === null ? 'create' : 'update',
     path,
-    content: `${existing}${separator}.local/\n`,
+    content: `${existing}${separator}${missingEntries.map((entry) => `${entry}\n`).join('')}`,
     expectedContent: existingContent,
   });
+};
+
+const validateClaudeCompatibility = async (
+  root: string,
+  scope: RepositoryScope,
+  diagnostics: RepositoryDiagnostic[],
+  doctor: boolean,
+): Promise<void> => {
+  const path = claudeGuidancePath(scope);
+  const source = repositoryGuidancePath(scope);
+  const linkStatus = await guidanceSymlinkStatus(root, path, source);
+  if (linkStatus === 'exact') return;
+  if (linkStatus === 'other') {
+    diagnostics.push({
+      severity: 'error',
+      path,
+      message: `Claude compatibility link does not point to ${source}.`,
+      ...(doctor ? { repair: `Replace the link or run \`arcantry repo update --scope ${scope} --compat claude\`.` } : {}),
+    });
+    return;
+  }
+  const content = await readText(join(root, path));
+  if (content === null || !containsManagedSection(content)) return;
+  if (upsertManagedSection(content, `@${source.replaceAll('\\', '/')}`).status !== 'unchanged') {
+    diagnostics.push({
+      severity: 'error',
+      path,
+      message: 'Arcantry managed Claude compatibility import is outdated.',
+      ...(doctor ? { repair: `Run \`arcantry repo update --scope ${scope} --compat claude\`.` } : {}),
+    });
+  }
 };
 
 const validateSection = async (
@@ -298,15 +384,43 @@ const validateSection = async (
 const validateGitExclude = async (root: string, diagnostics: RepositoryDiagnostic[], doctor: boolean): Promise<void> => {
   const path = await resolveGitPath(root, 'info/exclude');
   const lines = new Set(((await readText(path)) ?? '').split(/\r?\n/));
-  if (!lines.has('.local/')) {
+  const privateClaudeContent = await readText(join(root, claudeGuidancePath('private')));
+  const requiredEntries = [
+    '.local/',
+    ...(privateClaudeContent !== null && containsManagedSection(privateClaudeContent) ? ['CLAUDE.local.md'] : []),
+  ];
+  for (const entry of requiredEntries) if (!lines.has(entry)) {
     diagnostics.push({
       severity: 'error',
       path: '.git/info/exclude',
-      message: '.local/ must be excluded locally.',
-      ...(doctor ? { repair: 'Run `arcantry repo update --scope private`.' } : {}),
+      message: `${entry} must be excluded locally.`,
+      ...(doctor ? { repair: `Run \`arcantry repo update --scope private${entry === 'CLAUDE.local.md' ? ' --compat claude' : ''}\`.` } : {}),
     });
   }
 };
+
+const guidanceSymlinkStatus = async (
+  root: string,
+  targetPath: string,
+  sourcePath: string,
+): Promise<'none' | 'exact' | 'other'> => {
+  const target = join(root, targetPath);
+  try {
+    const stats = await lstat(target);
+    if (!stats.isSymbolicLink()) return 'none';
+    const raw = await readlink(target);
+    const [actual, expected] = await Promise.all([
+      realpath(resolve(dirname(target), raw)),
+      realpath(join(root, sourcePath)),
+    ]);
+    return normalizePath(actual) === normalizePath(expected) ? 'exact' : 'other';
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return 'none';
+    return 'other';
+  }
+};
+
+const normalizePath = (path: string): string => process.platform === 'win32' ? path.toLowerCase() : path;
 
 const guidanceFor = (scope: RepositoryScope): string => scope === 'private' ? privateGuidanceBody : sharedGuidanceBody;
 

@@ -6,7 +6,7 @@
 
 Coordinate project knowledge and repeatable agent work without forcing a repository shape.
 
-Arcantry keeps OpenSpec, changelogs, todo.txt queues, agent guidance, and focused skills in distinct roles. Shared and private TOML configuration remain independent, repository adoption stays minimal, and every structural write starts from a reviewable plan.
+Arcantry keeps shared and private OpenSpec, changelogs, todo.txt queues, universal agent guidance, and focused skills in distinct roles. `AGENTS.md` and `.agents` remain the recommended standard, while optional Claude adapters reuse the same sources without copying them.
 
 ```sh
 arcantry repo inspect

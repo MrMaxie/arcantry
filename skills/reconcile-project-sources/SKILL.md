@@ -1,6 +1,6 @@
 ---
 name: reconcile-project-sources
-description: Compare shared and private project sources, explain meaningful drift, and plan explicit promotion, relocation, rebind, cutover, or preservation. Use when OpenSpec, changelog, or todo sources overlap without automatic merging.
+description: Explain drift between shared and private OpenSpec, changelog, or todo sources and prepare one explicit transition that preserves both until apply.
 ---
 
 # Reconcile Project Sources

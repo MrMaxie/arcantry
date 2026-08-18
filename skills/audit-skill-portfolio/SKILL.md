@@ -1,11 +1,11 @@
 ---
 name: audit-skill-portfolio
-description: Audit installed skills for context cost, scope, duplicates, invocation policy, and trigger overlap. Use only when explicitly invoked with $audit-skill-portfolio; remain read-only and return evidence-backed portfolio actions.
+description: Inventory an installed skill portfolio, distinguish aliases from identity conflicts, and recommend evidence-backed routing or consolidation actions. Use only when explicitly requested and remain read-only.
 ---
 
 # Audit Skill Portfolio
 
-Audit the effective and installed skill catalog without changing skills, plugins, repositories, or Codex configuration. Use deterministic inventory data first, then apply human judgment to tier and consolidation candidates.
+Audit the effective and installed skill catalog without changing skills, plugins, repositories, or host configuration. Use deterministic inventory data first, then apply human judgment to tier and consolidation candidates.
 
 ## Required workflow
 
@@ -40,7 +40,7 @@ Add exact session evidence only when the session path is available:
 python scripts/audit_skill_portfolio.py --session <rollout.jsonl> --format json
 ```
 
-The defaults scan only `~/.codex/skills` and `~/.agents/skills`. Session mode adds skill paths that were actually injected, including enabled plugin skills. Never broaden this to a disk-wide scan.
+The defaults scan the universal `~/.agents/skills`, the Claude compatibility directory, and host-owned system skills. Physical directories are counted once even when multiple aliases expose them. Session mode adds skill paths that were actually injected, including enabled plugin skills. Never broaden this to a disk-wide scan.
 
 ## Interpret the report
 

@@ -1,15 +1,15 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
-  "summary": "Shape terminal interfaces around what users need to understand and do, including states, recovery, and keyboard behavior.",
+  "summary": "Design terminal interactions around clear navigation, state, recovery, accessibility, and constrained-screen behavior.",
   "scenarios": [
     {
       "title": "Design an interactive CLI flow",
-      "prompt": "Use $design-terminal-ux to design this deployment wizard for occasional users who need safe defaults and clear recovery.",
+      "prompt": "Use the design-terminal-ux skill to design this deployment wizard for occasional users who need safe defaults and clear recovery.",
       "outcome": "A right-sized flow covering hierarchy, input, progress, errors, completion, cancellation, and keyboard access."
     },
     {
       "title": "Audit a dense TUI",
-      "prompt": "Use $design-terminal-ux to audit this TUI screenshot and remove elements that do not support a real user decision.",
+      "prompt": "Use the design-terminal-ux skill to audit this TUI screenshot and remove elements that do not support a real user decision.",
       "outcome": "A prioritized critique grounded in user tasks, terminal constraints, meaningful states, and accessibility."
     }
   ]
