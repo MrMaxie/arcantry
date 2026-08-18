@@ -1,5 +1,5 @@
 @import '@fontsource-variable/manrope';
-@import '@fontsource/instrument-serif/400.css';
+@import '@fontsource-variable/fraunces';
 
 :root,
 :root[data-theme='light'] {
@@ -14,6 +14,10 @@
   --ar-border: #d0cfcf;
   --ar-border-soft: #dedddb;
   --ar-invert: #faf9f8;
+  --ar-accent-blue: #1978a3;
+  --ar-accent-violet: #6a4cc7;
+  --ar-accent-pink: #b93f67;
+  --ar-heart: #e65782;
 
   --sl-color-accent-low: #f0efee;
   --sl-color-accent: var(--ar-text);
@@ -51,6 +55,10 @@
   --ar-border: #353535;
   --ar-border-soft: #2a2a2a;
   --ar-invert: #121212;
+  --ar-accent-blue: #a8e7ff;
+  --ar-accent-violet: #c4b5fd;
+  --ar-accent-pink: #ff9ab8;
+  --ar-heart: #ff789f;
 
   --sl-color-accent-low: #202020;
   --sl-color-accent: var(--ar-text);
@@ -79,6 +87,8 @@ body {
   background: var(--ar-bg);
 }
 
+html { scroll-behavior: smooth; }
+
 body {
   font-family: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif;
   color: var(--ar-text);
@@ -99,8 +109,27 @@ textarea {
 }
 
 .sl-markdown-content code:not(:where(.not-content *)) {
+  margin-inline: .14em;
   border: 1px solid var(--ar-border);
   background: var(--ar-surface);
+}
+
+code[data-copyable-command] {
+  cursor: copy;
+  user-select: all;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+code[data-copyable-command]:hover,
+code[data-copyable-command]:focus-visible {
+  border-color: color-mix(in srgb, var(--ar-accent-violet) 55%, var(--ar-border));
+  background: color-mix(in srgb, var(--ar-accent-violet) 7%, var(--ar-surface));
+}
+
+code[data-copyable-command][data-copied='true'] {
+  color: var(--ar-text);
+  border-color: var(--ar-accent-blue);
+  box-shadow: 0 0 1rem color-mix(in srgb, var(--ar-accent-blue) 16%, transparent);
 }
 
 .skill-catalog-meta {
@@ -108,7 +137,7 @@ textarea {
   flex-wrap: wrap;
   gap: .5rem 1rem;
   margin-bottom: .85rem;
-  color: var(--ar-text-soft);
+  color: var(--ar-accent-violet);
   font-size: .72rem;
   font-weight: 700;
   letter-spacing: .06em;
@@ -138,11 +167,12 @@ textarea {
   margin-bottom: 1.4rem;
   max-width: 22ch;
   color: var(--ar-text);
-  font-family: var(--ar-font-display, 'Instrument Serif', Georgia, serif);
+  font-family: var(--ar-font-section, 'Fraunces Variable', Georgia, serif);
   font-size: clamp(1.8rem, 3vw, 2.7rem);
-  font-weight: 400;
-  line-height: 1;
-  letter-spacing: -.04em;
+  font-variation-settings: 'opsz' 54, 'SOFT' 40, 'WONK' 1;
+  font-weight: 480;
+  line-height: 1.06;
+  letter-spacing: -.035em;
 }
 
 .skill-catalog-grid {
@@ -164,11 +194,13 @@ textarea {
   gap: .85rem;
   padding: 1.3rem 1.3rem 1.35rem;
   background: var(--ar-bg);
-  transition: background-color 150ms ease;
+  background-image: linear-gradient(90deg, transparent, transparent);
+  transition: background-color 180ms ease, background-image 180ms ease;
 }
 
 .skill-catalog-card:hover {
-  background: var(--ar-bg-subtle);
+  background-color: var(--ar-bg-subtle);
+  background-image: linear-gradient(135deg, color-mix(in srgb, var(--ar-accent-blue) 7%, transparent), transparent 42%, color-mix(in srgb, var(--ar-accent-pink) 5%, transparent));
 }
 
 .skill-catalog-card:has(a:focus-visible) {
@@ -260,5 +292,9 @@ textarea {
 }
 
 :focus-visible {
-  outline-color: var(--ar-text);
+  outline-color: var(--ar-accent-violet);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
 }

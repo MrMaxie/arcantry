@@ -13,6 +13,7 @@ export default defineConfig({
         Head: './src/components/ArcantryHead.astro',
         PageFrame: './src/components/ArcantryPageFrame.astro',
         Header: './src/components/ArcantryHeader.astro',
+        Footer: './src/components/ArcantryFooter.astro',
         Sidebar: './src/components/ArcantrySidebar.astro',
         Hero: './src/components/ArcantryHero.astro'
       },

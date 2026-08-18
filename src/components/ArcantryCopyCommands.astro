@@ -1,0 +1,88 @@
+<arcantry-copy-commands aria-hidden="true"></arcantry-copy-commands>
+
+<script>
+  const commandPattern = /^(?:arcantry\b|npx\s+@maxiedev\/arcantry\b|pnpm\s+dlx\s+@maxiedev\/arcantry\b|nubx\s+@maxiedev\/arcantry\b)/i;
+
+  async function copyCommandText(text: string): Promise<boolean> {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const input = document.createElement('textarea');
+      input.value = text;
+      input.setAttribute('readonly', '');
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.append(input);
+      input.select();
+      const legacyDocument = document as unknown as { execCommand(command: 'copy'): boolean };
+      const copied = legacyDocument.execCommand('copy');
+      input.remove();
+      return copied;
+    }
+  }
+
+  class ArcantryCopyCommands extends HTMLElement {
+    connectedCallback(): void {
+      this.decorate();
+      document.addEventListener('astro:page-load', this.decorate);
+      document.addEventListener('click', this.onClick);
+      document.addEventListener('keydown', this.onKeyDown);
+    }
+
+    disconnectedCallback(): void {
+      document.removeEventListener('astro:page-load', this.decorate);
+      document.removeEventListener('click', this.onClick);
+      document.removeEventListener('keydown', this.onKeyDown);
+    }
+
+    private decorate = (): void => {
+      document.querySelectorAll<HTMLElement>('code:not([data-copyable-command])').forEach((code) => {
+        if (code.closest('pre, button, a, [data-no-command-copy]')) return;
+        const command = code.textContent?.trim() ?? '';
+        if (!commandPattern.test(command)) return;
+        code.dataset.copyableCommand = command;
+        code.setAttribute('role', 'button');
+        code.setAttribute('tabindex', '0');
+        code.setAttribute('aria-label', `Copy command: ${command}`);
+        code.setAttribute('title', 'Click to copy command');
+      });
+    };
+
+    private copy = async (code: HTMLElement): Promise<void> => {
+      const command = code.dataset.copyableCommand;
+      if (!command || !(await copyCommandText(command))) return;
+      code.dataset.copied = 'true';
+      code.setAttribute('aria-label', `Copied command: ${command}`);
+      window.setTimeout(() => {
+        delete code.dataset.copied;
+        code.setAttribute('aria-label', `Copy command: ${command}`);
+      }, 1600);
+    };
+
+    private onClick = (event: Event): void => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const code = target.closest<HTMLElement>('code[data-copyable-command]');
+      if (code) void this.copy(code);
+    };
+
+    private onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const code = target.closest<HTMLElement>('code[data-copyable-command]');
+      if (!code) return;
+      event.preventDefault();
+      void this.copy(code);
+    };
+  }
+
+  if (!customElements.get('arcantry-copy-commands')) {
+    customElements.define('arcantry-copy-commands', ArcantryCopyCommands);
+  }
+</script>
+
+<style>
+  arcantry-copy-commands { display: none; }
+</style>

@@ -1,27 +1,67 @@
 ---
 import type {} from '@astrojs/starlight';
 import { Icon } from '@astrojs/starlight/components';
-import { buildVersionModel } from '../../tooling/version.js';
+import ArcantryAmbientCanvas from './ArcantryAmbientCanvas.astro';
 
 const hero = Astro.locals.starlightRoute.entry.data.hero;
 if (!hero) throw new Error('ArcantryHero requires hero frontmatter');
-const { currentRelease } = buildVersionModel();
-const sourceCommand = 'pnpm exec tsx packages/arcantry/src/cli.ts repo init --docs none';
+const heroTitle = String(hero.title);
+const titleBreak = heroTitle.lastIndexOf(' ');
+const titleLead = titleBreak > -1 ? heroTitle.slice(0, titleBreak + 1) : '';
+const titleAccent = titleBreak > -1 ? heroTitle.slice(titleBreak + 1) : heroTitle;
+const commandOptions = [
+  { id: 'npm', label: 'npm', executable: 'npx', packageCommand: '@maxiedev/arcantry', value: 'npx @maxiedev/arcantry repo init --docs none' },
+  { id: 'pnpm', label: 'pnpm', executable: 'pnpm dlx', packageCommand: '@maxiedev/arcantry', value: 'pnpm dlx @maxiedev/arcantry repo init --docs none' },
+  { id: 'nub', label: 'Nub', executable: 'nubx', packageCommand: '@maxiedev/arcantry', value: 'nubx @maxiedev/arcantry repo init --docs none' },
+] as const;
 ---
 
 <section class="hero-shell">
+  <ArcantryAmbientCanvas />
   <div class="hero-copy">
-    <p class="hero-version"><span>Arcantry {currentRelease}</span><span>Catalog preview</span></p>
-    <h1>{hero.title}</h1>
+    <h1>{titleLead}<span>{titleAccent}</span></h1>
     {hero.tagline && <p class="hero-tagline">{hero.tagline}</p>}
-    <arcantry-copy-command class="hero-command">
-      <span class="command-label">Run from this checkout</span>
-      <code>{sourceCommand}</code>
-      <button type="button" data-copy={sourceCommand} aria-label="Copy adoption command">
-        <span class="copy-idle"><Icon name="document" /> Copy</span>
-        <span class="copy-done"><Icon name="approve-check" /> Copied</span>
-      </button>
-    </arcantry-copy-command>
+    <arcantry-command-picker class="hero-command">
+      <div class="command-tabs" role="tablist" aria-label="Package runner">
+        {commandOptions.map((option, index) => (
+          <button
+            type="button"
+            role="tab"
+            id={`command-tab-${option.id}`}
+            aria-controls={`command-${option.id}`}
+            aria-selected={index === 0 ? 'true' : 'false'}
+            tabindex={index === 0 ? 0 : -1}
+            data-runner={option.id}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      {commandOptions.map((option, index) => (
+        <div
+          class="command-panel"
+          role="tabpanel"
+          id={`command-${option.id}`}
+          aria-labelledby={`command-tab-${option.id}`}
+          data-command={option.id}
+          hidden={index !== 0}
+        >
+          <button
+            class="command-row"
+            type="button"
+            aria-label={`Copy ${option.label} command`}
+            data-label={option.label}
+            data-copy={option.value}
+          >
+            <code><span class="prompt">$</span> <span class="executable">{option.executable}</span> <span class="package">{option.packageCommand}</span> <span class="arguments">repo init <span class="flag">--docs</span> none</span></code>
+            <span class="copy-state" aria-hidden="true">
+              <span class="copy-idle"><Icon name="document" /></span>
+              <span class="copy-done"><Icon name="approve-check" /></span>
+            </span>
+          </button>
+        </div>
+      ))}
+    </arcantry-command-picker>
     {hero.actions?.length && (
       <div class="hero-actions">
         {hero.actions.map((action) => (
@@ -35,49 +75,118 @@ const sourceCommand = 'pnpm exec tsx packages/arcantry/src/cli.ts repo init --do
 </section>
 
 <script>
-  class ArcantryCopyCommand extends HTMLElement {
+  type CommandRunner = 'npm' | 'pnpm' | 'nub';
+
+  const commandStorageKey = 'arcantry:command-runner';
+  const commandRunners: CommandRunner[] = ['npm', 'pnpm', 'nub'];
+
+  async function copyText(text: string): Promise<boolean> {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const input = document.createElement('textarea');
+      input.value = text;
+      input.setAttribute('readonly', '');
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.append(input);
+      input.select();
+      const legacyDocument = document as unknown as { execCommand(command: 'copy'): boolean };
+      const copied = legacyDocument.execCommand('copy');
+      input.remove();
+      return copied;
+    }
+  }
+
+  class ArcantryCommandPicker extends HTMLElement {
+    private runner: CommandRunner = 'npm';
+
     connectedCallback(): void {
-      this.querySelector('button')?.addEventListener('click', this.copy);
+      const stored = localStorage.getItem(commandStorageKey);
+      if (commandRunners.includes(stored as CommandRunner)) this.runner = stored as CommandRunner;
+      this.render();
+      this.querySelectorAll<HTMLButtonElement>('[data-runner]').forEach((button) => button.addEventListener('click', this.selectRunner));
+      this.querySelector('[role="tablist"]')?.addEventListener('keydown', this.navigateTabs);
+      this.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((button) => button.addEventListener('click', this.copy));
     }
 
     disconnectedCallback(): void {
-      this.querySelector('button')?.removeEventListener('click', this.copy);
+      this.querySelectorAll<HTMLButtonElement>('[data-runner]').forEach((button) => button.removeEventListener('click', this.selectRunner));
+      this.querySelector('[role="tablist"]')?.removeEventListener('keydown', this.navigateTabs);
+      this.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((button) => button.removeEventListener('click', this.copy));
     }
+
+    private selectRunner = (event: Event): void => {
+      const button = event.currentTarget;
+      if (!(button instanceof HTMLButtonElement)) return;
+      const runner = button.dataset.runner as CommandRunner;
+      if (!commandRunners.includes(runner)) return;
+      this.runner = runner;
+      localStorage.setItem(commandStorageKey, runner);
+      this.render();
+    };
+
+    private navigateTabs = (event: Event): void => {
+      if (!(event instanceof KeyboardEvent)) return;
+      const currentIndex = commandRunners.indexOf(this.runner);
+      let nextIndex = currentIndex;
+      if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % commandRunners.length;
+      else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + commandRunners.length) % commandRunners.length;
+      else if (event.key === 'Home') nextIndex = 0;
+      else if (event.key === 'End') nextIndex = commandRunners.length - 1;
+      else return;
+      event.preventDefault();
+      this.runner = commandRunners[nextIndex];
+      localStorage.setItem(commandStorageKey, this.runner);
+      this.render();
+      this.querySelector<HTMLButtonElement>(`[data-runner="${this.runner}"]`)?.focus();
+    };
 
     private copy = async (event: Event): Promise<void> => {
       const button = event.currentTarget;
       if (!(button instanceof HTMLButtonElement)) return;
-      await navigator.clipboard.writeText(button.dataset.copy ?? '');
+      const copied = await copyText(button.dataset.copy ?? '');
+      if (!copied) return;
       button.dataset.copied = 'true';
-      window.setTimeout(() => delete button.dataset.copied, 1600);
+      button.setAttribute('aria-label', `${button.dataset.label} command copied`);
+      window.setTimeout(() => {
+        delete button.dataset.copied;
+        button.setAttribute('aria-label', `Copy ${button.dataset.label} command`);
+      }, 1600);
     };
+
+    private render(): void {
+      this.querySelectorAll<HTMLButtonElement>('[data-runner]').forEach((button) => {
+        const selected = button.dataset.runner === this.runner;
+        button.setAttribute('aria-selected', String(selected));
+        button.tabIndex = selected ? 0 : -1;
+      });
+      this.querySelectorAll<HTMLElement>('[data-command]').forEach((panel) => {
+        panel.hidden = panel.dataset.command !== this.runner;
+      });
+    }
   }
 
-  if (!customElements.get('arcantry-copy-command')) {
-    customElements.define('arcantry-copy-command', ArcantryCopyCommand);
+  if (!customElements.get('arcantry-command-picker')) {
+    customElements.define('arcantry-command-picker', ArcantryCommandPicker);
   }
 </script>
 
 <style>
   @layer starlight.core {
     .hero-shell {
+      position: relative;
+      isolation: isolate;
+      width: 100vw;
+      margin-left: calc(50% - 50vw);
       min-height: 24rem;
       display: flex;
       align-items: center;
-      padding: 4.8rem 0 4.2rem;
+      padding: 4.8rem max(1rem, calc((100vw - 72rem) / 2)) 4.2rem;
+      overflow: clip;
     }
-    .hero-copy { max-width: 52rem; }
-    .hero-version {
-      display: flex;
-      flex-wrap: wrap;
-      gap: .55rem 1rem;
-      margin: 0 0 1.35rem;
-      color: var(--ar-text-soft);
-      font-size: .68rem;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
+    .hero-copy { position: relative; z-index: 1; width: min(52rem, 100%); }
     h1 {
       margin: 0;
       max-width: 12ch;
@@ -87,6 +196,26 @@ const sourceCommand = 'pnpm exec tsx packages/arcantry/src/cli.ts repo init --do
       line-height: .92;
       letter-spacing: -.045em;
       color: var(--ar-text);
+    }
+    h1 span {
+      position: relative;
+      display: inline-block;
+      color: transparent;
+      background: linear-gradient(98deg, var(--ar-accent-blue), var(--ar-accent-violet) 48%, var(--ar-accent-pink));
+      background-clip: text;
+      -webkit-background-clip: text;
+      text-shadow: 0 .18em 1.2em color-mix(in srgb, var(--ar-accent-violet) 12%, transparent);
+    }
+    h1 span::after {
+      content: '';
+      position: absolute;
+      inset: auto .04em -.04em .02em;
+      height: .055em;
+      border-radius: 100%;
+      background: linear-gradient(90deg, var(--ar-accent-blue), var(--ar-accent-violet) 48%, var(--ar-accent-pink));
+      transform: scaleX(.86) rotate(-1deg);
+      transform-origin: left;
+      opacity: .78;
     }
     .hero-tagline {
       max-width: 39rem;
@@ -106,63 +235,115 @@ const sourceCommand = 'pnpm exec tsx packages/arcantry/src/cli.ts repo init --do
       text-decoration: none;
       transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
     }
-    .hero-action.primary { color: var(--ar-invert); background: var(--ar-text); border-color: var(--ar-text); }
+    .hero-action.primary {
+      color: var(--ar-invert);
+      background: var(--ar-text);
+      border-color: color-mix(in srgb, var(--ar-accent-violet) 42%, var(--ar-text));
+      box-shadow: 0 .55rem 1.6rem color-mix(in srgb, var(--ar-accent-violet) 12%, transparent);
+    }
     .hero-action.secondary { color: var(--ar-text); background: transparent; }
     .hero-action:hover { transform: translateY(-1px); }
     .hero-action.secondary:hover { border-color: var(--ar-text-soft); background: var(--ar-bg-subtle); }
     .hero-command {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      display: block;
       max-width: 45rem;
       margin-top: 2rem;
-      border: 1px solid var(--ar-border);
+      border: 1px solid transparent;
       border-radius: .25rem;
-      background: var(--ar-bg-subtle);
+      background:
+        linear-gradient(color-mix(in srgb, var(--ar-bg) 91%, transparent), color-mix(in srgb, var(--ar-bg-subtle) 88%, transparent)) padding-box,
+        linear-gradient(112deg, color-mix(in srgb, var(--ar-accent-blue) 76%, var(--ar-border)), color-mix(in srgb, var(--ar-accent-violet) 82%, var(--ar-border)) 52%, color-mix(in srgb, var(--ar-accent-pink) 72%, var(--ar-border))) border-box;
+      -webkit-backdrop-filter: blur(18px) saturate(88%);
+      backdrop-filter: blur(18px) saturate(88%);
+      box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--ar-text) 5%, transparent),
+        0 1.3rem 3.8rem color-mix(in srgb, var(--ar-accent-violet) 10%, transparent);
+      overflow: hidden;
     }
-    .command-label {
-      grid-column: 1 / -1;
-      padding: .6rem .8rem 0;
+    .command-tabs {
+      display: flex;
+      gap: .1rem;
+      padding: .18rem .3rem;
+      border-bottom: 1px solid color-mix(in srgb, var(--ar-accent-violet) 18%, var(--ar-border));
+    }
+    .command-tabs button {
+      position: relative;
+      height: 1.55rem;
+      min-height: 0;
+      padding: 0 .45rem;
+      border: 0;
+      border-radius: .15rem;
+      background: transparent;
       color: var(--ar-text-soft);
-      font-size: .65rem;
-      font-weight: 700;
-      letter-spacing: .07em;
-      text-transform: uppercase;
+      cursor: pointer;
+      font-family: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif !important;
+      font-size: .8rem !important;
+      font-weight: 650 !important;
+      line-height: 1 !important;
+      transition: color 150ms ease, background-color 150ms ease;
     }
-    .hero-command code {
+    .command-tabs button:hover { color: var(--ar-text); }
+    .command-tabs button[aria-selected='true'] { color: var(--ar-text); background: color-mix(in srgb, var(--ar-surface-raised) 84%, transparent); }
+    .command-tabs button[aria-selected='true']::after {
+      content: '';
+      position: absolute;
+      inset: auto .36rem -.2rem;
+      height: 1px;
+      background: linear-gradient(90deg, var(--ar-accent-blue), var(--ar-accent-violet), var(--ar-accent-pink));
+    }
+    .command-panel[hidden] { display: none; }
+    .command-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 1rem;
+      align-items: center;
+      gap: 1rem;
+      width: 100%;
       min-width: 0;
-      overflow-x: auto;
-      padding: .75rem .8rem .85rem;
+      padding: .78rem 1rem;
       border: 0;
       background: transparent;
       color: var(--ar-text);
-      font-size: .76rem;
-      white-space: nowrap;
+      cursor: copy;
+      text-align: left;
+      transition: background-color 150ms ease;
     }
-    .hero-command button {
-      align-self: stretch;
-      min-width: 5.5rem;
-      padding: 0 .8rem;
+    .command-row:hover { background: var(--ar-surface); }
+    .command-row code {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      overflow-x: auto;
+      padding: 0;
       border: 0;
-      border-left: 1px solid var(--ar-border);
       background: transparent;
       color: var(--ar-text-muted);
-      cursor: pointer;
-      font-size: .72rem;
-      font-weight: 700;
-      transition: color 150ms ease, background-color 150ms ease;
+      font-size: .8rem;
+      white-space: nowrap;
     }
-    .hero-command button:hover { color: var(--ar-text); background: var(--ar-surface); }
-    .hero-command button span { align-items: center; gap: .35rem; }
-    .hero-command button .copy-idle { display: inline-flex; }
-    .hero-command button .copy-done { display: none; }
-    .hero-command button[data-copied='true'] .copy-idle { display: none; }
-    .hero-command button[data-copied='true'] .copy-done { display: inline-flex; }
+    .command-row .prompt { color: var(--ar-accent-blue); font-weight: 800; }
+    .command-row .executable { color: var(--ar-text); font-weight: 750; }
+    .command-row .package { color: var(--ar-accent-violet); }
+    .command-row .flag { color: var(--ar-accent-pink); }
+    .copy-state { display: grid; flex: 0 0 auto; place-items: center; color: var(--ar-text-soft); font-size: .9rem; }
+    .copy-state .copy-idle { display: block; }
+    .copy-state .copy-done { display: none; }
+    .command-row[data-copied='true'] .copy-idle { display: none; }
+    .command-row[data-copied='true'] .copy-done { display: block; }
 
     @media (max-width: 49.99rem) {
-      .hero-shell { min-height: auto; padding: 3.5rem 0 3rem; }
+      .hero-shell { min-height: auto; padding: 3.5rem 1rem 3rem; }
       h1 { font-size: clamp(3.2rem, 17vw, 5rem); }
-      .hero-command { grid-template-columns: 1fr; }
-      .hero-command button { min-height: 2.65rem; border-top: 1px solid var(--ar-border); border-left: 0; }
+      .command-row { padding-inline: .8rem; }
+      .command-row code {
+        overflow: hidden;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.55;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      h1 span::after { transform: scaleX(.86) rotate(-1deg); }
     }
   }
 </style>

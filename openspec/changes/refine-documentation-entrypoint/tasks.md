@@ -1,0 +1,24 @@
+# Tasks
+
+- [x] Align the global wordmark, version, action icons, and automatic-theme icon.
+- [x] Rewrite the overview and implement the remembered npm, pnpm, and Nub command picker.
+- [x] Apply the restrained blue, violet, and pink accent palette to functional details.
+- [x] Clarify the three-command adoption path and remove decorative icon frames.
+- [x] Keep the released version under the brand and add the shared authorship and GitHub footer.
+- [x] Verify type checks, documentation checks, build output, and browser interactions.
+- [x] Review the completed change and release metadata.
+- [x] Add an overview-only interactive canvas atmosphere with reduced-motion behavior.
+- [x] Add site-wide Astro view transitions with stable shell treatment and navigation progress.
+- [x] Re-run automated and live-browser verification for motion, navigation, and both themes.
+- [x] Constrain the horizontal overview header to the content column and animate it to the full documentation width.
+- [x] Reorder the overview around value, comparison, product areas, setup, and expected outcomes.
+- [x] Make recognized inline Arcantry commands copyable and explain each setup command.
+- [x] Add restrained information-boundary motion and improve inline-code spacing.
+- [x] Verify the responsive command row and automatic system-theme synchronization.
+- [x] Remove inactive pointer glow, add sparse falling stars, and align the value cards.
+- [x] Add restrained glass treatment and simplify theme selection to light and dark.
+- [x] Keep fixed documentation dividers below the header during view transitions.
+- [x] Darken the hero command glass, compact the overview search, and enrich the ambient star field.
+- [x] Redesign comparison and expected-result surfaces around clear visual hierarchy.
+- [x] Keep the overview pager shape and add an animated gradient border that transitions to the standard documentation pager.
+- [x] Make the hero atmosphere viewport-wide, increase star density, and replace split comparison connectors with one animated SVG path.

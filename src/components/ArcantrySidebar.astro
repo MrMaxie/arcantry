@@ -67,8 +67,13 @@ const icons = {
     }
     .nav-link :global(svg) { flex: 0 0 auto; color: var(--ar-text-soft); font-size: .9rem; transition: color 150ms ease; }
     .nav-link:hover { color: var(--ar-text); background: var(--ar-surface); }
-    .nav-link:hover :global(svg), .nav-link.active :global(svg) { color: var(--ar-text); }
-    .nav-link.active { color: var(--ar-text); border-left-color: var(--ar-text); background: transparent; }
+    .nav-link:hover :global(svg) { color: var(--ar-accent-blue); }
+    .nav-link.active :global(svg) { color: var(--ar-accent-violet); }
+    .nav-link.active {
+      color: var(--ar-text);
+      border-left-color: var(--ar-accent-violet);
+      background: linear-gradient(90deg, color-mix(in srgb, var(--ar-accent-violet) 9%, transparent), transparent 82%);
+    }
     .sidebar-foot { display: flex; justify-content: space-between; gap: .5rem; padding: 1rem 1.35rem; border-top: 1px solid var(--ar-border); color: var(--ar-text-soft); font-size: .63rem; }
   }
 </style>

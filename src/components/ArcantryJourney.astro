@@ -2,57 +2,144 @@
 import { Icon } from '@astrojs/starlight/components';
 ---
 
+<section class="value" aria-labelledby="value-title">
+  <div class="value-heading">
+    <p>Why Arcantry</p>
+    <div>
+      <h2 id="value-title">Define the rules once, then make every tool follow them</h2>
+      <p>Arcantry connects repository guidance, focused agent skills, change intent, and release history without replacing the workflow you already own.</p>
+    </div>
+  </div>
+  <div class="value-grid">
+    <article>
+      <Icon name="approve-check-circle" />
+      <h3>Adopt safely</h3>
+      <p>Add only missing managed foundations. Existing project-owned files remain yours.</p>
+    </article>
+    <article>
+      <Icon name="puzzle" />
+      <h3>Link only what you need</h3>
+      <p>Choose one focused skill or install the full catalog when the whole collection is useful.</p>
+    </article>
+    <article>
+      <Icon name="approve-check" />
+      <h3>Verify one contract</h3>
+      <p>Contributors and CI run the same deterministic, read-only validation command.</p>
+    </article>
+  </div>
+</section>
+
+<section class="comparison" aria-labelledby="comparison-title">
+  <div class="comparison-heading">
+    <p>With and without</p>
+    <h2 id="comparison-title">Replace repeated coordination with one explicit contract</h2>
+  </div>
+  <div class="comparison-flow" role="list">
+    <article role="listitem">
+      <header><span>01</span><h3>Shared rules</h3></header>
+      <div class="comparison-before"><small>Without Arcantry</small><p>Guidance is repeated across tools and contributor notes.</p></div>
+      <span class="comparison-arrow" aria-hidden="true">
+        <svg viewBox="0 0 88 24" focusable="false">
+          <defs><linearGradient id="comparison-gradient-1"><stop stop-color="var(--ar-accent-blue)"/><stop offset=".5" stop-color="var(--ar-accent-violet)"/><stop offset="1" stop-color="var(--ar-accent-pink)"/></linearGradient></defs>
+          <path class="connector-track" d="M3 12H84M76 5L84 12L76 19" />
+          <path class="connector-flow" d="M3 12H84M76 5L84 12L76 19" stroke="url(#comparison-gradient-1)" />
+        </svg>
+      </span>
+      <div class="comparison-after"><small>With Arcantry</small><p>One repository contract is shared by agents, contributors, and CI.</p></div>
+    </article>
+    <article role="listitem">
+      <header><span>02</span><h3>Private context</h3></header>
+      <div class="comparison-before"><small>Without Arcantry</small><p>Working notes and machine configuration need manual separation.</p></div>
+      <span class="comparison-arrow" aria-hidden="true">
+        <svg viewBox="0 0 88 24" focusable="false">
+          <defs><linearGradient id="comparison-gradient-2"><stop stop-color="var(--ar-accent-blue)"/><stop offset=".5" stop-color="var(--ar-accent-violet)"/><stop offset="1" stop-color="var(--ar-accent-pink)"/></linearGradient></defs>
+          <path class="connector-track" d="M3 12H84M76 5L84 12L76 19" />
+          <path class="connector-flow" d="M3 12H84M76 5L84 12L76 19" stroke="url(#comparison-gradient-2)" />
+        </svg>
+      </span>
+      <div class="comparison-after"><small>With Arcantry</small><p>Operational state stays outside shared project guidance by default.</p></div>
+    </article>
+    <article role="listitem">
+      <header><span>03</span><h3>Ready to ship</h3></header>
+      <div class="comparison-before"><small>Without Arcantry</small><p>Each workflow defines its own completion check.</p></div>
+      <span class="comparison-arrow" aria-hidden="true">
+        <svg viewBox="0 0 88 24" focusable="false">
+          <defs><linearGradient id="comparison-gradient-3"><stop stop-color="var(--ar-accent-blue)"/><stop offset=".5" stop-color="var(--ar-accent-violet)"/><stop offset="1" stop-color="var(--ar-accent-pink)"/></linearGradient></defs>
+          <path class="connector-track" d="M3 12H84M76 5L84 12L76 19" />
+          <path class="connector-flow" d="M3 12H84M76 5L84 12L76 19" stroke="url(#comparison-gradient-3)" />
+        </svg>
+      </span>
+      <div class="comparison-after"><small>With Arcantry</small><p><code>arcantry repo validate</code> checks managed content without changing it.</p></div>
+    </article>
+  </div>
+</section>
+
+<section class="contract-map" aria-labelledby="contract-title">
+  <div class="contract-heading">
+    <p>Explore Arcantry</p>
+    <h2 id="contract-title">Choose the part of the workflow you need</h2>
+  </div>
+  <div class="contract-lanes">
+    <a class="local-lane" href="/arcantry/adoption/#keep-each-kind-of-information-in-its-layer">
+      <div class="lane-title"><Icon name="database" /><span>Information boundaries</span></div>
+      <h3>Keep private work on your machine</h3>
+      <p>See where credentials, working notes, shared guidance, specifications, and Git history belong.</p>
+      <span class="lane-action">Understand the boundaries <Icon name="right-arrow" /></span>
+    </a>
+    <ol class="product-lane">
+      <li><a href="/arcantry/adoption/#minimum-adoption"><Icon name="approve-check-circle" /><span><strong>Adopt a repository</strong><small>Add Arcantry without replacing the build system</small></span><Icon name="right-arrow" /></a></li>
+      <li><a href="/arcantry/skills/#choose-a-distribution-path"><Icon name="puzzle" /><span><strong>Choose a skill</strong><small>Link one workflow or install the full catalog</small></span><Icon name="right-arrow" /></a></li>
+      <li><a href="/arcantry/lifecycle/changes/#required-artifacts"><Icon name="document" /><span><strong>Define a change</strong><small>Record intent, requirements, design, and tasks</small></span><Icon name="right-arrow" /></a></li>
+      <li><a href="/arcantry/lifecycle/releases/"><Icon name="star" /><span><strong>Prepare a release</strong><small>Ship every public surface under one version</small></span><Icon name="right-arrow" /></a></li>
+    </ol>
+  </div>
+</section>
+
 <section class="journey" id="quickstart" aria-labelledby="quickstart-title">
   <div class="journey-heading">
-    <p>Shortest path</p>
+    <p>Three commands</p>
     <div>
-      <h2 id="quickstart-title">From checkout to a verified repository.</h2>
-      <p>Arcantry stops on project-owned conflicts and creates only recognized managed files.</p>
+      <h2 id="quickstart-title">Set up <span>Arcantry</span> in three commands</h2>
     </div>
   </div>
   <ol class="journey-steps">
     <li>
       <span class="step-icon"><Icon name="approve-check-circle" /></span>
-      <div><span>01</span><h3>Adopt the repository</h3><code>arcantry repo init --docs none</code></div>
+      <div><span>01</span><h3>Initialize the repository</h3><p>Add the missing managed foundations while preserving existing project-owned files.</p><div class="step-command"><span>$</span><code>arcantry repo init <b>--docs</b> none</code></div></div>
     </li>
     <li>
       <span class="step-icon"><Icon name="puzzle" /></span>
-      <div><span>02</span><h3>Link one skill</h3><code>arcantry skills link &lt;name&gt;</code></div>
+      <div><span>02</span><h3>Link one skill</h3><p>Connect one focused workflow from the catalog to the configured agent skill directory.</p><div class="step-command"><span>$</span><code>arcantry skills link &lt;name&gt;</code></div></div>
     </li>
     <li>
       <span class="step-icon"><Icon name="approve-check" /></span>
-      <div><span>03</span><h3>Check the result</h3><code>arcantry repo validate</code></div>
+      <div><span>03</span><h3>Validate the result</h3><p>Run the same read-only repository gate locally and in CI without implicit repairs.</p><div class="step-command"><span>$</span><code>arcantry repo validate</code></div></div>
     </li>
   </ol>
 </section>
 
-<section class="contract-map" aria-labelledby="contract-title">
-  <div class="contract-heading">
-    <p>Repository contract</p>
-    <h2 id="contract-title">Release history starts with an archived OpenSpec change.</h2>
-  </div>
-  <div class="contract-lanes">
-    <article class="local-lane">
-      <div class="lane-title"><Icon name="database" /><span>Local lane</span></div>
-      <h3><code>.local/</code> holds the current task.</h3>
-      <p>Credentials, scratch notes, and operational state do not become product documentation.</p>
-    </article>
-    <ol class="product-lane">
-      <li><Icon name="puzzle" /><span><strong>Skill package</strong><small>Reusable behavior</small></span></li>
-      <li><Icon name="document" /><span><strong>OpenSpec change</strong><small>Agreed intent</small></span></li>
-      <li><Icon name="star" /><span><strong>Release manifest</strong><small>Public version</small></span></li>
-    </ol>
-  </div>
-</section>
-
 <section class="proof" aria-labelledby="proof-title">
   <div class="proof-heading">
-    <p>Dogfooding</p>
-    <h2 id="proof-title">Arcantry runs its public checks against this repository.</h2>
+    <p>Expected result</p>
+    <h2 id="proof-title">A repository that stays understandable after the first run</h2>
   </div>
-  <div class="proof-list">
-    <article><Icon name="approve-check" /><div><h3>Project files survive adoption.</h3><p>Arcantry stops before replacing a different <code>justfile</code>, <code>mise.toml</code>, or OpenSpec setup.</p></div></article>
-    <article><Icon name="database" /><div><h3>Private state has one boundary.</h3><p><code>.local/</code> stays operational. Shared guidance and specifications use explicit public locations.</p></div></article>
-    <article><Icon name="code-branch" /><div><h3>One release versions every surface.</h3><p>Git records implementation. Archived OpenSpec changes determine the CLI, plugin, catalog, and skill history.</p></div></article>
+  <div class="proof-stage">
+    <article class="proof-feature">
+      <span class="proof-index">01</span>
+      <Icon name="approve-check" />
+      <div><h3>Project files are not overwritten</h3><p>Arcantry stops before replacing an existing <code>justfile</code>, <code>mise.toml</code>, or OpenSpec setup.</p></div>
+    </article>
+    <div class="proof-stack">
+      <article>
+        <span class="proof-index">02</span>
+        <Icon name="database" />
+        <div><h3>Private state stays private</h3><p>Machine-specific credentials, notes, and operational state stay outside shared project guidance.</p></div>
+      </article>
+      <article>
+        <span class="proof-index">03</span>
+        <Icon name="code-branch" />
+        <div><h3>One version covers every public surface</h3><p>The CLI, plugin, catalog, and skills ship from the same archived OpenSpec history.</p></div>
+      </article>
+    </div>
   </div>
 </section>
