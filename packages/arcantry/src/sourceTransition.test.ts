@@ -5,14 +5,21 @@ import { inspectKnowledge } from './knowledge.js';
 import { applyProjectPlan } from './projectPlan.js';
 import { parseProjectConfig, type ResolvedProject } from './projectConfig.js';
 import { planSourceTransition } from './sourceTransition.js';
-import { createFixtureDirectory, removeFixtures } from './testHelpers.js';
+import { createFixtureDirectory, createFixtureRepository, removeFixtures } from './testHelpers.js';
 
 afterEach(removeFixtures);
 
 const configuredProject = async (root: string, source: string): Promise<ResolvedProject> => {
   const configPath = join(root, 'arcantry.toml');
   await writeFile(configPath, source);
-  return { root, configPath, config: parseProjectConfig(source), mode: 'configured' };
+  return {
+    root,
+    configPath,
+    config: parseProjectConfig(source),
+    mode: 'configured',
+    scope: 'shared',
+    shadowedConfigPaths: [],
+  };
 };
 
 describe('source transition planning', () => {
@@ -67,6 +74,110 @@ adapter = "openspec@1"
 
     expect(await readFile(join(root, 'todo.txt'), 'utf8')).toBe('');
     await expect(readFile(join(root, 'arcantry.toml'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('adds a discovered source to the active shared configuration', async () => {
+    const root = await createFixtureDirectory('arcantry-configured-adopt-');
+    await writeFile(join(root, 'todo.txt'), 'Keep this task\n');
+    const project = await configuredProject(root, 'config_version = 1\n');
+
+    const plan = await planSourceTransition(await inspectKnowledge(project), {
+      sourceId: 'todo-root',
+      transition: 'adopt',
+      toolVersion: '0.3.2',
+    });
+    await applyProjectPlan(plan, '0.3.2');
+
+    const config = parseProjectConfig(await readFile(join(root, 'arcantry.toml'), 'utf8'));
+    expect(config.sources['todo-root']).toMatchObject({
+      kind: 'todo-txt',
+      management: 'manage',
+      path: 'todo.txt',
+    });
+    expect(await readFile(join(root, 'todo.txt'), 'utf8')).toBe('Keep this task\n');
+  });
+
+  it('initializes and configures a standard missing source in one plan', async () => {
+    const root = await createFixtureDirectory('arcantry-missing-adopt-');
+    const project = await configuredProject(root, 'config_version = 1\n');
+
+    const plan = await planSourceTransition(await inspectKnowledge(project), {
+      sourceId: 'todo-root',
+      transition: 'adopt',
+      toolVersion: '0.3.2',
+    });
+    expect(plan.operations.map((operation) => operation.path)).toEqual(['todo.txt', 'arcantry.toml']);
+
+    await applyProjectPlan(plan, '0.3.2');
+    expect((await inspectKnowledge(await configuredProject(root, await readFile(join(root, 'arcantry.toml'), 'utf8')))).sources)
+      .toContainEqual(expect.objectContaining({ id: 'todo-root', origin: 'configured', management: 'manage' }));
+  });
+
+  it('adopts a private source into the active private configuration', async () => {
+    const root = await createFixtureRepository();
+    await mkdir(join(root, '.local'), { recursive: true });
+    const configPath = join(root, '.local', 'arcantry.toml');
+    await writeFile(configPath, 'config_version = 1\n');
+    const project: ResolvedProject = {
+      root,
+      configPath,
+      config: parseProjectConfig('config_version = 1\n'),
+      mode: 'configured',
+      scope: 'private',
+      shadowedConfigPaths: [],
+    };
+
+    const plan = await planSourceTransition(await inspectKnowledge(project), {
+      sourceId: 'todo-local',
+      transition: 'adopt',
+      toolVersion: '0.3.2',
+    });
+    await applyProjectPlan(plan, '0.3.2');
+
+    expect(parseProjectConfig(await readFile(configPath, 'utf8')).sources['todo-local']).toMatchObject({
+      path: '.local/todo.txt',
+      management: 'manage',
+      visibility: 'private',
+    });
+    expect(await readFile(join(root, '.git', 'info', 'exclude'), 'utf8')).toContain('.local/');
+    await expect(readFile(join(root, 'arcantry.toml'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('records explicit changelog authority and rejects an unknown dependency', async () => {
+    const root = await createFixtureDirectory('arcantry-adopt-dependency-');
+    await mkdir(join(root, 'openspec'));
+    await writeFile(join(root, 'CHANGELOG.md'), '# Changelog\n\n## [Unreleased]\n');
+    const project = await configuredProject(root, `config_version = 1
+
+[sources.openspec]
+kind = "openspec"
+path = "openspec"
+management = "manage"
+adapter = "openspec@1"
+`);
+
+    const validPlan = await planSourceTransition(await inspectKnowledge(project), {
+      sourceId: 'changelog',
+      transition: 'adopt',
+      from: ['openspec'],
+      toolVersion: '0.3.2',
+    });
+    expect(validPlan.conflicts).toEqual([]);
+    await applyProjectPlan(validPlan, '0.3.2');
+    expect(parseProjectConfig(await readFile(join(root, 'arcantry.toml'), 'utf8')).sources.changelog?.from)
+      .toEqual(['openspec']);
+
+    const invalidRoot = await createFixtureDirectory('arcantry-adopt-invalid-dependency-');
+    await writeFile(join(invalidRoot, 'CHANGELOG.md'), '# Changelog\n\n## [Unreleased]\n');
+    const invalidProject = await configuredProject(invalidRoot, 'config_version = 1\n');
+    const invalidPlan = await planSourceTransition(await inspectKnowledge(invalidProject), {
+      sourceId: 'changelog',
+      transition: 'adopt',
+      from: ['missing'],
+      toolVersion: '0.3.2',
+    });
+    expect(invalidPlan.operations).toEqual([]);
+    expect(invalidPlan.conflicts.join('\n')).toContain('unknown source dependency: missing');
   });
 
   it('cuts over a configured changelog and persists its adapter boundary', async () => {
