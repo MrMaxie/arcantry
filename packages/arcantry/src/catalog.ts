@@ -6,9 +6,12 @@ import { validRange } from 'semver';
 import { z } from 'zod';
 
 const skillNamePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const skillFamilySchema = z.enum(['self-improvement', 'repo-safely', 'content-safely']);
+export const skillAgentSchema = z.enum(['codex', 'claude', 'gemini']);
 
 export const catalogEntrySchema = z.object({
   name: z.string().regex(skillNamePattern).max(63),
+  family: skillFamilySchema,
   tags: z.array(z.string().regex(skillNamePattern)).min(1),
 }).strict();
 
@@ -47,6 +50,7 @@ export const skillMetadataSchema = z.object({
 export type CatalogEntry = z.infer<typeof catalogEntrySchema>;
 export type Catalog = z.infer<typeof catalogSchema>;
 export type SkillMetadata = z.infer<typeof skillMetadataSchema>;
+export type SkillAgent = z.infer<typeof skillAgentSchema>;
 
 export type SkillInspection = {
   entry: CatalogEntry;
@@ -73,7 +77,16 @@ export type SkillLinkOptions = {
   backupLabel?: string;
 };
 
-export const defaultSkillTargetRoot = (): string => join(process.env.CODEX_HOME ?? join(homedir(), '.codex'), 'skills');
+const skillAgentDirectory = (agent: SkillAgent): string[] => {
+  if (agent === 'claude') return ['.claude', 'skills'];
+  if (agent === 'gemini') return ['.gemini', 'skills'];
+  return ['.agents', 'skills'];
+};
+
+export const userSkillTargetRoot = (agent: SkillAgent = 'codex'): string => join(homedir(), ...skillAgentDirectory(agent));
+export const repositorySkillTargetRoot = (root: string, agent: SkillAgent = 'codex'): string =>
+  join(resolve(root), ...skillAgentDirectory(agent));
+export const defaultSkillTargetRoot = userSkillTargetRoot;
 
 export const loadCatalog = async (root: string): Promise<Catalog> => {
   const content = await readFile(join(root, 'catalog.json'), 'utf8');

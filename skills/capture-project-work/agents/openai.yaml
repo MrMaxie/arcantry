@@ -1,0 +1,4 @@
+interface:
+  display_name: "Capture Project Work"
+  short_description: "Place project thoughts in the right source"
+  default_prompt: "Use $capture-project-work to capture this project input at the right commitment level."

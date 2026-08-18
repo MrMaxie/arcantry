@@ -1,0 +1,133 @@
+---
+import type { StarlightIcon } from '@astrojs/starlight/types';
+import { Icon } from '@astrojs/starlight/components';
+
+type SidebarLink = {
+  type: 'link';
+  label: string;
+  href: string;
+  isCurrent: boolean;
+};
+
+type SidebarGroup = {
+  type: 'group';
+  label: string;
+  entries: SidebarEntry[];
+  collapsed: boolean;
+};
+
+type SidebarEntry = SidebarLink | SidebarGroup;
+
+interface Props {
+  entry: SidebarEntry;
+  depth?: number;
+  insideSkillCatalog?: boolean;
+}
+
+const { entry, depth = 0, insideSkillCatalog = false } = Astro.props;
+const skillCatalog = insideSkillCatalog || (entry.type === 'group' && entry.label === 'Skill catalog');
+const containsCurrent = (candidate: SidebarEntry): boolean => candidate.type === 'link'
+  ? candidate.isCurrent
+  : candidate.entries.some(containsCurrent);
+
+const icons: Record<string, StarlightIcon> = {
+  Homepage: 'rocket',
+  'Get started': 'approve-check',
+  'Adoption paths': 'approve-check',
+  Skills: 'puzzle',
+  'Skill catalog': 'list-format',
+  'Catalog overview': 'list-format',
+  CLI: 'setting',
+  Configuration: 'setting',
+  'Inspect, plan and apply': 'code-branch',
+  'todo.txt queues': 'list-format',
+  'Project knowledge stack': 'document',
+  'Change lifecycle': 'document',
+  'Release lifecycle': 'star',
+  'Contributor commands': 'open-book',
+};
+
+const iconFor = (candidate: SidebarEntry): StarlightIcon => {
+  if (skillCatalog && candidate.type === 'link' && candidate.label !== 'Catalog overview') return 'document';
+  if (skillCatalog && candidate.type === 'group') return 'list-format';
+  return icons[candidate.label] ?? 'document';
+};
+---
+
+{entry.type === 'link' ? (
+  <a
+    class:list={['nav-link', { 'nav-sublink': depth > 0, active: entry.isCurrent }]}
+    href={entry.href}
+    aria-current={entry.isCurrent ? 'page' : undefined}
+    style={`--nav-depth: ${depth}`}
+  >
+    <span class="nav-icon-slot" aria-hidden="true"><Icon name={iconFor(entry)} /></span>
+    <span>{entry.label}</span>
+  </a>
+) : (
+  <details class:list={['nav-subgroup', { 'nav-nested': depth > 0 }]} open={!entry.collapsed || containsCurrent(entry)} style={`--nav-depth: ${depth}`}>
+    <summary>
+      <span class="nav-icon-slot" aria-hidden="true"><Icon name={iconFor(entry)} /></span>
+      <span>{entry.label}</span>
+      <Icon class="nav-caret" name="right-caret" aria-hidden="true" />
+    </summary>
+    <div class="nav-subitems">
+      {entry.entries.map((child) => (
+        <Astro.self entry={child} depth={depth + 1} insideSkillCatalog={skillCatalog} />
+      ))}
+    </div>
+  </details>
+)}
+
+<style>
+  @layer starlight.core {
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      margin-inline: -.9rem;
+      padding: .5rem .9rem .5rem calc(1.6rem + var(--nav-depth, 0) * 1.15rem);
+      border-left: 2px solid transparent;
+      color: var(--ar-text-muted);
+      text-decoration: none;
+      font-size: .83rem;
+      font-weight: 560;
+      letter-spacing: -.015em;
+      transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+    }
+    .nav-icon-slot { display: grid; width: .9rem; flex: 0 0 .9rem; place-items: center; }
+    .nav-link :global(svg) { flex: 0 0 auto; color: var(--ar-text-soft); font-size: .9rem; transition: color 150ms ease; }
+    .nav-link:hover { color: var(--ar-text); background: var(--ar-surface); }
+    .nav-link:hover :global(svg) { color: var(--ar-accent-blue); }
+    .nav-link.active :global(svg) { color: var(--ar-accent-violet); }
+    .nav-link.active {
+      color: var(--ar-text);
+      border-left-color: var(--ar-accent-violet);
+      background: linear-gradient(90deg, color-mix(in srgb, var(--ar-accent-violet) 9%, transparent), transparent 82%);
+    }
+    .nav-subgroup { margin-inline: -.9rem; }
+    .nav-subgroup.nav-nested { margin-inline: 0; }
+    .nav-subgroup > summary {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      padding: .5rem .9rem .5rem calc(1.6rem + var(--nav-depth, 0) * 1.15rem);
+      color: var(--ar-text-muted);
+      cursor: pointer;
+      font-size: .83rem;
+      font-weight: 560;
+      letter-spacing: -.015em;
+      list-style: none;
+      transition: color 150ms ease, background-color 150ms ease;
+    }
+    .nav-subgroup > summary::-webkit-details-marker,
+    .nav-subgroup > summary::marker { content: ''; display: none; }
+    .nav-subgroup > summary:hover { color: var(--ar-text); background: var(--ar-surface); }
+    .nav-subgroup > summary :global(svg) { color: var(--ar-text-soft); font-size: .9rem; transition: color 150ms ease, transform 150ms ease; }
+    .nav-subgroup > summary:hover :global(svg) { color: var(--ar-accent-blue); }
+    .nav-subgroup[open] > summary { color: var(--ar-text); }
+    .nav-subgroup[open] > summary > :global(.nav-caret) { transform: rotate(90deg); }
+    .nav-subitems { display: grid; gap: .08rem; padding-bottom: .2rem; }
+    .nav-sublink { margin-inline: 0; font-size: .78rem; }
+  }
+</style>

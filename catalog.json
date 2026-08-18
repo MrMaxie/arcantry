@@ -3,60 +3,93 @@
   "skills": [
     {
       "name": "adopt-arcantry",
+      "family": "repo-safely",
       "tags": ["adoption", "cli", "repository"]
     },
     {
       "name": "agent-self-improve",
+      "family": "self-improvement",
       "tags": ["agent-guidance", "conversations", "quality"]
     },
     {
       "name": "audience-scope-discipline",
+      "family": "content-safely",
       "tags": ["audience", "privacy", "scope"]
     },
     {
       "name": "audit-skill-portfolio",
+      "family": "self-improvement",
       "tags": ["catalog", "quality", "skills"]
     },
     {
+      "name": "capture-project-work",
+      "family": "repo-safely",
+      "tags": ["intake", "repository", "sources"]
+    },
+    {
       "name": "capture-repeatable-work",
+      "family": "self-improvement",
       "tags": ["automation", "conversations", "workflow"]
     },
     {
       "name": "design-terminal-ux",
+      "family": "content-safely",
       "tags": ["cli", "tui", "ux"]
     },
     {
       "name": "evaluate-skill-change",
+      "family": "self-improvement",
       "tags": ["evaluation", "quality", "skills"]
     },
     {
       "name": "forge-skill-from-conversations",
+      "family": "self-improvement",
       "tags": ["conversations", "creation", "skills"]
     },
     {
-      "name": "intake-linear-work",
-      "tags": ["intake", "linear", "operations"]
+      "name": "maintain-agent-guidance",
+      "family": "self-improvement",
+      "tags": ["agent-guidance", "approval", "scope"]
     },
     {
-      "name": "intake-repository-work",
-      "tags": ["intake", "local", "repository"]
+      "name": "maintain-release-story",
+      "family": "repo-safely",
+      "tags": ["changelog", "release", "versioning"]
     },
     {
       "name": "productize-repeatable-work",
+      "family": "self-improvement",
       "tags": ["automation", "implementation", "workflow"]
     },
     {
-      "name": "promote-meeting-notes",
-      "tags": ["documentation", "meetings", "workflow"]
+      "name": "promote-todo-to-openspec",
+      "family": "repo-safely",
+      "tags": ["openspec", "promotion", "todo-txt"]
+    },
+    {
+      "name": "reconcile-project-sources",
+      "family": "repo-safely",
+      "tags": ["privacy", "sources", "synchronization"]
     },
     {
       "name": "select-task-skills",
+      "family": "self-improvement",
       "tags": ["discovery", "routing", "skills"]
     },
     {
       "name": "stage-code-review-findings",
+      "family": "self-improvement",
       "tags": ["approval", "code-review", "collaboration"]
+    },
+    {
+      "name": "verify-work-proportionally",
+      "family": "repo-safely",
+      "tags": ["quality", "review", "verification"]
+    },
+    {
+      "name": "write-product-content",
+      "family": "content-safely",
+      "tags": ["content", "documentation", "quality"]
     }
   ]
 }
-

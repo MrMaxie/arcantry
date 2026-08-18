@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Write concrete, evidence-backed product content for a real audience without process narration, leakage, or AI slop.",
+  "learning": {
+    "outcomes": [
+      "Turn authoritative product facts into concise audience-directed content.",
+      "Remove unsupported claims, generic filler, repetition, and private context leakage."
+    ]
+  },
+  "scenarios": [
+    {
+      "title": "Rewrite product documentation",
+      "prompt": "Use $write-product-content to revise this documentation for developers while preserving its approved structure and presentation.",
+      "outcome": "The content leads with developer outcomes, uses verified commands, and removes process-centered filler."
+    },
+    {
+      "title": "Prepare concise release copy",
+      "prompt": "Use $write-product-content to turn these verified release facts into concise consumer-facing copy.",
+      "outcome": "The release text states concrete user impact without commit narration or unsupported significance."
+    }
+  ]
+}

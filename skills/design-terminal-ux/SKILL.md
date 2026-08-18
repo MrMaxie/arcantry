@@ -1,6 +1,6 @@
 ---
 name: design-terminal-ux
-description: Design, audit, and improve clear end-user terminal experiences across full-screen TUIs, interactive CLI workflows, prompts, wizards, status streams, and command output. Use when Codex needs to shape information hierarchy, navigation, keyboard discoverability, user-facing language, loading and progress, empty and partial states, errors and recovery, completion feedback, destructive actions, accessibility, small-terminal behavior, or when proposed terminal UI elements need product-value scrutiny. Focus on user goals and behavior rather than programming languages, frameworks, libraries, or implementation.
+description: Design or audit end-user terminal experiences across TUIs, CLI workflows, prompts, status streams, and command output. Use for information hierarchy, navigation, progress, empty states, errors, destructive actions, accessibility, or small-terminal behavior.
 ---
 
 # Design Terminal UX
@@ -110,4 +110,3 @@ Read only the references required by the task:
 | references/states-and-copy.md | Designing loading, progress, completion, empty, partial, error, recovery, destructive behavior, or user-facing language |
 | references/audit-playbook.md | Auditing an existing terminal experience or proposing scoped improvements |
 | references/design-scenarios.md | Stress-testing a design, resolving a tradeoff, or checking good and bad decisions against realistic scenarios |
-

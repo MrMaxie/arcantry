@@ -1,0 +1,4 @@
+interface:
+  display_name: "Promote todo.txt to OpenSpec"
+  short_description: "Propose safe todo.txt transformations into OpenSpec"
+  default_prompt: "Use $promote-todo-to-openspec to review todo.txt and propose approval-gated OpenSpec transformations."

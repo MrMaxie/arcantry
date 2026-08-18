@@ -1,5 +1,0 @@
-interface:
-  display_name: "Intake Repository Work"
-  short_description: "Capture repository work locally"
-  default_prompt: "Use $intake-repository-work to capture this repository task in local operational artifacts."
-

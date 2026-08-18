@@ -1,6 +1,6 @@
 ---
 title: Get started
-description: Inspect a project with Arcantry before choosing any repository footprint.
+description: Inspect a project with Arcantry before choosing shared, private, or configuration-free use.
 ---
 
 import ArcantryCommandPicker from '../../components/ArcantryCommandPicker.astro';
@@ -47,7 +47,9 @@ An empty result is valid. Git and `arcantry.toml` are not prerequisites.
 ## Choose what happens next
 
 - Keep using configuration-free inspection when you only need a trace-free observer.
-- Add one external or project `arcantry.toml` when paths and responsibilities must be explicit.
+- Run `arcantry repo init --scope private` for untracked project context and private agent guidance.
+- Run `arcantry repo init --scope shared` when collaborators need the same configuration and guidance.
+- Use an explicit external `arcantry.toml` when the target project must remain unchanged.
 - Use [todo.txt queues](/arcantry/guides/todo-txt/) or [skills](/arcantry/skills/) independently.
 - Follow [Adoption paths](/arcantry/adoption/) before planning a source transition.
 - Use [Inspect, plan and apply](/arcantry/reference/repository-workflow/) when a source must change.

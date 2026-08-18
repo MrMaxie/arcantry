@@ -1,11 +1,12 @@
 import { readFile, stat } from 'node:fs/promises';
-import { dirname, isAbsolute, join, parse as parsePath, relative, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, parse as parsePath, relative, resolve } from 'node:path';
 import { satisfies, valid, validRange } from 'semver';
 import { parse, stringify } from 'smol-toml';
 import { z } from 'zod';
 
 export const projectConfigVersion = 1 as const;
 export const projectConfigFilename = 'arcantry.toml';
+export const privateProjectConfigPath = join('.local', projectConfigFilename);
 export const projectConfigSchemaLocation =
   'https://mrmaxie.github.io/arcantry/schemas/arcantry-config-v1.tosd';
 
@@ -135,6 +136,8 @@ export type ResolvedProject = {
   configPath: string | null;
   config: ProjectConfig | null;
   mode: 'configured' | 'wild';
+  scope: 'shared' | 'private' | 'external' | null;
+  shadowedConfigPaths: string[];
 };
 
 export const parseAdapter = (adapter: string): { name: string; version: number } => {
@@ -210,16 +213,28 @@ export const renderProjectConfig = (config: ProjectConfig): string =>
     ),
   });
 
-export const findNearestProjectConfig = async (start: string): Promise<string | null> => {
+type DiscoveredProjectConfig = { active: string | null; shadowed: string[] };
+
+const discoverProjectConfig = async (start: string): Promise<DiscoveredProjectConfig> => {
   let directory = resolve(start);
   while (true) {
-    const candidate = join(directory, projectConfigFilename);
-    if (await isFile(candidate)) return candidate;
+    const privateCandidate = join(directory, privateProjectConfigPath);
+    const sharedCandidate = join(directory, projectConfigFilename);
+    const [hasPrivate, hasShared] = await Promise.all([isFile(privateCandidate), isFile(sharedCandidate)]);
+    if (hasPrivate || hasShared) {
+      return {
+        active: hasPrivate ? privateCandidate : sharedCandidate,
+        shadowed: hasPrivate && hasShared ? [sharedCandidate] : [],
+      };
+    }
     const parent = dirname(directory);
-    if (parent === directory || parsePath(directory).root === directory) return null;
+    if (parent === directory || parsePath(directory).root === directory) return { active: null, shadowed: [] };
     directory = parent;
   }
 };
+
+export const findNearestProjectConfig = async (start: string): Promise<string | null> =>
+  (await discoverProjectConfig(start)).active;
 
 export const resolveProject = async (options: {
   cwd: string;
@@ -229,23 +244,39 @@ export const resolveProject = async (options: {
 }): Promise<ResolvedProject> => {
   const cwd = resolve(options.cwd);
   const explicitConfig = options.configPath === undefined ? null : resolve(cwd, options.configPath);
-  const configPath = explicitConfig ?? (await findNearestProjectConfig(cwd));
-  if (configPath === null) return { root: cwd, configPath: null, config: null, mode: 'wild' };
+  const discovered = await discoverProjectConfig(cwd);
+  const configPath = explicitConfig ?? discovered.active;
+  if (configPath === null) {
+    return { root: cwd, configPath: null, config: null, mode: 'wild', scope: null, shadowedConfigPaths: [] };
+  }
 
   const content = await readFile(configPath, 'utf8');
   let config = parseProjectConfig(content, {
     toolVersion: options.toolVersion,
     allowAbsolutePaths: explicitConfig !== null,
   });
+  const scope = explicitConfig !== null && configPath !== discovered.active
+    ? 'external'
+    : isPrivateConfigPath(configPath)
+      ? 'private'
+      : 'shared';
+  const configRoot = scope === 'private' ? dirname(dirname(configPath)) : dirname(configPath);
   const root = options.cwdExplicit === true
     ? cwd
-    : config.project === undefined
-      ? dirname(configPath)
-      : resolve(dirname(configPath), config.project.root);
+    : config.project !== undefined
+      ? resolve(configRoot, config.project.root)
+      : explicitConfig !== null
+        ? cwd
+        : configRoot;
   if (explicitConfig !== null && isWithin(root, configPath)) {
     config = parseProjectConfig(content, { toolVersion: options.toolVersion, allowAbsolutePaths: false });
   }
-  return { root, configPath, config, mode: 'configured' };
+  const shadowedConfigPaths = explicitConfig === null
+    ? discovered.shadowed
+    : [discovered.active, ...discovered.shadowed].filter(
+        (path): path is string => path !== null && resolve(path) !== resolve(configPath),
+      );
+  return { root, configPath, config, mode: 'configured', scope, shadowedConfigPaths };
 };
 
 const scopesOverlap = (left: string, right: string): boolean => {
@@ -267,6 +298,9 @@ const isPrivateProjectPath = (path: string): boolean => {
   const normalized = path.replaceAll('\\', '/').replace(/^\.\//, '');
   return normalized === '.local' || normalized.startsWith('.local/');
 };
+
+const isPrivateConfigPath = (path: string): boolean =>
+  basename(dirname(resolve(path))).toLowerCase() === '.local' && basename(path).toLowerCase() === projectConfigFilename;
 
 const isFile = async (path: string): Promise<boolean> => {
   try {

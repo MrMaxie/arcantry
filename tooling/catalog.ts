@@ -4,6 +4,7 @@ import { parse as parseYaml } from 'yaml';
 
 export interface CatalogEntry {
   name: string;
+  family: 'self-improvement' | 'repo-safely' | 'content-safely';
   tags: string[];
 }
 
@@ -39,6 +40,7 @@ export interface SkillAgent {
 }
 
 const skillNamePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const skillFamilies = new Set(['self-improvement', 'repo-safely', 'content-safely']);
 const catalogSchemaPath = './schemas/catalog.schema.json';
 const skillMetadataSchemaPath = '../../schemas/skill-metadata.schema.json';
 
@@ -102,6 +104,7 @@ export function validateCatalog(root = process.cwd()): string[] {
 
   for (const entry of catalog.skills) {
     if (!skillNamePattern.test(entry.name) || entry.name.length > 63) errors.push(`invalid skill name: ${entry.name}`);
+    if (!skillFamilies.has(entry.family)) errors.push(`skills/${entry.name} family is invalid`);
     if (
       !Array.isArray(entry.tags) ||
       entry.tags.length === 0 ||
@@ -110,7 +113,7 @@ export function validateCatalog(root = process.cwd()): string[] {
     ) {
       errors.push(`skills/${entry.name} must have unique tags`);
     }
-    if (Object.keys(entry).some((key) => key !== 'name' && key !== 'tags')) {
+    if (Object.keys(entry).some((key) => key !== 'name' && key !== 'family' && key !== 'tags')) {
       errors.push(`skills/${entry.name} must not contain unsupported fields`);
     }
 

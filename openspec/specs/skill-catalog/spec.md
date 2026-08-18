@@ -17,12 +17,18 @@ The public skill catalog MUST be generated deterministically from validated skil
 
 ### Requirement: Skills support individual and complete distribution
 
-Users MUST be able to inspect and link one catalog skill through the CLI. Users MUST also be able to install the complete catalog through the Arcantry Codex plugin.
+Users MUST be able to inspect and link one catalog skill through the CLI into a standard user or repository Agent Skills directory. The public catalog MUST remain compatible with manual copying, symbolic linking, and independent Agent Skills installers without requiring those tools as runtime dependencies.
+
+#### Scenario: A user chooses one catalog skill
+
+- **WHEN** the user selects a skill from a canonical checkout or installed package
+- **THEN** they can link it into user or repository scope with the Arcantry CLI
+- **AND** the installed package remains an independently readable skill directory
 
 #### Scenario: A user chooses the full collection
 
-- **WHEN** the user installs the Arcantry Codex plugin
-- **THEN** the plugin exposes every validated public skill in the current catalog version
+- **WHEN** the user installs or links the complete canonical catalog with a compatible Agent Skills workflow
+- **THEN** every validated public skill in the current catalog is available without a provider-specific runtime dependency
 
 ### Requirement: Distribution excludes private state
 
@@ -35,27 +41,29 @@ Catalog and plugin outputs MUST use an allowlist of public package fields and fi
 
 ### Requirement: Public catalog is an audience-facing projection
 
-The generated public catalog MUST group skills by the work a developer wants to complete. Each catalog item MUST use a readable display name, a short outcome, release state, and a link to its detail page. Raw tags MAY support search and filtering but MUST NOT occupy a primary catalog column or card region.
+The generated public catalog MUST group every skill into exactly one of `self-improvement`, `repo-safely`, or `content-safely`. Each catalog item MUST use a readable display name, a short outcome, release state, and a link to its detail page. Raw tags MAY support search and filtering but MUST NOT occupy a primary catalog column or card region.
 
 #### Scenario: A developer scans the catalog
 
-- **WHEN** they compare skills in one goal group
+- **WHEN** they compare skills in one family
 - **THEN** names remain readable, summaries stay short, and internal metadata does not compete with the choice
+- **AND** every skill appears in exactly one family
 
 ### Requirement: Skill versions follow the Arcantry release
 
-A generated skill page MUST derive its release state from archived OpenSpec change components and Arcantry release manifests. A released skill MUST show the first Arcantry version that included it. A skill without a released component MUST show `Unreleased`. The catalog and skill metadata MUST NOT define an independent skill version.
+Generated skill pages and catalog cards MUST show the current Arcantry release version. Public skill documentation MUST describe the current catalog directly and MUST NOT expose an implementation timeline or derive per-skill history from archived changes.
 
 #### Scenario: A skill has no released component
 
 - **WHEN** documentation generation runs
-- **THEN** its page shows `Unreleased` instead of borrowing the current package version
+- **THEN** its page shows the current Arcantry release version
+- **AND** does not construct a separate skill version or public release timeline
 
 ### Requirement: Canonical catalog metadata is schema strict
 
-Catalog and skill metadata validation MUST require the canonical schema references, supported field allowlists, valid lowercase identifiers, unique tags and documented audience-facing text lengths. Source tooling and the distributed package MUST enforce the same contract.
+Catalog and skill metadata validation MUST require the canonical schema references, a `family` value from the supported family enum, supported field allowlists, valid lowercase identifiers, unique tags, and documented audience-facing text lengths. Source tooling and the distributed package MUST enforce the same contract.
 
 #### Scenario: Unsupported metadata is introduced
 
-- **WHEN** catalog or skill metadata contains an unknown field, invalid identifier, incorrect schema reference or out-of-range text
+- **WHEN** catalog or skill metadata contains an unknown field, invalid family or identifier, incorrect schema reference, or out-of-range text
 - **THEN** repository validation and packaged runtime validation reject the metadata before generating or exposing projections

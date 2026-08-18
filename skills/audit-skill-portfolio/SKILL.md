@@ -1,6 +1,6 @@
 ---
 name: audit-skill-portfolio
-description: Audit installed Codex skills, catalog-budget pressure, invocation policy, scope, duplicates, and trigger overlap; produce read-only evidence and tier candidates. Use only when explicitly invoked with $audit-skill-portfolio to review or compare a skill catalog.
+description: Audit installed skills for context cost, scope, duplicates, invocation policy, and trigger overlap. Use only when explicitly invoked with $audit-skill-portfolio; remain read-only and return evidence-backed portfolio actions.
 ---
 
 # Audit Skill Portfolio
@@ -82,4 +82,3 @@ python <skill-creator>/scripts/quick_validate.py <this-skill-directory>
 ```
 
 For forward-testing, give a fresh agent one raw prompt from [references/scenarios.md](references/scenarios.md). Evaluate the response afterward with [references/evaluation-rubric.md](references/evaluation-rubric.md); never provide the rubric to the test agent.
-

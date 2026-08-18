@@ -19,7 +19,7 @@ describe('source transition planning', () => {
   it('preserves a source without writing configuration or content', async () => {
     const root = await createFixtureDirectory('arcantry-preserve-');
     await writeFile(join(root, 'todo.txt'), 'Keep me\n');
-    const inspection = await inspectKnowledge({ root, configPath: null, config: null, mode: 'wild' });
+    const inspection = await inspectKnowledge({ root, configPath: null, config: null, mode: 'wild', scope: null, shadowedConfigPaths: [] });
 
     const plan = await planSourceTransition(inspection, {
       sourceId: 'todo-root',
@@ -56,7 +56,7 @@ adapter = "openspec@1"
 
   it('adopts a standard source in an empty configuration-free project', async () => {
     const root = await createFixtureDirectory('arcantry-wild-adopt-');
-    const inspection = await inspectKnowledge({ root, configPath: null, config: null, mode: 'wild' });
+    const inspection = await inspectKnowledge({ root, configPath: null, config: null, mode: 'wild', scope: null, shadowedConfigPaths: [] });
 
     const plan = await planSourceTransition(inspection, {
       sourceId: 'todo-root',
@@ -106,7 +106,7 @@ from = ["intent"]
   it('blocks ambiguous full changelog migration without producing writes', async () => {
     const root = await createFixtureDirectory('arcantry-migrate-');
     await writeFile(join(root, 'CHANGELOG.md'), '# History\n\nFree-form meaning\n');
-    const inspection = await inspectKnowledge({ root, configPath: null, config: null, mode: 'wild' });
+    const inspection = await inspectKnowledge({ root, configPath: null, config: null, mode: 'wild', scope: null, shadowedConfigPaths: [] });
 
     const plan = await planSourceTransition(inspection, {
       sourceId: 'changelog',
@@ -121,7 +121,7 @@ from = ["intent"]
   it('blocks an unsupported target adapter before producing writes', async () => {
     const root = await createFixtureDirectory('arcantry-target-adapter-');
     await writeFile(join(root, 'CHANGELOG.md'), '# Changelog\n\nBased on https://keepachangelog.com/en/1.1.0/\n\n## [Unreleased]\n');
-    const inspection = await inspectKnowledge({ root, configPath: null, config: null, mode: 'wild' });
+    const inspection = await inspectKnowledge({ root, configPath: null, config: null, mode: 'wild', scope: null, shadowedConfigPaths: [] });
 
     const plan = await planSourceTransition(inspection, {
       sourceId: 'changelog',
@@ -138,7 +138,7 @@ from = ["intent"]
     const root = await createFixtureDirectory('arcantry-tree-');
     await mkdir(join(root, 'openspec', 'specs'), { recursive: true });
     await writeFile(join(root, 'openspec', 'specs', 'one.md'), 'one\n');
-    const inspection = await inspectKnowledge({ root, configPath: null, config: null, mode: 'wild' });
+    const inspection = await inspectKnowledge({ root, configPath: null, config: null, mode: 'wild', scope: null, shadowedConfigPaths: [] });
     const plan = await planSourceTransition(inspection, {
       sourceId: 'openspec',
       transition: 'relocate',
@@ -157,7 +157,7 @@ from = ["intent"]
     const root = await createFixtureDirectory('arcantry-unrelated-');
     await writeFile(join(root, 'todo.txt'), 'Move me\n');
     await writeFile(join(root, 'unrelated.txt'), 'user change\n');
-    const inspection = await inspectKnowledge({ root, configPath: null, config: null, mode: 'wild' });
+    const inspection = await inspectKnowledge({ root, configPath: null, config: null, mode: 'wild', scope: null, shadowedConfigPaths: [] });
     const plan = await planSourceTransition(inspection, {
       sourceId: 'todo-root',
       transition: 'relocate',

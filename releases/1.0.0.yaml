@@ -1,0 +1,7 @@
+version: 1.0.0
+date: 2026-08-18
+changes:
+  - refine-documentation-navigation
+  - refine-overview-product-story
+  - stabilize-arcantry-1-0
+  - support-multiple-agent-hosts

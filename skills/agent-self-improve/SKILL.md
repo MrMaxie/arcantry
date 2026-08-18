@@ -1,6 +1,6 @@
 ---
 name: agent-self-improve
-description: Review current, selected, or recent Codex project conversations to find user-agent communication failures, distinguish execution lapses from instruction defects and project-local guidance gaps, and propose small human-approved edits to skills, AGENTS.md, and private workflow instructions. Use only when the user explicitly invokes $agent-self-improve for a communication or agent-guidance review.
+description: Review Codex conversations for communication failures and durable guidance gaps, then propose small approval-gated fixes. Use only when explicitly invoked with $agent-self-improve for a communication or agent-guidance review.
 ---
 
 # Agent Self Improve
@@ -27,6 +27,8 @@ Do not use prompt-writing advice as the primary remedy. Offer it only when the u
 
 Use the Codex app tools that list projects, list threads, and read a thread when they are available.
 
+If project or thread listing is unavailable, do not infer recency from memory or rollout summaries. Use a read-only local thread index only when it exposes thread id, normalized cwd or project id, recency, source, and exact rollout path. Exclude the current thread and subagent threads, sort qualifying user threads by recency, and read only those selected rollout paths. If those facts cannot be established, request explicit thread IDs or a transcript.
+
 - Match the current working directory to a local Codex project by normalized path. Prefer the longest matching project root.
 - Ask once for a project name, path, or `projectId` only when no unique local project can be resolved.
 - Accept an explicit project override even when the current working directory belongs to another project.
@@ -47,6 +49,7 @@ When selecting project threads:
 2. Match by `projectId` first. Otherwise match a normalized thread `cwd` equal to or below the project root.
 3. If an explicit thread belongs to another project, state the mismatch and ask before mixing its evidence with the target project's guidance.
 4. If only one eligible previous thread exists, analyze it and disclose the reduced sample. If none are discoverable, request thread IDs or a Markdown transcript.
+5. Record the selected thread IDs, titles, update order, and excluded current thread before diagnosis. Include this compact sample ledger in the review output so the user can verify scope. Do not call a sample "most recent" unless the selection source establishes recency.
 
 Start with the 12 most recent turns per thread and no tool outputs. Read older pages only to establish or disprove a specific finding, and stop after 40 turns total unless the user explicitly requests a complete-history review. Fetch bounded output only for a turn where it is necessary to establish a specific failure. Do not analyze reasoning summaries as user-agent communication.
 
@@ -69,7 +72,7 @@ Read the narrowest relevant set:
 
 Do not bulk-read `.local`. Do not open credential stores or copy credential values. Treat an installed skill's current text as a current snapshot unless historical evidence establishes the earlier version.
 
-Use `$audience-scope-discipline` when deciding the audience and layer for a proposal. Use `$agents-md-maintainer` for an accepted `AGENTS.md` or `.local/AGENTS.md` edit. Use `$skill-creator` for an accepted skill edit. If a companion skill is unavailable, preserve the same audience, scope, concision, and validation rules directly.
+Use `$audience-scope-discipline` when deciding the audience and layer for a proposal. Use `$maintain-agent-guidance` for an accepted `AGENTS.md` or `.local/AGENTS.md` edit. Use `$skill-creator` for an accepted skill edit. If a companion skill is unavailable, preserve the same audience, scope, concision, and validation rules directly.
 
 ## Route companion work
 
@@ -129,7 +132,7 @@ Do not edit files while a proposal is only `proposed` or `revising`.
 
 - **Skill:** regenerate `agents/openai.yaml` only if its interface or trigger changed, locate and run `scripts/quick_validate.py` relative to the installed `$skill-creator` skill, and forward-test the changed behavior with raw scenarios and a fresh agent. If validation fails only because `yaml` or PyYAML is unavailable and `uv` exists, retry with `uv run --with pyyaml python <validator> <skill-directory>` without installing anything globally. Use manual verification only when the validator or this isolated runner is unavailable, and report the attempted commands and remaining gap.
   For changes affecting project or thread resolution, also run a read-only live smoke test against a disposable or explicitly approved local project with at least three eligible threads and one paginated history. Verify current-thread exclusion, ordering, deduplication, and pagination. Do not use unrelated user conversations as fixtures; if no suitable project exists, report live mode as unverified.
-- **AGENTS.md:** verify commands and project facts against source files, keep the edit surgical, and audit it with `$agents-md-maintainer`.
+- **AGENTS.md:** verify commands and project facts against source files, keep the edit surgical, and audit it with `$maintain-agent-guidance`.
 - **`.local`:** verify that no secret value was added and that `.local` is covered by `.git/info/exclude`; include a missing exclusion in the accepted proposal rather than changing it silently.
 - **Other instruction file:** run the narrowest syntax or consistency check that applies.
 
@@ -140,4 +143,3 @@ After applying changes, report the applied proposal IDs, changed targets, valida
 Write in the user's language. Lead with the highest-impact finding or the next decision. Keep evidence short, show exact proposed text, and avoid agent-process narration. Keep the proposal ledger in chat; do not create a report file unless the user requests one.
 
 For forward-testing this skill, give a fresh agent one prompt from [references/scenarios.md](references/scenarios.md) and access to the skill. Evaluate the raw response afterward with [references/evaluation-rubric.md](references/evaluation-rubric.md). Never give the rubric to the test agent.
-

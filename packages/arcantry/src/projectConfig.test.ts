@@ -124,6 +124,22 @@ scope = "packages/app"
     expect(resolved.mode).toBe('configured');
   });
 
+  it('prefers private configuration at the nearest project boundary', async () => {
+    const project = await createFixtureDirectory('arcantry-local-config-');
+    const nested = join(project, 'apps', 'web');
+    await mkdir(join(project, '.local'), { recursive: true });
+    await mkdir(nested, { recursive: true });
+    await writeFile(join(project, 'arcantry.toml'), 'config_version = 1\n');
+    await writeFile(join(project, '.local/arcantry.toml'), 'config_version = 1\n');
+
+    const resolved = await resolveProject({ cwd: nested });
+
+    expect(resolved.root).toBe(project);
+    expect(resolved.scope).toBe('private');
+    expect(resolved.configPath).toBe(join(project, '.local/arcantry.toml'));
+    expect(resolved.shadowedConfigPaths).toEqual([join(project, 'arcantry.toml')]);
+  });
+
   it('allows absolute sources only when an explicit config is outside the resolved project', async () => {
     const project = await createFixtureDirectory('arcantry-internal-config-');
     const absolute = join(project, 'todo.txt').replaceAll('\\', '/');
@@ -146,6 +162,8 @@ adapter = "todo-txt@1"
       configPath: null,
       config: null,
       mode: 'wild',
+      scope: null,
+      shadowedConfigPaths: [],
     });
   });
 });

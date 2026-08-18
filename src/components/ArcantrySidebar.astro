@@ -1,45 +1,20 @@
 ---
-import type {} from '@astrojs/starlight';
-import { Icon } from '@astrojs/starlight/components';
 import { faHeart } from '@fortawesome/free-solid-svg-icons';
+import ArcantrySidebarEntry from './ArcantrySidebarEntry.astro';
 
 const { sidebar } = Astro.locals.starlightRoute;
 const [heartWidth, heartHeight, , , heartPath] = faHeart.icon;
-const icons = {
-  Overview: 'rocket',
-  Adoption: 'approve-check',
-  Skills: 'puzzle',
-  'Skill catalog': 'list-format',
-  CLI: 'setting',
-  'Repository workflow': 'code-branch',
-  Changes: 'document',
-  Releases: 'star',
-  'Contributor commands': 'open-book',
-  'Repository contract': 'document',
-} as const;
 ---
 
 <div class="navigation">
   {sidebar.map((entry) => (
     entry.type === 'link' ? (
-      <a class:list={['nav-link', { active: entry.isCurrent }]} href={entry.href}>
-        <span class="nav-icon-slot" aria-hidden="true">
-          {entry.label in icons && <Icon name={icons[entry.label as keyof typeof icons]} />}
-        </span>
-        <span>{entry.label}</span>
-      </a>
+      <ArcantrySidebarEntry entry={entry} />
     ) : (
       <section class="nav-group">
         <div class="nav-label">{entry.label}</div>
         <div class="nav-items">
-          {entry.entries.map((item) => item.type === 'link' && (
-            <a class:list={['nav-link', { active: item.isCurrent }]} href={item.href}>
-              <span class="nav-icon-slot" aria-hidden="true">
-                {item.label in icons && <Icon name={icons[item.label as keyof typeof icons]} />}
-              </span>
-              <span>{item.label}</span>
-            </a>
-          ))}
+          {entry.entries.map((item) => <ArcantrySidebarEntry entry={item} />)}
         </div>
       </section>
     )
@@ -63,30 +38,6 @@ const icons = {
     .nav-group + .nav-group, .nav-link + .nav-group { margin-top: 1.7rem; }
     .nav-label { padding: 0 .7rem .5rem; color: var(--ar-text-soft); font-size: .68rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
     .nav-items { display: grid; gap: .1rem; }
-    .nav-link {
-      display: flex;
-      align-items: center;
-      gap: .65rem;
-      margin-inline: -.9rem;
-      padding: .5rem .9rem .5rem 1.6rem;
-      border-left: 2px solid transparent;
-      color: var(--ar-text-muted);
-      text-decoration: none;
-      font-size: .83rem;
-      font-weight: 560;
-      letter-spacing: -.015em;
-      transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
-    }
-    .nav-icon-slot { display: grid; width: .9rem; flex: 0 0 .9rem; place-items: center; }
-    .nav-link :global(svg) { flex: 0 0 auto; color: var(--ar-text-soft); font-size: .9rem; transition: color 150ms ease; }
-    .nav-link:hover { color: var(--ar-text); background: var(--ar-surface); }
-    .nav-link:hover :global(svg) { color: var(--ar-accent-blue); }
-    .nav-link.active :global(svg) { color: var(--ar-accent-violet); }
-    .nav-link.active {
-      color: var(--ar-text);
-      border-left-color: var(--ar-accent-violet);
-      background: linear-gradient(90deg, color-mix(in srgb, var(--ar-accent-violet) 9%, transparent), transparent 82%);
-    }
     .sidebar-foot { display: flex; align-items: center; min-height: 3.25rem; padding: .8rem 1.35rem; border-top: 1px solid var(--ar-border); color: var(--ar-text-soft); font-size: .65rem; }
     .sidebar-credit { display: inline-flex; align-items: center; gap: .26rem; }
     .sidebar-heart {

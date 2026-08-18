@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reconcile Project Sources"
+  short_description: "Plan explicit shared and private source moves"
+  default_prompt: "Use $reconcile-project-sources to inspect this source drift and prepare a safe plan."

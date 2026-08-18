@@ -1,6 +1,6 @@
 ---
 name: stage-code-review-findings
-description: Perform an approval-gated code review whose findings remain in chat until the user selects which ones may advance. Use when the user asks for a local, chat-only, draft, or pre-publication review; wants findings in Polish with stable IDs, file paths, line ranges, problem descriptions, and problem types; or wants only accepted findings translated to English and later written, drafted, submitted, or published to GitHub, Azure DevOps, a browser form, a file, or another named destination.
+description: Perform an approval-gated code review whose findings stay in chat until selected. Use for local, draft, or pre-publication review, or when only accepted findings may be translated and sent to a named destination.
 ---
 
 # Stage Code Review Findings
@@ -73,4 +73,3 @@ Adapt to the destination without losing meaning:
 - Publish only the accepted IDs named by the user and report exactly what changed and what remained unpublished.
 
 Never modify source code as part of this workflow unless the user separately requests implementation.
-

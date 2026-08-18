@@ -1,6 +1,6 @@
 ---
 name: forge-skill-from-conversations
-description: Turn recurring work found in supplied, current, or recent completed Codex conversations into one focused, evaluated skill candidate. Use only when explicitly invoked with $forge-skill-from-conversations. Orchestrate evidence capture, candidate approval, skill creation, held-out evaluation, and optional adoption without auto-approving, auto-installing, publishing, committing, or pushing anything.
+description: Turn recurring work from supplied or recent Codex conversations into one focused, evaluated skill candidate. Use only when explicitly invoked with $forge-skill-from-conversations; require approval before creation or adoption.
 ---
 
 # Forge Skill from Conversations
@@ -87,4 +87,3 @@ Return only the checkpoint needed for the next user decision:
 - **Evaluation:** case counts, baseline and candidate metrics, critical regressions, decision, and minimum evidence.
 - **Installation proposal:** accepted source, exact destination, replacement status, validation, and approval question.
 - **Installed result:** installed path, files, validation, and anything not verified.
-

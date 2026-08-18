@@ -1,0 +1,25 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Capture a project thought at its current commitment level without duplicating or prematurely promoting it.",
+  "compatibility": {
+    "sourceKinds": ["openspec", "changelog", "todo-txt"]
+  },
+  "learning": {
+    "outcomes": [
+      "Route incoming work to todo, OpenSpec, changelog, or the skill improvement pipeline.",
+      "Preserve shared and private scope while avoiding duplicate project knowledge."
+    ]
+  },
+  "scenarios": [
+    {
+      "title": "Capture a hot project thought",
+      "prompt": "Use $capture-project-work to record this unrefined implementation thought without changing accepted product specifications.",
+      "outcome": "The thought is captured in the appropriate todo source with its scope and wording preserved."
+    },
+    {
+      "title": "Record an accepted decision",
+      "prompt": "Use $capture-project-work to place this approved product decision in the correct project source without writing release history yet.",
+      "outcome": "The accepted intent is represented in OpenSpec and unrelated sources remain unchanged."
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 const root = process.cwd();
 const packageManifest = JSON.parse(readFileSync(join(root, 'packages', 'arcantry', 'package.json'), 'utf8')) as {
   name: string;
+  version: string;
 };
 const workspaceManifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
   name: string;
@@ -13,11 +14,17 @@ const workspaceManifest = JSON.parse(readFileSync(join(root, 'package.json'), 'u
 
 const publicIdentitySurfaces = [
   'src/content/docs/getting-started.mdx',
-  'src/content/docs/lifecycle/releases.md',
+  'src/content/docs/lifecycle/releases.mdx',
   'src/components/ArcantryCommandPicker.astro',
   'src/components/ArcantryHero.astro',
   'src/components/ArcantryCopyCommands.astro',
   'packages/arcantry/scripts/check-package.mjs',
+];
+
+const agentManifestPaths = [
+  '.codex-plugin/plugin.json',
+  '.claude-plugin/plugin.json',
+  'gemini-extension.json',
 ];
 
 describe('npm package identity', () => {
@@ -44,5 +51,12 @@ describe('npm package identity', () => {
     expect(commandPicker).toContain('value: `npx ${packageName} repo inspect`');
     expect(commandPicker).toContain('value: `pnpm dlx ${packageName} repo inspect`');
     expect(commandPicker).toContain('value: `nubx ${packageName} repo inspect`');
+  });
+
+  it('keeps supported agent manifests aligned with the package identity', () => {
+    for (const relativePath of agentManifestPaths) {
+      const manifest = JSON.parse(readFileSync(join(root, relativePath), 'utf8')) as { name: string; version: string };
+      expect(manifest, relativePath).toMatchObject({ name: packageManifest.name, version: packageManifest.version });
+    }
   });
 });

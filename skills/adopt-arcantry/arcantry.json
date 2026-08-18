@@ -15,7 +15,7 @@
     ],
     "outcomes": [
       "Distinguish discovery, footprint, and management for each project source.",
-      "Choose an explicit preservation or migration boundary without automatic conversion."
+      "Choose an explicit preservation or source transition boundary without automatic conversion."
     ]
   },
   "scenarios": [

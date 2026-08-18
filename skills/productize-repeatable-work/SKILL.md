@@ -1,6 +1,6 @@
 ---
 name: productize-repeatable-work
-description: Implement an accepted repeatable-work candidate as the smallest durable instruction, script, skill, hook, automation, or plugin proposal. Use only when explicitly invoked with $productize-repeatable-work and an accepted stable candidate ID; do not discover or broaden scope.
+description: Implement one accepted repeatable-work candidate as the smallest durable artifact. Use only when explicitly invoked with $productize-repeatable-work and an accepted stable candidate ID; do not rediscover or broaden scope.
 ---
 
 # Productize Repeatable Work
@@ -19,7 +19,7 @@ Stop and return a revised proposal when the target preimage drifted, the accepte
 2. Read [references/productization-rules.md](references/productization-rules.md) and confirm the narrowest artifact.
 3. Preserve unrelated files and existing user changes.
 4. Use the owning companion:
-   - `$agents-md-maintainer` for `AGENTS.md` or `.local/AGENTS.md`;
+   - `$maintain-agent-guidance` for `AGENTS.md` or `.local/AGENTS.md`;
    - `$skill-creator` for a skill;
    - the automation tool for scheduled work;
    - applicable Codex configuration guidance for a hook;
