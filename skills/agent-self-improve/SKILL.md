@@ -70,6 +70,8 @@ Read the narrowest relevant set:
 - skills explicitly used, visibly routed, or clearly applicable but omitted;
 - source-of-truth workflow files only when needed to verify a claimed project rule.
 
+Use `protect-local-boundary` before reading or changing any `.local/` target. It owns the private directory boundary and exclusion checks; this skill owns diagnosis and proposal decisions.
+
 Do not bulk-read `.local`. Do not open credential stores or copy credential values. Treat an installed skill's current text as a current snapshot unless historical evidence establishes the earlier version.
 
 Use `audience-scope-discipline` when deciding the audience and layer for a proposal. Use `maintain-agent-guidance` for an accepted `AGENTS.md` or `.local/AGENTS.md` edit. Use the host's `skill-creator` capability for an accepted skill edit. If a companion skill is unavailable, preserve the same audience, scope, concision, and validation rules directly.

@@ -63,6 +63,10 @@ export default [
         "slug": "skills/promote-todo-to-openspec"
       },
       {
+        "label": "Protect Local Boundary",
+        "slug": "skills/protect-local-boundary"
+      },
+      {
         "label": "Reconcile Project Sources",
         "slug": "skills/reconcile-project-sources"
       },

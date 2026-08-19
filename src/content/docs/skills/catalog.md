@@ -93,6 +93,12 @@ description: Choose a focused Arcantry skill for the work at hand.
   <p class="skill-catalog-summary">Group selected todo.txt items into privacy-safe OpenSpec transformations and hold every proposed change for approval.</p>
   <p class="skill-catalog-command"><code>promote-todo-to-openspec</code></p>
 </a>
+<a class="skill-catalog-card" href="/arcantry/skills/protect-local-boundary/">
+  <p class="skill-catalog-version">Arcantry 1.0.0</p>
+  <h3>Protect Local Boundary</h3>
+  <p class="skill-catalog-summary">Keep private .local state usable without letting it become a dependency of shared project behavior.</p>
+  <p class="skill-catalog-command"><code>protect-local-boundary</code></p>
+</a>
 <a class="skill-catalog-card" href="/arcantry/skills/reconcile-project-sources/">
   <p class="skill-catalog-version">Arcantry 1.0.0</p>
   <h3>Reconcile Project Sources</h3>

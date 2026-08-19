@@ -16,7 +16,7 @@ Require:
 - a JSONL case file following [references/evaluation-protocol.md](references/evaluation-protocol.md).
 
 Use supplied generic cases or reusable cases colocated with the target skill.
-Keep project-specific cases and run artifacts under `.local/self-improvement`.
+Use `protect-local-boundary` before creating or reading project-specific cases and run artifacts under `.local/self-improvement`.
 
 ## Workflow
 

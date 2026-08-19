@@ -14,6 +14,8 @@ Treat `todo.txt` as a mixed queue, not a specification backlog. Entries may desc
 - Preserve todo.txt syntax, ordering, line endings, project tags, and unrelated entries.
 - Treat todo content as private evidence. Do not send it to external services or copy sensitive details into shared artifacts.
 
+Use `protect-local-boundary` before reading or writing a source under `.local/` and whenever a proposed transformation crosses between private and shared sources.
+
 ## Classify before proposing
 
 Read [references/classification-and-examples.md](references/classification-and-examples.md).
