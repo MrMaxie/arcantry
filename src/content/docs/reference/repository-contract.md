@@ -1,36 +1,31 @@
 ---
 title: Project knowledge stack
-description: Understand authority, projections, queues, capabilities, privacy, and integrity evidence.
+description: Understand authority, release projections, queues, capabilities, privacy, and verification evidence.
 ---
 
-Arcantry composes project knowledge without treating every artifact as the same kind of truth. Each source keeps a distinct role, responsibility, path, and versioned adapter.
+Arcantry keeps project knowledge roles distinct while making them inspectable through one local-first model.
 
 ## Roles in the stack
 
 | Role | Arcantry model | Responsibility |
 | --- | --- | --- |
-| Authority | OpenSpec source | Accepted product and engineering meaning for its configured scope. |
-| Projection | Changelog source | Human release history derived from explicit authority when managed. |
+| Authority | `openspec` or `.local/openspec` | Accepted shared or private product and engineering meaning for its configured scope. |
+| Projection | `CHANGELOG.md` or `.local/CHANGELOG.md` | Shared or private release history derived from explicit authority when managed. |
 | Queue | todo.txt source | Short shared or private work items without product authority. |
-| Capability | Skill package | A reusable procedure that may describe compatibility but is not project state. |
-| Privacy boundary | `.local/` | Machine-local or private sources that must not be presented as shared. |
-| Integrity evidence | Optional VCS, including Git | Evidence about implementation history or release sealing, never the source of release prose. |
+| Capability | `skills/<name>` or `.local/skills/<name>` | A reusable public or private procedure that is not project knowledge. |
+| Guidance | `AGENTS.md` or `.local/AGENTS.md` | Universal shared or private instructions that shape agent behavior. |
+| Privacy boundary | `.local/` | Machine-local configuration and sources that must remain untracked. |
+| Verification evidence | Static, automated, live, independent, or user checks | Proof matched to the risk and acceptance boundary. |
 
-Project-owned documentation, including any `.docs` directory, remains outside Arcantry's model unless a future explicit capability says otherwise.
+## Configuration scopes
 
-## Three independent axes
+Shared `arcantry.toml` and private `.local/arcantry.toml` use the same schema. They are independent sources of configuration, not layers to merge.
 
-### Discovery
+An explicit `--config` wins. Otherwise Arcantry walks toward the filesystem root and checks the private file before the shared file at each directory. Inspection reports the active file and any sibling it shadows.
 
-A project can use configuration-free discovery, one explicit `--config` file, or the nearest ancestor `arcantry.toml`. These modes decide how Arcantry finds a stack, not what it may change.
+## Source responsibility
 
-### Footprint
-
-Arcantry can remain absent from the project, use an external or private configuration, or use one tracked project configuration. Footprint does not imply management responsibility.
-
-### Management
-
-Each source independently uses one level:
+Each source independently uses one management level:
 
 | Level | Meaning |
 | --- | --- |
@@ -39,38 +34,39 @@ Each source independently uses one level:
 | `validate` | Check the configured contract without writing. |
 | `manage` | Permit explicit planned writes through the source adapter. |
 
-A project can therefore manage one source, validate another, observe a third, and omit the rest.
+A project can manage one source, validate another, observe a third, and omit the rest.
 
-## Relationships and meaning
+## Relationships and release meaning
 
-Source dependencies form an acyclic `from` graph. A managed changelog is a projection of one or more OpenSpec authorities, so its wording, category, and version impact come from accepted OpenSpec release artifacts. Git commits and diffs are not semantic inputs.
+Source dependencies form an acyclic `from` graph. A managed changelog projects release meaning from one or more OpenSpec authorities. Git commits and diffs remain implementation evidence and do not generate consumer release prose.
 
-An observed or validated changelog can exist without OpenSpec. In that case Arcantry can report or check its structure, but it cannot generate new release meaning for it.
+Shared release history cannot depend on private intent. Private release history may compose shared and private intent because it remains inside the same privacy boundary.
 
-Todo queues are independent. They preserve todo.txt metadata and do not become specifications or changelog inputs. Skills are also independent: they teach a procedure but do not install themselves or establish project facts.
+An observed changelog can exist without OpenSpec. Arcantry may inspect it, but it cannot invent new release meaning for it.
 
-## Version boundaries
+Todo queues stay independent until an explicit move. A hot thought belongs in todo before it becomes accepted intent. Accepted intent belongs in OpenSpec. Completed consumer impact belongs in the changelog. A repeated procedure belongs in the skill improvement pipeline.
 
-Four versions may coexist:
+## Skill families
 
-- the Arcantry CLI version;
-- the `config_version` format;
-- each source adapter version, such as `openspec@1`;
-- the source data version, such as a changelog's historical format boundary.
+- `self-improvement` captures repeated work and maintains scoped skills and agent guidance.
+- `repo-safely` adopts repositories, captures project work, reconciles sources, maintains release meaning, and scales verification.
+- `content-safely` protects audience and privacy while improving terminal experiences and product writing.
 
-Updating the CLI does not automatically update the configuration, adapter, or source data. A supported earlier adapter remains usable until an explicit transition changes it.
+Skills can be used without repository adoption. They do not install themselves or establish project facts.
+
+`.agents/skills` is the universal installation surface. Codex consumes it directly. Claude compatibility uses imports and aliases in branded locations while preserving the universal guidance and canonical package as the only source.
 
 ## Safety invariants
 
-- Empty directories and missing source kinds are valid.
-- Git, configuration, package managers, task runners, and project-local Node tooling are optional.
-- Configurations are singular and never implicitly merged.
-- Managed source relationships are acyclic and managed OpenSpec authorities do not overlap.
+- Missing configuration and missing source kinds are valid.
+- Git, package managers, task runners, and project-local Node tooling are optional.
+- Configuration files are singular for each invocation and never merged.
+- Shared and private sources are not synchronized automatically.
 - `inspect` and `plan` do not write.
-- `apply` rejects changed inputs and corrupt planned content before accepting the transition.
-- Serialized plans must be protected because they can contain planned source content.
-- Private `.local` sources cannot be declared shared.
-- Managed changelog meaning always comes from OpenSpec.
+- `apply` rejects changed inputs and corrupt planned content.
+- Private source data remains private in plans, logs, and public output.
+- External writes require authority for the exact target and action.
+- Complete verification claims name their actual coverage.
 
 ## Built-in adapter compatibility
 
@@ -80,4 +76,4 @@ Updating the CLI does not automatically update the configuration, adapter, or so
 | Changelog | `keep-a-changelog@1`, `keep-a-changelog@2` | `keep-a-changelog@1`, `keep-a-changelog@2` |
 | todo.txt | `todo-txt@1` | `todo-txt@1` |
 
-An unsupported adapter reports its id and stops before producing a partial transition. See [Configuration](/arcantry/reference/configuration/) for the complete `arcantry.toml` contract.
+An unsupported adapter stops before a partial transition. See [Configuration](/arcantry/reference/configuration/) for the TOML contract.

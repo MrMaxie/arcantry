@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import skillSidebar from './src/generated/skill-sidebar.mjs';
 
 export default defineConfig({
   site: 'https://mrmaxie.github.io',
@@ -21,7 +22,7 @@ export default defineConfig({
         {
           label: 'Start',
           items: [
-            { label: 'Overview', slug: 'index' },
+            { label: 'Homepage', slug: 'index' },
             { label: 'Get started', slug: 'getting-started' },
             { label: 'Adoption paths', slug: 'adoption' }
           ]
@@ -43,7 +44,14 @@ export default defineConfig({
           items: [
             { label: 'CLI', slug: 'reference/cli' },
             { label: 'Configuration', slug: 'reference/configuration' },
-            { label: 'Skill catalog', slug: 'skills/catalog' }
+            {
+              label: 'Skill catalog',
+              collapsed: true,
+              items: [
+                { label: 'Catalog overview', slug: 'skills/catalog' },
+                ...skillSidebar
+              ]
+            }
           ]
         },
         {

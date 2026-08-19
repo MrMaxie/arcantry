@@ -16,12 +16,15 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "tags"],
+        "required": ["name", "family", "tags"],
         "properties": {
           "name": {
             "type": "string",
             "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
             "maxLength": 63
+          },
+          "family": {
+            "enum": ["self-improvement", "repo-safely", "content-safely"]
           },
           "tags": {
             "type": "array",

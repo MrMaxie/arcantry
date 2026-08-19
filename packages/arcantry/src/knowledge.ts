@@ -34,6 +34,8 @@ export type KnowledgeInspection = {
   root: string;
   mode: ResolvedProject['mode'];
   configPath: string | null;
+  configScope: ResolvedProject['scope'];
+  shadowedConfigPaths: string[];
   sources: ProjectSource[];
   diagnostics: string[];
 };
@@ -69,7 +71,9 @@ const candidates: Array<{
   expected: 'file' | 'directory';
 }> = [
   { id: 'openspec', kind: 'openspec', path: 'openspec', visibility: 'shared', expected: 'directory' },
+  { id: 'openspec-local', kind: 'openspec', path: '.local/openspec', visibility: 'private', expected: 'directory' },
   { id: 'changelog', kind: 'changelog', path: 'CHANGELOG.md', visibility: 'shared', expected: 'file' },
+  { id: 'changelog-local', kind: 'changelog', path: '.local/CHANGELOG.md', visibility: 'private', expected: 'file' },
   { id: 'todo-root', kind: 'todo-txt', path: 'todo.txt', visibility: 'shared', expected: 'file' },
   { id: 'todo-local', kind: 'todo-txt', path: '.local/todo.txt', visibility: 'private', expected: 'file' },
 ];
@@ -114,6 +118,8 @@ export const inspectKnowledge = async (project: ResolvedProject): Promise<Knowle
     root: project.root,
     mode: project.mode,
     configPath: project.configPath,
+    configScope: project.scope,
+    shadowedConfigPaths: project.shadowedConfigPaths,
     sources: sources.sort((left, right) => left.id.localeCompare(right.id)),
     diagnostics,
   };

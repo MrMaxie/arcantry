@@ -58,6 +58,46 @@ adapter = "todo-txt@1"
     expect(() => parseProjectConfig(configured(), { toolVersion: '2.0.0' })).toThrow('does not satisfy');
   });
 
+  it('keeps private release meaning private while allowing independent authorities', () => {
+    expect(() => parseProjectConfig(`config_version = 1
+
+[sources.private_intent]
+kind = "openspec"
+path = ".local/openspec"
+management = "manage"
+adapter = "openspec@1"
+
+[sources.shared_history]
+kind = "changelog"
+path = "CHANGELOG.md"
+management = "manage"
+adapter = "keep-a-changelog@2"
+from = ["private_intent"]
+`)).toThrow('shared changelog sources cannot depend on private OpenSpec sources');
+
+    expect(() => parseProjectConfig(`config_version = 1
+
+[sources.shared_intent]
+kind = "openspec"
+path = "openspec"
+management = "manage"
+adapter = "openspec@1"
+
+[sources.private_intent]
+kind = "openspec"
+path = ".local/openspec"
+management = "manage"
+adapter = "openspec@1"
+
+[sources.private_history]
+kind = "changelog"
+path = ".local/CHANGELOG.md"
+management = "manage"
+adapter = "keep-a-changelog@2"
+from = ["shared_intent", "private_intent"]
+`)).not.toThrow();
+  });
+
   it('rejects unknown fields and nested managed OpenSpec authorities', () => {
     expect(() => parseProjectConfig(configured().replace('path = "openspec"', 'path = "openspec"\nmanagment = "manage"'))).toThrow(
       'Unrecognized key',
@@ -100,6 +140,48 @@ scope = "packages/app"
     });
   });
 
+  it('parses and renders an explicit local release story', () => {
+    const config = parseProjectConfig(`${configured()}
+[release]
+adapter = "openspec-release@1"
+manifests_path = "releases"
+changelog_source = "history"
+tag_prefix = "v"
+repository_url = "https://github.com/example/project"
+
+[[release.version_sources]]
+path = "Cargo.toml"
+adapter = "cargo-workspace@1"
+`);
+
+    expect(config.release).toEqual({
+      adapter: 'openspec-release@1',
+      manifestsPath: 'releases',
+      changelogSource: 'history',
+      tagPrefix: 'v',
+      repositoryUrl: 'https://github.com/example/project',
+      versionSources: [{ path: 'Cargo.toml', adapter: 'cargo-workspace@1' }],
+    });
+    expect(parseProjectConfig(renderProjectConfig(config))).toEqual({
+      ...config,
+      schemaReference: { location: projectConfigSchemaLocation, version: '1.0.0' },
+    });
+  });
+
+  it('rejects a release block without a managed changelog authority', () => {
+    expect(() => parseProjectConfig(`config_version = 1
+
+[release]
+adapter = "openspec-release@1"
+manifests_path = "releases"
+changelog_source = "missing"
+
+[[release.version_sources]]
+path = "package.json"
+adapter = "json-package@1"
+`)).toThrow('unknown release changelog source');
+  });
+
   it('publishes a TOML Schema 1.0.0 contract for dynamic source tables', async () => {
     const schema = parseToml(await readFile(new URL('../../../schemas/arcantry-config-v1.tosd', import.meta.url), 'utf8')) as Record<string, unknown>;
     const metadata = schema['toml-schema'] as { version: string };
@@ -124,6 +206,22 @@ scope = "packages/app"
     expect(resolved.mode).toBe('configured');
   });
 
+  it('prefers private configuration at the nearest project boundary', async () => {
+    const project = await createFixtureDirectory('arcantry-local-config-');
+    const nested = join(project, 'apps', 'web');
+    await mkdir(join(project, '.local'), { recursive: true });
+    await mkdir(nested, { recursive: true });
+    await writeFile(join(project, 'arcantry.toml'), 'config_version = 1\n');
+    await writeFile(join(project, '.local/arcantry.toml'), 'config_version = 1\n');
+
+    const resolved = await resolveProject({ cwd: nested });
+
+    expect(resolved.root).toBe(project);
+    expect(resolved.scope).toBe('private');
+    expect(resolved.configPath).toBe(join(project, '.local/arcantry.toml'));
+    expect(resolved.shadowedConfigPaths).toEqual([join(project, 'arcantry.toml')]);
+  });
+
   it('allows absolute sources only when an explicit config is outside the resolved project', async () => {
     const project = await createFixtureDirectory('arcantry-internal-config-');
     const absolute = join(project, 'todo.txt').replaceAll('\\', '/');
@@ -146,6 +244,8 @@ adapter = "todo-txt@1"
       configPath: null,
       config: null,
       mode: 'wild',
+      scope: null,
+      shadowedConfigPaths: [],
     });
   });
 });

@@ -1,0 +1,17 @@
+{
+  "name": "arcantry",
+  "version": "1.0.0",
+  "description": "Local-first project knowledge and focused agent skills.",
+  "author": {
+    "name": "Maxie",
+    "url": "https://github.com/MrMaxie"
+  },
+  "homepage": "https://maxie.dev/arcantry/",
+  "repository": "https://github.com/MrMaxie/arcantry",
+  "license": "Apache-2.0",
+  "keywords": [
+    "agent-skills",
+    "claude-code",
+    "repository-lifecycle"
+  ]
+}

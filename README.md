@@ -4,12 +4,13 @@
 [![Documentation](https://img.shields.io/badge/docs-maxie.dev-6a4cc7)](https://maxie.dev/arcantry/)
 [![License](https://img.shields.io/github/license/MrMaxie/arcantry)](LICENSE)
 
-Compose versioned project knowledge without forcing a repository shape.
+Coordinate project knowledge and repeatable agent work without forcing a repository shape.
 
-Arcantry discovers OpenSpec, changelogs, todo.txt queues and agent skills as independent sources. Each source keeps its own role, location and management level, so an established project can start with read-only inspection and adopt only the parts it needs.
+Arcantry keeps shared and private OpenSpec, changelogs, todo.txt queues, universal agent guidance, and focused skills in distinct roles. `AGENTS.md` and `.agents` remain the recommended standard, while optional Claude adapters reuse the same sources without copying them.
 
 ```sh
 arcantry repo inspect
+arcantry repo init --scope private
 arcantry repo plan --source todo-root --transition relocate --to-path .local/todo.txt --json
 arcantry repo apply --plan plan.json
 ```
@@ -17,7 +18,8 @@ arcantry repo apply --plan plan.json
 ## Why Arcantry
 
 - Inspect empty directories, mature repositories and monorepos without requiring Git or configuration.
-- Keep product intent, release projections, short queues and reusable procedures in distinct layers.
+- Keep accepted intent, consumer release meaning, hot thoughts, private state, and reusable procedures in distinct layers.
+- Use focused skills for self-improvement, repository safety, and audience-safe content.
 - Preview structural changes as serializable plans and reject changed inputs before writing.
 - Use the same deterministic checks locally and in CI.
 

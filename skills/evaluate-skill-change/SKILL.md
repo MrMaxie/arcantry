@@ -1,6 +1,6 @@
 ---
 name: evaluate-skill-change
-description: Compare a baseline and candidate Codex skill on synthetic routing and behavior cases before adoption. Use only when explicitly invoked with $evaluate-skill-change; do not edit or install the live skill and never auto-adopt a candidate.
+description: Measure whether a candidate skill improves routing and behavior over its baseline before adoption. Use only when explicitly requested and never install the candidate automatically.
 ---
 
 # Evaluate Skill Change
@@ -21,7 +21,7 @@ Keep project-specific cases and run artifacts under `.local/self-improvement`.
 ## Workflow
 
 1. Run `scripts/validate_cases.py <cases.jsonl>`.
-2. Run `python scripts/resolve_quick_validate.py` to locate the validator owned by the installed `$skill-creator`, then run that exact `quick_validate.py` against baseline and candidate. If validation fails only because `yaml` or PyYAML is unavailable and `uv` exists, retry with `uv run --with pyyaml python <validator> <skill-directory>` without a global install. Report a controlled validation gap if neither path is available.
+2. Run `python scripts/resolve_quick_validate.py` to locate the validator owned by an installed `skill-creator`, then run that exact `quick_validate.py` against baseline and candidate. If validation fails only because `yaml` or PyYAML is unavailable and `uv` exists, retry with `uv run --with pyyaml python <validator> <skill-directory>` without a global install. Report a controlled validation gap if neither path is available.
 3. Confirm the candidate uses at most three independent edit groups. Record additions, replacements, and deletions separately.
 4. Evaluate baseline and candidate with identical prompts in isolated fresh contexts. Keep at least three cases held out from candidate drafting.
 5. Measure routing precision, routing recall, rubric pass rate, critical regressions, and skill-body size delta.

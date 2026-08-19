@@ -2,7 +2,17 @@ import { mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { inspectSkill, linkSkill, unlinkSkill, validateCatalog } from './catalog.js';
+import {
+  inspectSkill,
+  linkSkill,
+  linkSkillTargets,
+  repositoryClaudeSkillTargetRoot,
+  repositorySkillTargetRoot,
+  unlinkSkill,
+  userClaudeSkillTargetRoot,
+  userSkillTargetRoot,
+  validateCatalog,
+} from './catalog.js';
 import { createFixtureDirectory, removeFixtures } from './testHelpers.js';
 
 afterEach(removeFixtures);
@@ -13,7 +23,7 @@ const createCatalogFixture = async (): Promise<string> => {
   await mkdir(join(skillRoot, 'agents'), { recursive: true });
   await writeFile(
     join(root, 'catalog.json'),
-    `${JSON.stringify({ $schema: './schemas/catalog.schema.json', skills: [{ name: 'example-skill', tags: ['quality'] }] }, null, 2)}\n`,
+    `${JSON.stringify({ $schema: './schemas/catalog.schema.json', skills: [{ name: 'example-skill', family: 'repo-safely', tags: ['quality'] }] }, null, 2)}\n`,
   );
   await writeFile(
     join(skillRoot, 'SKILL.md'),
@@ -43,6 +53,13 @@ const createCatalogFixture = async (): Promise<string> => {
 };
 
 describe('skill catalog', () => {
+  it('keeps the universal target separate from Claude compatibility', () => {
+    expect(userSkillTargetRoot()).toMatch(/[\\/]\.agents[\\/]skills$/);
+    expect(userClaudeSkillTargetRoot()).toMatch(/[\\/]\.claude[\\/]skills$/);
+    expect(repositorySkillTargetRoot('/project')).toMatch(/[\\/]project[\\/]\.agents[\\/]skills$/);
+    expect(repositoryClaudeSkillTargetRoot('/project')).toMatch(/[\\/]project[\\/]\.claude[\\/]skills$/);
+  });
+
   it('validates and inspects canonical skill packages', async () => {
     const root = await createCatalogFixture();
     expect((await validateCatalog(root)).valid).toBe(true);
@@ -58,6 +75,17 @@ describe('skill catalog', () => {
     expect((await linkSkill({ catalogRoot: root, name: 'example-skill', targetRoot })).status).toBe('linked');
     expect((await linkSkill({ catalogRoot: root, name: 'example-skill', targetRoot })).status).toBe('unchanged');
     expect((await unlinkSkill({ catalogRoot: root, name: 'example-skill', targetRoot })).status).toBe('unlinked');
+  });
+
+  it('links one canonical package through universal and Claude aliases', async () => {
+    const root = await createCatalogFixture();
+    const universal = await createFixtureDirectory('arcantry-universal-links-');
+    const claude = await createFixtureDirectory('arcantry-claude-links-');
+
+    const results = await linkSkillTargets({ catalogRoot: root, name: 'example-skill' }, [universal, claude]);
+
+    expect(results.map((result) => result.status)).toEqual(['linked', 'linked']);
+    expect(results[0]?.source).toBe(results[1]?.source);
   });
 
   it('backs up an ordinary directory only with explicit replacement', async () => {

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maintain Release Story"
+  short_description: "Align versions and consumer release meaning"
+  default_prompt: "Use $maintain-release-story to prepare or verify this product release."

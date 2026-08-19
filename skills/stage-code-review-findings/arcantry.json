@@ -1,10 +1,10 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
-  "summary": "Keep code-review findings in chat until the user chooses exactly which items may be drafted or published.",
+  "summary": "Stage evidence-backed review findings in chat until the user selects exactly what may become an external draft.",
   "scenarios": [
     {
       "title": "Review without publishing",
-      "prompt": "Use $stage-code-review-findings to review my uncommitted changes. Keep every finding in Polish and in chat only.",
+      "prompt": "Use the stage-code-review-findings skill to review my uncommitted changes. Keep every finding in Polish and in chat only.",
       "outcome": "Actionable findings with stable IDs, tight line anchors, and no source edits, browser drafts, or provider mutations."
     },
     {

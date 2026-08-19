@@ -4,6 +4,7 @@ import { parse as parseYaml } from 'yaml';
 
 export interface CatalogEntry {
   name: string;
+  family: 'self-improvement' | 'repo-safely' | 'content-safely';
   tags: string[];
 }
 
@@ -39,6 +40,7 @@ export interface SkillAgent {
 }
 
 const skillNamePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const skillFamilies = new Set(['self-improvement', 'repo-safely', 'content-safely']);
 const catalogSchemaPath = './schemas/catalog.schema.json';
 const skillMetadataSchemaPath = '../../schemas/skill-metadata.schema.json';
 
@@ -85,6 +87,8 @@ export function validateCatalog(root = process.cwd()): string[] {
   }
 
   const names = catalog.skills.map((entry) => entry.name);
+  const summaries = new Map<string, string>();
+  const descriptions = new Map<string, string>();
   const sortedNames = [...names].sort((a, b) => a.localeCompare(b));
   if (JSON.stringify(names) !== JSON.stringify(sortedNames)) errors.push('catalog skills must be sorted by name');
   if (new Set(names).size !== names.length) errors.push('catalog skill names must be unique');
@@ -102,6 +106,7 @@ export function validateCatalog(root = process.cwd()): string[] {
 
   for (const entry of catalog.skills) {
     if (!skillNamePattern.test(entry.name) || entry.name.length > 63) errors.push(`invalid skill name: ${entry.name}`);
+    if (!skillFamilies.has(entry.family)) errors.push(`skills/${entry.name} family is invalid`);
     if (
       !Array.isArray(entry.tags) ||
       entry.tags.length === 0 ||
@@ -110,7 +115,7 @@ export function validateCatalog(root = process.cwd()): string[] {
     ) {
       errors.push(`skills/${entry.name} must have unique tags`);
     }
-    if (Object.keys(entry).some((key) => key !== 'name' && key !== 'tags')) {
+    if (Object.keys(entry).some((key) => key !== 'name' && key !== 'family' && key !== 'tags')) {
       errors.push(`skills/${entry.name} must not contain unsupported fields`);
     }
 
@@ -124,6 +129,10 @@ export function validateCatalog(root = process.cwd()): string[] {
       const frontmatter = readSkillFrontmatter(root, entry.name);
       if (frontmatter.name !== entry.name) errors.push(`skills/${entry.name} frontmatter name must match its directory`);
       if (frontmatter.description.trim().length < 30) errors.push(`skills/${entry.name} description is too short`);
+      const normalizedDescription = normalizeText(frontmatter.description);
+      const existingDescription = descriptions.get(normalizedDescription);
+      if (existingDescription !== undefined) errors.push(`skills/${entry.name} description duplicates skills/${existingDescription}`);
+      else descriptions.set(normalizedDescription, entry.name);
     } catch (error) {
       errors.push(error instanceof Error ? error.message : String(error));
     }
@@ -137,6 +146,11 @@ export function validateCatalog(root = process.cwd()): string[] {
     }
     if (typeof metadata.summary !== 'string' || metadata.summary.length < 30 || metadata.summary.length > 180) {
       errors.push(`skills/${entry.name} summary must contain 30-180 characters`);
+    } else {
+      const normalizedSummary = normalizeText(metadata.summary);
+      const existingSummary = summaries.get(normalizedSummary);
+      if (existingSummary !== undefined) errors.push(`skills/${entry.name} summary duplicates skills/${existingSummary}`);
+      else summaries.set(normalizedSummary, entry.name);
     }
     if (!Array.isArray(metadata.scenarios) || metadata.scenarios.length !== 2) {
       errors.push(`skills/${entry.name} must define exactly two scenarios`);
@@ -227,6 +241,8 @@ export function validateCatalog(root = process.cwd()): string[] {
 
   return errors;
 }
+
+const normalizeText = (value: string): string => value.trim().replace(/\s+/g, ' ').toLowerCase();
 
 function markdownFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

@@ -7,7 +7,14 @@ import { createFixtureDirectory, removeFixtures } from './testHelpers.js';
 
 afterEach(removeFixtures);
 
-const wild = (root: string): ResolvedProject => ({ root, configPath: null, config: null, mode: 'wild' });
+const wild = (root: string): ResolvedProject => ({
+  root,
+  configPath: null,
+  config: null,
+  mode: 'wild',
+  scope: null,
+  shadowedConfigPaths: [],
+});
 
 describe('knowledge source discovery', () => {
   it('accepts an empty non-Git project without creating a source', async () => {
@@ -16,14 +23,18 @@ describe('knowledge source discovery', () => {
     await expect(inspectKnowledge(wild(root))).resolves.toMatchObject({ mode: 'wild', sources: [], diagnostics: [] });
   });
 
-  it('discovers OpenSpec, both todo queues and a Keep a Changelog 2 file independently', async () => {
+  it('discovers shared and private standard sources independently', async () => {
     const root = await createFixtureDirectory('arcantry-discovery-');
     await mkdir(join(root, 'openspec'));
-    await mkdir(join(root, '.local'));
+    await mkdir(join(root, '.local/openspec'), { recursive: true });
     await writeFile(join(root, 'todo.txt'), '(A) Ship +Arcantry @desk\n');
     await writeFile(join(root, '.local/todo.txt'), 'Private note custom:value\n');
     await writeFile(
       join(root, 'CHANGELOG.md'),
+      '# Changelog\n\nThe format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/).\n\n## [Unreleased]\n',
+    );
+    await writeFile(
+      join(root, '.local/CHANGELOG.md'),
       '# Changelog\n\nThe format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/).\n\n## [Unreleased]\n',
     );
 
@@ -31,7 +42,9 @@ describe('knowledge source discovery', () => {
 
     expect(inspection.sources.map(({ id, adapter, management, visibility }) => ({ id, adapter, management, visibility }))).toEqual([
       { id: 'changelog', adapter: 'keep-a-changelog@2', management: 'observe', visibility: 'shared' },
+      { id: 'changelog-local', adapter: 'keep-a-changelog@2', management: 'observe', visibility: 'private' },
       { id: 'openspec', adapter: 'openspec@1', management: 'observe', visibility: 'shared' },
+      { id: 'openspec-local', adapter: 'openspec@1', management: 'observe', visibility: 'private' },
       { id: 'todo-local', adapter: 'todo-txt@1', management: 'observe', visibility: 'private' },
       { id: 'todo-root', adapter: 'todo-txt@1', management: 'observe', visibility: 'shared' },
     ]);

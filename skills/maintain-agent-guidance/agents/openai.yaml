@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maintain Agent Guidance"
+  short_description: "Keep agent rules scoped and effective"
+  default_prompt: "Use $maintain-agent-guidance to audit and improve the applicable agent instructions."

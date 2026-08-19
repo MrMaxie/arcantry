@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
-  "summary": "Integrate Arcantry into a repository without overwriting project-owned tooling, specifications, or private operational state.",
+  "summary": "Adopt the smallest useful Arcantry boundary while preserving repository-owned tooling, knowledge sources, and private state.",
   "compatibility": {
     "sourceKinds": ["openspec", "changelog", "todo-txt"],
     "adapters": [
@@ -15,18 +15,20 @@
     ],
     "outcomes": [
       "Distinguish discovery, footprint, and management for each project source.",
-      "Choose an explicit preservation or migration boundary without automatic conversion."
+      "Choose an explicit preservation or source transition boundary without automatic conversion.",
+      "Keep local state private unless the default remote branch establishes a different repository policy.",
+      "Prefer user-wide skills and make repository-private packages an explicit fallback."
     ]
   },
   "scenarios": [
     {
       "title": "Adopt Arcantry in a mature repository",
-      "prompt": "Use $adopt-arcantry to inspect a mature repository and plan selective adoption while preserving existing tooling and knowledge sources.",
+      "prompt": "Use the adopt-arcantry skill to inspect a mature repository and plan selective adoption while preserving existing tooling and knowledge sources.",
       "outcome": "A source-by-source adoption plan that leaves project-owned files unchanged until explicitly applied."
     },
     {
       "title": "Diagnose an existing adoption",
-      "prompt": "Use $adopt-arcantry to inspect and validate this repository without removing unknown files or changing external systems.",
+      "prompt": "Use the adopt-arcantry skill to inspect and validate this repository without removing unknown files or changing external systems.",
       "outcome": "A repository health report backed by Arcantry validation and doctor checks, with private state kept local."
     }
   ]

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Write Product Content"
+  short_description: "Write concrete product copy without slop"
+  default_prompt: "Use $write-product-content to write or revise this product-facing content."

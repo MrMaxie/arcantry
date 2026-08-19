@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Maintain universal AGENTS.md guidance at the narrowest applicable scope through exact, approval-gated edits.",
+  "learning": {
+    "outcomes": [
+      "Choose the narrowest guidance scope that owns a recurring agent decision.",
+      "Apply independently approved instruction changes without leaking private context."
+    ]
+  },
+  "scenarios": [
+    {
+      "title": "Fix a repository instruction gap",
+      "prompt": "Use the maintain-agent-guidance skill to propose a durable repository rule for this repeated agent failure and wait for approval before editing.",
+      "outcome": "The user receives a minimal exact proposal targeted to the applicable AGENTS.md file."
+    },
+    {
+      "title": "Keep workstation guidance private",
+      "prompt": "Use the maintain-agent-guidance skill to record this machine-specific workflow without exposing it to repository contributors.",
+      "outcome": "The approved rule is placed in private local guidance and the Git exclusion is verified."
+    }
+  ]
+}

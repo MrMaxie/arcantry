@@ -1,6 +1,6 @@
 {
   "name": "arcantry",
-  "version": "0.4.3",
+  "version": "1.0.0",
   "description": "Arcantry repository adoption, skill catalog, and agent integration CLI.",
   "type": "module",
   "bin": {
@@ -26,14 +26,12 @@
     "./release": {
       "types": "./dist/release.d.ts",
       "import": "./dist/release.js"
-    },
-    "./agents": {
-      "types": "./dist/agents.d.ts",
-      "import": "./dist/agents.js"
     }
   },
   "types": "./dist/index.d.ts",
   "files": [
+    ".claude-plugin",
+    ".codex-plugin",
     "dist",
     "skills",
     "catalog.json",

@@ -1,26 +1,52 @@
 import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { relative, resolve } from 'node:path';
 import { Command } from 'commander';
 import { ZodError } from 'zod';
-import { doctorSkills, findCatalogRoot, inspectSkill, linkSkill, loadCatalog, unlinkSkill } from './catalog.js';
-import { type AgentName, type ArcantrySource, agentNameSchema, docsModeSchema, sourceModeSchema } from './config.js';
+import {
+  doctorPrivateSkills,
+  doctorSkills,
+  findCatalogRoot,
+  inspectPrivateSkill,
+  inspectSkill,
+  linkSkillTargets,
+  listPrivateSkills,
+  loadCatalog,
+  privateSkillExists,
+  repositoryClaudeSkillTargetRoot,
+  repositorySkillTargetRoot,
+  rollbackSkillLinks,
+  unlinkSkillTargets,
+  userClaudeSkillTargetRoot,
+  userSkillTargetRoot,
+  type SkillLinkOptions,
+} from './catalog.js';
 import {
   doctorRepository,
   initRepository,
   removeRepository,
+  repositoryCompatibilitySchema,
+  repositoryScopeSchema,
+  resolveRepositoryRoot,
   updateRepository,
   validateRepository,
   type RepositoryReport,
   type RepositoryResult,
 } from './repository.js';
 import { displaySourcePath, inspectKnowledge, validateKnowledge, type KnowledgeInspection } from './knowledge.js';
-import { applyProjectPlan, createProjectPlan, createWriteOperation, parseProjectPlan, renderProjectPlan, serializeProjectPlan } from './projectPlan.js';
+import { applyProjectPlan, createProjectPlan, createWriteOperation, parseProjectPlan, renderProjectPlan, serializeProjectPlan, type PlanOperation } from './projectPlan.js';
 import { resolveProject, transitionSchema } from './projectConfig.js';
 import { planSourceTransition } from './sourceTransition.js';
 import { addTodoTask, completeTodoTask, inspectTodoTasks, moveTodoTask } from './todoTxt.js';
-import { planLocalGitExclude } from './privateState.js';
+import { planLocalGitExclude, planLocalGitExcludeEntries } from './privateState.js';
 import type { ProjectSource } from './knowledge.js';
+import {
+  checkProjectRelease,
+  inspectReleasePlan,
+  planReleaseBaseline,
+  planReleaseCut,
+  planReleaseRender,
+} from './projectRelease.js';
 
 const packageManifest = JSON.parse(
   readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
@@ -38,7 +64,7 @@ export const buildProgram = (context: CliContext): Command => {
   const program = new Command();
   program
     .name('arcantry')
-    .description('Manage Arcantry repository adoption and skill links.')
+    .description('Manage Arcantry project sources, local releases, and skill links.')
     .version(arcantryVersion)
     .option('--cwd <path>', 'Run against another repository or catalog location.')
     .option('--config <path>', 'Use one explicit arcantry.toml file without config merging.')
@@ -70,6 +96,7 @@ export const buildProgram = (context: CliContext): Command => {
     .requiredOption('--transition <transition>', 'Transition: preserve, adopt, rebind, cutover, migrate, or relocate.')
     .option('--to-path <path>', 'Target source path for rebind or relocate.')
     .option('--to-adapter <adapter>', 'Target versioned adapter.')
+    .option('--from <source...>', 'Explicit source dependencies for adoption.')
     .option('--managed-from <version>', 'First managed SemVer version for changelog cutover.')
     .option('--delete-source', 'Delete the verified source after relocation.')
     .option('--json', 'Write the serializable plan required by repo apply.')
@@ -78,6 +105,7 @@ export const buildProgram = (context: CliContext): Command => {
       transition: string;
       toPath?: string;
       toAdapter?: string;
+      from?: string[];
       managedFrom?: string;
       deleteSource?: boolean;
       json?: boolean;
@@ -90,6 +118,7 @@ export const buildProgram = (context: CliContext): Command => {
           toolVersion: arcantryVersion,
           ...(options.toPath === undefined ? {} : { targetPath: options.toPath }),
           ...(options.toAdapter === undefined ? {} : { targetAdapter: options.toAdapter }),
+          ...(options.from === undefined ? {} : { from: options.from }),
           ...(options.managedFrom === undefined ? {} : { managedFrom: options.managedFrom }),
           deleteSource: options.deleteSource === true,
         });
@@ -115,25 +144,16 @@ export const buildProgram = (context: CliContext): Command => {
 
   repo
     .command('init')
-    .description('Initialize Arcantry-managed repository artifacts.')
-    .requiredOption('--docs <mode>', 'Documentation mode: shared, local, or none.')
-    .option('--agent <agent>', 'Agent entrypoint to manage; repeat to select more than one.', collectAgent, [])
-    .option('--source <name=mode>', 'Ordered source and mode; repeat to select more than one.', collectSource, [])
-    .option('--operational-source <name>', 'Name of the single operational source.')
-    .action(async (options: { docs: string; agent: AgentName[]; source: ArcantrySource[]; operationalSource?: string }) => {
+    .description('Initialize minimal shared or private Arcantry repository state.')
+    .requiredOption('--scope <scope>', 'Configuration scope: shared or private.')
+    .option('--compat <compatibility>', 'Add an explicit compatibility adapter: claude.')
+    .action(async (options: { scope: string; compat?: string }) => {
       await execute(program, context, async () => {
-        const docs = docsModeSchema.parse(options.docs);
-        if (docs !== 'none') {
-          throw new Error('Legacy --docs shared/local modes are no longer supported. Existing .docs content remains project-owned; use --docs none.');
-        }
-        const sources = options.source.length > 0 ? options.source : undefined;
-        const inferredOperationalSource = sources?.find((source) => source.mode === 'operational')?.name;
-        const result = await initRepository(commandCwd(program, context), {
-          docs,
-          agents: options.agent.length > 0 ? options.agent : undefined,
-          sources,
-          operationalSource: options.operationalSource ?? inferredOperationalSource,
-        });
+        const result = await initRepository(
+          commandCwd(program, context),
+          repositoryScopeSchema.parse(options.scope),
+          parseCompatibility(options.compat),
+        );
         renderRepositoryResult(context, result);
       });
     });
@@ -141,34 +161,37 @@ export const buildProgram = (context: CliContext): Command => {
   repo
     .command('update')
     .description('Refresh owned artifacts while preserving configuration.')
-    .action(async () => execute(program, context, async () => renderRepositoryResult(context, await updateRepository(commandCwd(program, context)))));
+    .requiredOption('--scope <scope>', 'Configuration scope: shared or private.')
+    .option('--compat <compatibility>', 'Add or refresh an explicit compatibility adapter: claude.')
+    .action(async (options: { scope: string; compat?: string }) => execute(program, context, async () =>
+      renderRepositoryResult(context, await updateRepository(
+        commandCwd(program, context),
+        repositoryScopeSchema.parse(options.scope),
+        parseCompatibility(options.compat),
+      ))));
 
   repo
     .command('doctor')
     .description('Diagnose repository adoption without changing it.')
     .action(async () => execute(program, context, async () => {
-      if (await shouldUseLegacyRepository(program, context)) {
-        renderRepositoryReport(program, context, await doctorRepository(commandCwd(program, context)));
-      } else {
-        await renderKnowledgeValidation(program, context, true);
-      }
+      renderRepositoryReport(program, context, await doctorRepository(commandCwd(program, context), commandConfigPath(program, context)));
+      await renderKnowledgeValidation(program, context, true);
     }));
 
   repo
     .command('validate')
     .description('Validate repository adoption without changing it.')
     .action(async () => execute(program, context, async () => {
-      if (await shouldUseLegacyRepository(program, context)) {
-        renderRepositoryReport(program, context, await validateRepository(commandCwd(program, context)));
-      } else {
-        await renderKnowledgeValidation(program, context, false);
-      }
+      renderRepositoryReport(program, context, await validateRepository(commandCwd(program, context), false, commandConfigPath(program, context)));
+      await renderKnowledgeValidation(program, context, false);
     }));
 
   repo
     .command('remove')
     .description('Remove only verified Arcantry-owned artifacts and sections.')
-    .action(async () => execute(program, context, async () => renderRepositoryResult(context, await removeRepository(commandCwd(program, context)))));
+    .requiredOption('--scope <scope>', 'Configuration scope: shared or private.')
+    .action(async (options: { scope: string }) => execute(program, context, async () =>
+      renderRepositoryResult(context, await removeRepository(commandCwd(program, context), repositoryScopeSchema.parse(options.scope)))));
 
   const todo = program.command('todo').description('Use root or private todo.txt queues without imposing a workflow taxonomy.');
   todo
@@ -270,47 +293,130 @@ export const buildProgram = (context: CliContext): Command => {
       });
     });
 
+  const release = program.command('release').description('Manage an OpenSpec-backed local release story without publishing.');
+  release
+    .command('baseline <version>')
+    .description('Preview or apply a baseline for an existing project release.')
+    .requiredOption('--date <date>', 'Existing release date in YYYY-MM-DD.')
+    .option('--apply', 'Apply the previewed release plan.')
+    .option('--json', 'Write the plan or applied operations as JSON.')
+    .action(async (version: string, options: { date: string; apply?: boolean; json?: boolean }) => {
+      await execute(program, context, async () => {
+        const plan = await planReleaseBaseline(await commandProject(program, context), version, options.date, arcantryVersion);
+        await handleMutationPlan(program, context, plan, options.apply === true, options.json === true);
+      });
+    });
+
+  release
+    .command('plan')
+    .description('Inspect the next local release without changing files.')
+    .option('--json', 'Write the release plan as JSON.')
+    .action(async (options: { json?: boolean }) => {
+      await execute(program, context, async () => {
+        const plan = inspectReleasePlan(await commandProject(program, context));
+        if (options.json === true) context.stdout(`${JSON.stringify(plan, null, 2)}\n`);
+        else {
+          context.stdout(`Current: ${plan.current}\nNext: ${plan.next}\nImpact: ${plan.impact}\n`);
+          context.stdout(plan.changes.length === 0 ? 'Changes: none\n' : `Changes: ${plan.changes.join(', ')}\n`);
+        }
+      });
+    });
+
+  release
+    .command('cut')
+    .description('Preview or apply the next local release manifest, versions and changelog.')
+    .option('--date <date>', 'Release date in YYYY-MM-DD.', localDate())
+    .option('--apply', 'Apply the previewed release plan.')
+    .option('--json', 'Write the plan or applied operations as JSON.')
+    .action(async (options: { date: string; apply?: boolean; json?: boolean }) => {
+      await execute(program, context, async () => {
+        const plan = await planReleaseCut(await commandProject(program, context), options.date, arcantryVersion);
+        await handleMutationPlan(program, context, plan, options.apply === true, options.json === true);
+      });
+    });
+
+  release
+    .command('render')
+    .description('Preview or apply the deterministic managed changelog.')
+    .option('--apply', 'Apply the previewed changelog plan.')
+    .option('--json', 'Write the plan or applied operations as JSON.')
+    .action(async (options: { apply?: boolean; json?: boolean }) => {
+      await execute(program, context, async () => {
+        const plan = await planReleaseRender(await commandProject(program, context), arcantryVersion);
+        await handleMutationPlan(program, context, plan, options.apply === true, options.json === true);
+      });
+    });
+
+  release
+    .command('check')
+    .description('Check local release consistency without changing files.')
+    .option('--sealed', 'Also require final assignment, clean Git state and a release seal.')
+    .action(async (options: { sealed?: boolean }) => {
+      await execute(program, context, async () => {
+        checkProjectRelease(await commandProject(program, context), options.sealed === true);
+        context.stdout(options.sealed === true ? 'Release state is sealed.\n' : 'Release state is consistent.\n');
+      });
+    });
+
   const skills = program.command('skills').description('Inspect the catalog and manage skill links.');
   skills
     .command('list')
-    .description('List skills in the canonical catalog.')
+    .description('List public catalog skills or private repository skills.')
     .option('--catalog-root <path>', 'Directory containing catalog.json and skills/.')
-    .action(async (options: { catalogRoot?: string }) => {
+    .option('--scope <scope>', 'Inventory scope: public or private.', 'public')
+    .action(async (options: { catalogRoot?: string; scope: string }) => {
       await execute(program, context, async () => {
+        if (options.scope === 'private') {
+          const root = await resolveRepositoryRoot(commandCwd(program, context));
+          for (const skill of await listPrivateSkills(root)) context.stdout(`${skill.name}\tprivate\t${skill.description}\n`);
+          return;
+        }
+        if (options.scope !== 'public') throw new Error('--scope must be public or private.');
         const root = await catalogRoot(program, context, options.catalogRoot);
         const catalog = await loadCatalog(root);
-        for (const entry of catalog.skills) context.stdout(`${entry.name}\t${entry.tags.join(', ')}\n`);
+        for (const entry of catalog.skills) context.stdout(`${entry.name}\t${entry.family}\t${entry.tags.join(', ')}\n`);
       });
     });
 
   skills
     .command('inspect <name>')
-    .description('Show public metadata for one skill.')
+    .description('Show metadata for one public or private skill.')
     .option('--catalog-root <path>', 'Directory containing catalog.json and skills/.')
-    .action(async (name: string, options: { catalogRoot?: string }) => {
+    .option('--scope <scope>', 'Inventory scope: public or private.', 'public')
+    .action(async (name: string, options: { catalogRoot?: string; scope: string }) => {
       await execute(program, context, async () => {
+        if (options.scope === 'private') {
+          const inspection = await inspectPrivateSkill(await resolveRepositoryRoot(commandCwd(program, context)), name);
+          context.stdout(`${inspection.name}\n${inspection.description}\nVisibility: private\nSource: ${inspection.directory}\n`);
+          return;
+        }
+        if (options.scope !== 'public') throw new Error('--scope must be public or private.');
         const inspection = await inspectSkill(await catalogRoot(program, context, options.catalogRoot), name);
-        context.stdout(`${inspection.entry.name}\n${inspection.metadata.summary}\nTags: ${inspection.entry.tags.join(', ')}\n`);
+        context.stdout(`${inspection.entry.name}\n${inspection.metadata.summary}\nFamily: ${inspection.entry.family}\nTags: ${inspection.entry.tags.join(', ')}\n`);
         for (const scenario of inspection.metadata.scenarios) context.stdout(`- ${scenario.title}: ${scenario.outcome}\n`);
       });
     });
 
   skills
     .command('link <name>')
-    .description('Link one catalog skill into an agent skill directory.')
+    .description('Link one canonical skill into the universal Agent Skills directory.')
     .option('--catalog-root <path>', 'Directory containing catalog.json and skills/.')
-    .option('--target <path>', 'Agent skill directory.')
+    .option('--scope <scope>', 'Skill scope: user, repo, or private.')
+    .option('--compat <compatibility>', 'Also add a compatibility alias: claude.')
+    .option('--target <path>', 'Advanced explicit Agent Skills directory.')
     .option('--replace', 'Back up an ordinary target or replace a different link before linking.')
-    .action(async (name: string, options: { catalogRoot?: string; target?: string; replace?: boolean }) => {
+    .action(async (name: string, options: SkillCommandOptions) => {
       await execute(program, context, async () => {
-        const result = await linkSkill({
-          catalogRoot: await catalogRoot(program, context, options.catalogRoot),
-          name,
-          targetRoot: options.target,
-          replace: options.replace,
-        });
-        context.stdout(result.status === 'unchanged' ? `Already linked: ${name}\n` : `Linked: ${name}\n`);
-        if (result.backup !== null) context.stdout(`Backup: ${result.backup}\n`);
+        const operation = await resolveSkillOperation(program, context, name, options);
+        const results = await linkSkillTargets({ ...operation.source, name, replace: options.replace }, operation.targetRoots);
+        try {
+          if (operation.privateRoot !== null) await excludePrivateSkillLinks(operation.privateRoot, name, operation.targetRoots);
+        } catch (error) {
+          await rollbackSkillLinks(results);
+          throw error;
+        }
+        context.stdout(results.every((result) => result.status === 'unchanged') ? `Already linked: ${name}\n` : `Linked: ${name}\n`);
+        for (const result of results) if (result.backup !== null) context.stdout(`Backup: ${result.backup}\n`);
       });
     });
 
@@ -318,22 +424,38 @@ export const buildProgram = (context: CliContext): Command => {
     .command('unlink <name>')
     .description('Remove only an exact link to one catalog skill.')
     .option('--catalog-root <path>', 'Directory containing catalog.json and skills/.')
-    .option('--target <path>', 'Agent skill directory.')
-    .action(async (name: string, options: { catalogRoot?: string; target?: string }) => {
+    .option('--scope <scope>', 'Skill scope: user, repo, or private.')
+    .option('--compat <compatibility>', 'Also remove the compatibility alias: claude.')
+    .option('--target <path>', 'Advanced explicit Agent Skills directory.')
+    .action(async (name: string, options: SkillCommandOptions) => {
       await execute(program, context, async () => {
-        await unlinkSkill({ catalogRoot: await catalogRoot(program, context, options.catalogRoot), name, targetRoot: options.target });
-        context.stdout(`Unlinked: ${name}\n`);
+        const operation = await resolveSkillOperation(program, context, name, options);
+        const results = await unlinkSkillTargets({ ...operation.source, name }, operation.targetRoots);
+        context.stdout(results.every((result) => result.status === 'unchanged') ? `Already unlinked: ${name}\n` : `Unlinked: ${name}\n`);
       });
     });
 
   skills
     .command('doctor')
-    .description('Validate catalog packages and optionally inspect a skill link directory.')
+    .description('Validate skill packages and optionally inspect universal and compatibility links.')
     .option('--catalog-root <path>', 'Directory containing catalog.json and skills/.')
-    .option('--target <path>', 'Agent skill directory to inspect.')
-    .action(async (options: { catalogRoot?: string; target?: string }) => {
+    .option('--scope <scope>', 'Skill scope to inspect: user, repo, or private.')
+    .option('--compat <compatibility>', 'Also inspect a compatibility alias: claude.')
+    .option('--target <path>', 'Advanced explicit Agent Skills directory to inspect.')
+    .action(async (options: SkillCommandOptions) => {
       await execute(program, context, async () => {
-        const report = await doctorSkills(await catalogRoot(program, context, options.catalogRoot), options.target);
+        let report: Awaited<ReturnType<typeof doctorSkills>>;
+        if (options.scope === 'private') {
+          const root = await resolveRepositoryRoot(commandCwd(program, context));
+          const targetRoots = await resolveSkillTargetRoots(program, context, options);
+          const publicCatalog = await loadCatalog(await catalogRoot(program, context, options.catalogRoot));
+          report = await doctorPrivateSkills(root, targetRoots, new Set(publicCatalog.skills.map((entry) => entry.name)));
+        } else {
+          const targetRoots = options.scope === undefined && options.compat === undefined && options.target === undefined
+            ? undefined
+            : await resolveSkillTargetRoots(program, context, options);
+          report = await doctorSkills(await catalogRoot(program, context, options.catalogRoot), targetRoots);
+        }
         for (const error of report.errors) context.stderr(`ERROR: ${error}\n`);
         for (const warning of report.warnings) context.stdout(`WARNING: ${warning}\n`);
         if (report.valid) context.stdout('Skill catalog is valid.\n');
@@ -371,6 +493,11 @@ const execute = async (program: Command, context: CliContext, action: () => Prom
 
 const commandCwd = (program: Command, context: CliContext): string => resolve(program.opts<{ cwd?: string }>().cwd ?? context.cwd);
 
+const commandConfigPath = (program: Command, context: CliContext): string | undefined => {
+  const config = program.opts<{ config?: string }>().config;
+  return config === undefined ? undefined : resolve(commandCwd(program, context), config);
+};
+
 const commandProject = async (program: Command, context: CliContext) => {
   const options = program.opts<{ cwd?: string; config?: string }>();
   return resolveProject({
@@ -407,7 +534,8 @@ const renderRepositoryReport = (program: Command, context: CliContext, report: R
 
 const renderKnowledgeInspection = (context: CliContext, inspection: KnowledgeInspection): void => {
   context.stdout(`Mode: ${inspection.mode}\n`);
-  context.stdout(`Config: ${inspection.configPath === null ? 'none' : 'arcantry.toml'}\n`);
+  context.stdout(`Config: ${inspection.configPath === null ? 'none' : `${inspection.configScope ?? 'external'} (${inspection.configPath})`}\n`);
+  for (const path of inspection.shadowedConfigPaths) context.stdout(`Shadowed config: ${path}\n`);
   if (inspection.sources.length === 0) context.stdout('No knowledge sources detected.\n');
   for (const source of inspection.sources) {
     context.stdout(
@@ -433,25 +561,32 @@ const renderKnowledgeValidation = async (program: Command, context: CliContext, 
   else exitCodes.set(program, 1);
 };
 
-const shouldUseLegacyRepository = async (program: Command, context: CliContext): Promise<boolean> => {
-  const options = program.opts<{ config?: string }>();
-  if (options.config !== undefined) return false;
-  try {
-    await readFile(resolve(commandCwd(program, context), '.local', 'arcantry.json'), 'utf8');
-    return (await commandProject(program, context)).config === null;
-  } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return false;
-    throw error;
-  }
+const handleTodoPlan = async (program: Command, context: CliContext, plan: ReturnType<typeof parseProjectPlan>, apply: boolean): Promise<void> => {
+  await handleMutationPlan(program, context, plan, apply, false);
 };
 
-const handleTodoPlan = async (program: Command, context: CliContext, plan: ReturnType<typeof parseProjectPlan>, apply: boolean): Promise<void> => {
+const handleMutationPlan = async (
+  program: Command,
+  context: CliContext,
+  plan: ReturnType<typeof parseProjectPlan>,
+  apply: boolean,
+  json: boolean,
+): Promise<void> => {
   if (!apply) {
-    renderPlanResult(program, context, plan);
-    context.stdout('Run the same command with --apply to write these changes.\n');
+    if (json) {
+      context.stdout(serializeProjectPlan(plan));
+      if (plan.conflicts.length > 0) exitCodes.set(program, 1);
+    } else {
+      renderPlanResult(program, context, plan);
+      context.stdout('Run the same command with --apply to write these changes.\n');
+    }
     return;
   }
   const result = await applyProjectPlan(plan, arcantryVersion);
+  if (json) {
+    context.stdout(`${JSON.stringify({ applied: result.applied }, null, 2)}\n`);
+    return;
+  }
   for (const operation of result.applied) context.stdout(`${operation.action}: ${operation.path}\n`);
   if (result.applied.length === 0) context.stdout('No file changes.\n');
 };
@@ -503,15 +638,96 @@ const localDate = (): string => {
   return `${year}-${month}-${day}`;
 };
 
-const collectAgent = (value: string, previous: AgentName[]): AgentName[] => [...previous, agentNameSchema.parse(value)];
-
-const collectSource = (value: string, previous: ArcantrySource[]): ArcantrySource[] => {
-  const parts = value.split('=');
-  if (parts.length !== 2 || parts[0]?.trim() === '' || parts[1]?.trim() === '') {
-    throw new Error('--source must use <name=readonly|readwrite|operational>.');
-  }
-  return [...previous, { name: parts[0].trim(), mode: sourceModeSchema.parse(parts[1].trim()) }];
+type SkillCommandOptions = {
+  catalogRoot?: string;
+  scope?: string;
+  compat?: string;
+  target?: string;
+  replace?: boolean;
 };
+
+type ResolvedSkillOperation = {
+  source: Pick<SkillLinkOptions, 'catalogRoot' | 'sourceDirectory'>;
+  targetRoots: string[];
+  privateRoot: string | null;
+};
+
+const resolveSkillOperation = async (
+  program: Command,
+  context: CliContext,
+  name: string,
+  options: SkillCommandOptions,
+): Promise<ResolvedSkillOperation> => {
+  const targetRoots = await resolveSkillTargetRoots(program, context, options);
+  if (options.scope === 'private') {
+    const root = await resolveRepositoryRoot(commandCwd(program, context));
+    const privateSkill = await inspectPrivateSkill(root, name);
+    const publicRoot = await catalogRoot(program, context, options.catalogRoot);
+    if ((await loadCatalog(publicRoot)).skills.some((entry) => entry.name === name)) {
+      throw new Error(`Skill name conflict: ${name} exists in both the public catalog and .local/skills.`);
+    }
+    return { source: { sourceDirectory: privateSkill.directory }, targetRoots, privateRoot: root };
+  }
+  if (options.scope === 'repo') {
+    const root = await resolveRepositoryRoot(commandCwd(program, context));
+    if (await privateSkillExists(root, name)) {
+      throw new Error(`Skill name conflict: ${name} exists in both the public catalog and .local/skills.`);
+    }
+  }
+  return {
+    source: { catalogRoot: await catalogRoot(program, context, options.catalogRoot) },
+    targetRoots,
+    privateRoot: null,
+  };
+};
+
+const resolveSkillTargetRoots = async (
+  program: Command,
+  context: CliContext,
+  options: Pick<SkillCommandOptions, 'scope' | 'compat' | 'target'>,
+): Promise<string[]> => {
+  if (options.target !== undefined && (options.scope !== undefined || options.compat !== undefined)) {
+    throw new Error('--target cannot be combined with --scope or --compat.');
+  }
+  if (options.target !== undefined) return [resolve(commandCwd(program, context), options.target)];
+  const compatibility = parseCompatibility(options.compat);
+  if (compatibility !== null && options.scope === undefined) {
+    throw new Error('--compat requires --scope user|repo|private.');
+  }
+  if (options.scope === 'user') {
+    return compatibility === 'claude' ? [userSkillTargetRoot(), userClaudeSkillTargetRoot()] : [userSkillTargetRoot()];
+  }
+  if (options.scope === 'repo' || options.scope === 'private') {
+    const root = await resolveRepositoryRoot(commandCwd(program, context));
+    return compatibility === 'claude'
+      ? [repositorySkillTargetRoot(root), repositoryClaudeSkillTargetRoot(root)]
+      : [repositorySkillTargetRoot(root)];
+  }
+  if (options.scope !== undefined) throw new Error('--scope must be user, repo, or private.');
+  throw new Error('Choose --scope user|repo|private or provide --target.');
+};
+
+const excludePrivateSkillLinks = async (root: string, name: string, targetRoots: string[]): Promise<void> => {
+  const entries = ['.local/'];
+  for (const targetRoot of targetRoots) {
+    const relativeRoot = relative(resolve(root), resolve(targetRoot)).replaceAll('\\', '/');
+    if (!relativeRoot.startsWith('../') && relativeRoot !== '') entries.push(`${relativeRoot}/${name}`);
+  }
+  const operations: PlanOperation[] = [];
+  await planLocalGitExcludeEntries(root, entries, operations);
+  if (operations.length === 0) return;
+  await applyProjectPlan(createProjectPlan({
+    toolVersion: arcantryVersion,
+    root,
+    sourceId: `private-skill-${name}`,
+    transition: 'preserve',
+    adapter: 'agent-skill@1',
+    operations,
+  }), arcantryVersion);
+};
+
+const parseCompatibility = (value: string | undefined): 'claude' | null =>
+  value === undefined ? null : repositoryCompatibilitySchema.parse(value);
 
 const formatError = (error: unknown): string => {
   if (error instanceof ZodError) return error.issues.map((issue) => issue.message).join(' ');

@@ -1,15 +1,15 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
-  "summary": "Inspect an installed Codex skill collection and surface overlap, catalog pressure, and consolidation candidates without changing it.",
+  "summary": "Inventory installed skills, separate aliases from conflicts, and recommend evidence-backed portfolio actions without changing them.",
   "scenarios": [
     {
       "title": "Find overlapping installed skills",
-      "prompt": "Use $audit-skill-portfolio to inspect my installed skills and identify the strongest consolidation candidates.",
+      "prompt": "Use the audit-skill-portfolio skill to inspect my installed skills and identify the strongest consolidation candidates.",
       "outcome": "A read-only inventory that separates deterministic evidence from heuristic overlap and prioritizes a short decision list."
     },
     {
       "title": "Audit one repository catalog",
-      "prompt": "Use $audit-skill-portfolio for this repository's project skills and check naming, invocation policy, and trigger collisions.",
+      "prompt": "Use the audit-skill-portfolio skill for this repository's project skills and check naming, invocation policy, and trigger collisions.",
       "outcome": "A scoped catalog report with diagnostics and tier candidates, without installing, deleting, or rewriting skills."
     }
   ]

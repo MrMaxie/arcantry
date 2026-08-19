@@ -1,6 +1,6 @@
 ---
 name: audience-scope-discipline
-description: Design, write, review, and implement product-facing or externally shared content and changes for their actual audience while preventing local-context leakage, unnecessary detail, scope creep, incidental refactoring, and preference-driven churn. Use for audience-facing artifacts, derived copies of existing structured artifacts, or non-trivial implementation where audience, local/private boundaries, or scope fidelity materially affect the result. Do not use for trivial translation, calculation, or private implementation-only edits with no audience or artifact contract.
+description: Protect the audience, scope, privacy boundary, and established structure of product-facing or derived artifacts when implementation or content could drift.
 ---
 
 # Audience and Scope Discipline

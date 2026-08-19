@@ -1,0 +1,25 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Explain shared and private source drift and prepare one explicit transition that preserves both sides until apply.",
+  "compatibility": {
+    "sourceKinds": ["openspec", "changelog", "todo-txt"]
+  },
+  "learning": {
+    "outcomes": [
+      "Explain source drift without merging configurations or exposing private content.",
+      "Plan a verified promotion or relocation with explicit deletion boundaries."
+    ]
+  },
+  "scenarios": [
+    {
+      "title": "Promote private project intent",
+      "prompt": "Use the reconcile-project-sources skill to compare the private and shared intent sources and prepare a safe promotion plan.",
+      "outcome": "A reviewed plan identifies semantic drift, the target authority, verification, and any separate deletion."
+    },
+    {
+      "title": "Preserve divergent task queues",
+      "prompt": "Use the reconcile-project-sources skill to inspect shared and private todo queues without automatically merging them.",
+      "outcome": "Each queue remains independent and the report identifies only explicit actions the user may choose."
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Verify Work Proportionally"
+  short_description: "Match verification depth to real risk"
+  default_prompt: "Use $verify-work-proportionally to design and execute the right verification layers."

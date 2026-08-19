@@ -174,12 +174,20 @@ describe('release state validation', () => {
     const root = fixture();
     manifest(root);
     const packageRoot = join(root, 'packages', 'arcantry');
+    const codexPluginRoot = join(root, '.codex-plugin');
+    const claudePluginRoot = join(root, '.claude-plugin');
     mkdirSync(packageRoot, { recursive: true });
+    mkdirSync(codexPluginRoot, { recursive: true });
+    mkdirSync(claudePluginRoot, { recursive: true });
     writeFileSync(join(packageRoot, 'package.json'), '{"version":"0.2.0"}\n');
 
     expect(() => validateDistributionVersions(root)).toThrow('distribution version must match release 0.1.0');
     writeFileSync(join(packageRoot, 'package.json'), '{"version":"0.1.0"}\n');
+    writeFileSync(join(codexPluginRoot, 'plugin.json'), '{"version":"0.1.0"}\n');
+    writeFileSync(join(claudePluginRoot, 'plugin.json'), '{"version":"0.1.0"}\n');
     expect(() => validateDistributionVersions(root)).not.toThrow();
+    writeFileSync(join(claudePluginRoot, 'plugin.json'), '{"version":"0.2.0"}\n');
+    expect(() => validateDistributionVersions(root)).toThrow('distribution version must match release 0.1.0');
   });
 });
 
