@@ -15,6 +15,8 @@ Preserve the thought quickly, then place it according to its current level of co
 - Use the skill improvement pipeline for a repeated workflow with evidence across tasks.
 - Use `.local/openspec`, `.local/CHANGELOG.md`, `.local/todo.txt`, or `.local/skills` when the corresponding content is private to one user or workstation.
 
+Use `protect-local-boundary` before reading or writing a source under `.local/` and before any later promotion or relocation crosses the private boundary.
+
 When both shared and private sources can accept the item, ask for the scope only if the content or collaboration boundary does not make it clear.
 
 ## Capture

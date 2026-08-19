@@ -1,0 +1,7 @@
+interface:
+  display_name: "Protect Local Boundary"
+  short_description: "Keep private .local state out of shared flows"
+  default_prompt: "Use $protect-local-boundary to handle this .local operation without coupling private state to shared project behavior."
+
+policy:
+  allow_implicit_invocation: true
