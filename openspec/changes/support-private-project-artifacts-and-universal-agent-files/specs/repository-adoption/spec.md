@@ -2,7 +2,7 @@
 
 ### Requirement: Repository guidance uses explicit information layers
 
-Arcantry MUST keep machine-local execution state in `.local/`, accepted product and engineering intent in configured shared or private OpenSpec sources, human release history in configured shared or private changelog sources, quick task queues in configured todo.txt sources, and procedural capabilities in independently managed skill packages. `AGENTS.md` and `.agents` MUST be the universal guidance and skill surfaces. Shared and private layers MUST remain independent unless an explicit reviewed operation promotes or relocates content. `.local/` MUST remain private when Git is present.
+Arcantry MUST keep machine-local execution state in `.local/`, accepted product and engineering intent in configured shared or private OpenSpec sources, human release history in configured shared or private changelog sources, quick task queues in configured todo.txt sources, and procedural capabilities in independently managed skill packages. `AGENTS.md` and `.agents` MUST be the universal guidance and skill surfaces. Shared and private layers MUST remain independent unless an explicit reviewed operation promotes or relocates content. `.local/` MUST remain private when Git is present unless the configured default remote branch already tracks it; that established repository policy MUST be preserved and reported as a conflict with Arcantry's private-local convention.
 
 #### Scenario: A project uses both information scopes
 
@@ -21,6 +21,18 @@ Arcantry MUST keep machine-local execution state in `.local/`, accepted product 
 - **WHEN** Arcantry initializes one repository scope
 - **THEN** it manages only the configuration and universal guidance for that scope
 - **AND** configured source responsibilities remain distinct
+
+#### Scenario: The remote repository already tracks local state
+
+- **WHEN** the configured default remote branch tracks content under `.local/`
+- **THEN** adoption preserves that established repository policy
+- **AND** reports its conflict with Arcantry's private-local convention
+
+#### Scenario: Only the local index tracks local state
+
+- **WHEN** `.local/` is absent from the configured default remote branch but present in the current index
+- **THEN** adoption plans removal from the index as a separate explicitly authorized operation
+- **AND** preserves the working files
 
 #### Scenario: Claude compatibility is present
 
