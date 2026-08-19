@@ -25,6 +25,8 @@ arcantry skills link <name> --scope user --compat claude
 arcantry skills doctor --scope user
 ```
 
+Use user scope by default so the skill remains available across projects. Choose repository scope only for a shared repository requirement, and use a private package under `.local/skills` only as an explicitly selected fallback or local override.
+
 Arcantry recommends the universal Agent Skills locations:
 
 | Surface | User scope | Repository scope |

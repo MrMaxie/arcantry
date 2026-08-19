@@ -15,7 +15,9 @@
     ],
     "outcomes": [
       "Distinguish discovery, footprint, and management for each project source.",
-      "Choose an explicit preservation or source transition boundary without automatic conversion."
+      "Choose an explicit preservation or source transition boundary without automatic conversion.",
+      "Keep local state private unless the default remote branch establishes a different repository policy.",
+      "Prefer user-wide skills and make repository-private packages an explicit fallback."
     ]
   },
   "scenarios": [

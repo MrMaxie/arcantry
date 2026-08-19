@@ -11,6 +11,8 @@ arcantry repo inspect
 
 Inspection is read-only and works without Git, configuration, or recognized sources.
 
+In a Git repository, adoption resolves `.local/` before using local state. If the configured default remote branch already tracks `.local/`, Arcantry preserves that established repository policy and reports the conflict with its private-local convention. Otherwise it keeps the directory private through `.git/info/exclude`. If only the current index tracks `.local/`, removal from the index is planned separately, requires explicit approval, and preserves the working files.
+
 ## Choose an adoption path
 
 | Need | Start here | Repository footprint |
@@ -21,7 +23,7 @@ Inspection is read-only and works without Git, configuration, or recognized sour
 | External control | Use `--cwd` with `--config`. | None in the target project. |
 | One source transition | Inspect, plan, review, and apply. | Only the explicitly applied source change. |
 | Skills only | Inspect or link a catalog skill. | One link in a standard Agent Skills directory. |
-| Private skills | Keep packages in `.local/skills` and link them explicitly. | Locally excluded `.agents` links and optional Claude aliases. |
+| Private skill fallback | Keep an explicitly selected package or override in `.local/skills`. | Locally excluded `.agents` links and optional Claude aliases. |
 
 ## Private setup
 
@@ -91,4 +93,6 @@ arcantry skills link <name> --scope user
 
 Todo mutations preview by default and write only with `--apply`. A linked skill remains a procedure, not project authority.
 
-For a private repository skill, create `.local/skills/<name>/SKILL.md` and use `arcantry skills link <name> --scope private`. Add `--compat claude` only for the extra branded alias.
+Prefer user-scoped skills. Adoption does not install, update, or copy them automatically. When a required skill is missing, choose between the recommended user-wide installation and a private repository package. When the user-wide skill is unsuitable for the required version or compatibility, choose between updating it user-wide and creating a local override.
+
+Use `.local/skills/<name>/SKILL.md` with `arcantry skills link <name> --scope private` only after selecting the private fallback. Add `--compat claude` only for the extra branded alias.
