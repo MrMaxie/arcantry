@@ -17,16 +17,17 @@ Stop and return a revised proposal when the target preimage drifted, the accepte
 
 1. Re-read the accepted candidate, target, applicable `AGENTS.md`, and relevant private instructions.
 2. Read [references/productization-rules.md](references/productization-rules.md) and confirm the narrowest artifact.
-3. Preserve unrelated files and existing user changes.
-4. Use the owning companion:
+3. Use `protect-local-boundary` before creating or reading a private carrier under `.local/` or promoting anything from it into a shared catalog.
+4. Preserve unrelated files and existing user changes.
+5. Use the owning companion:
    - `maintain-agent-guidance` for `AGENTS.md` or `.local/AGENTS.md`;
    - the host's `skill-creator` capability for a skill;
    - the automation tool for scheduled work;
    - applicable host configuration guidance for a hook;
    - the target catalog's documented workflow for an approved catalog operation.
-5. Add deterministic scripts only when stable inputs, outputs, and failure behavior are defined. Test every added script.
-6. Run `evaluate-skill-change` before adopting a new or changed skill.
-7. Validate the resulting artifact and report the accepted ID, target, checks, and remaining gaps.
+6. Add deterministic scripts only when stable inputs, outputs, and failure behavior are defined. Test every added script.
+7. Run `evaluate-skill-change` before adopting a new or changed skill.
+8. Validate the resulting artifact and report the accepted ID, target, checks, and remaining gaps.
 
 ## Safety
 

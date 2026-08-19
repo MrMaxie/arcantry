@@ -67,6 +67,11 @@
       "tags": ["openspec", "promotion", "todo-txt"]
     },
     {
+      "name": "protect-local-boundary",
+      "family": "repo-safely",
+      "tags": ["privacy", "repository", "safety"]
+    },
+    {
       "name": "reconcile-project-sources",
       "family": "repo-safely",
       "tags": ["privacy", "sources", "synchronization"]

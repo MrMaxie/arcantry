@@ -10,11 +10,7 @@ Adopt only the information layers the project needs. Preserve project-owned cont
 ## Inspect
 
 1. Read the applicable repository and private instructions.
-2. Resolve `.local/` before creating or using local state:
-   - Inspect the configured default remote reference when available.
-   - If that reference tracks `.local/`, preserve it as the repository's established policy and report that it conflicts with Arcantry's private-local convention.
-   - Otherwise treat the entire directory as private: ensure `.local/` is in `.git/info/exclude`, never add it to `.gitignore`, and verify the rule with `git check-ignore -v .local`.
-   - If only the current index tracks `.local/`, preserve working files and include a separate, explicitly authorized plan operation to remove it from the index.
+2. Use `protect-local-boundary` before creating or using local state. Let it resolve absent, private, index-only, or remote-tracked `.local/` status and complete the exclusion and authorization gates before continuing.
 3. Run `arcantry repo inspect` before proposing changes.
 4. Identify the active and shadowed configuration, then list each shared or private OpenSpec, changelog, and todo.txt source with its adapter, visibility, management level, and dependencies.
 5. Treat `.local/` as a privacy boundary and keep shared and private sources independent.
