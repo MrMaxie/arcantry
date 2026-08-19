@@ -35,6 +35,8 @@ Review the reported operations, then repeat the command with `--apply`:
 arcantry todo add "Review adapter +Arcantry @desk" --source root --apply
 ```
 
+An explicitly selected missing root, private, or configured source can be planned and created by `todo add`. Listing and previewing remain non-mutating; only `--apply` writes the file.
+
 When both queues exist, a mutating command without `--source` fails rather than guessing.
 
 ## Complete a task
@@ -57,8 +59,21 @@ arcantry todo move 2 --from root --to local --apply
 
 The applied move stages both queue updates as one plan. When the target is private, Arcantry also plans the relevant `.local` Git exclusion if Git is present.
 
-## Preserve the todo.txt format
+## Use the official todo.txt baseline
 
-Arcantry preserves untouched lines, line endings, a byte-order mark, completion dates, priorities, arbitrary `+project` and `@context` tags, and `key:value` metadata. It does not turn the queue into an OpenSpec authority or infer a workflow taxonomy.
+Arcantry uses the [official todo.txt format](https://github.com/todotxt/todo.txt) as its baseline. Each task occupies one non-empty physical line. Priority, creation date, `+project`, `@context`, and `key:value` metadata are optional:
+
+```text
+Review adapter
+(A) 2026-08-19 Review adapter +Arcantry @desk
+2026-08-19 Review adapter owner:Maxie
+x 2026-08-20 2026-08-19 Review adapter +Arcantry @desk
+```
+
+Completed tasks place lowercase `x` first, followed by the completion date, an optional creation date, and the task text. When a project or selected source defines a compatible convention, follow it; otherwise, use this baseline without inventing optional fields.
+
+Arcantry updates existing queues incrementally. `todo add` appends one task, `todo move` preserves the selected raw line, and `todo complete` rewrites only the selected task into completed-task order. Untouched lines, line endings, a byte-order mark, trailing-newline state, and extensions remain unchanged. Older or noncanonical entries do not block a scoped change and are not normalized implicitly.
+
+Arcantry does not turn the queue into an OpenSpec authority, judge task quality, or infer a workflow taxonomy.
 
 Use [Configuration](/arcantry/reference/configuration/) to place additional todo.txt sources or assign explicit management levels.
