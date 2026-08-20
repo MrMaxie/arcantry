@@ -25,6 +25,18 @@ Do not assume that the requester is the end user. Do not silently replace an exp
 
 If the audience or outcome is unclear, inspect project evidence first. Ask a decision question only when different answers would materially change the product, public contract, risk, or scope.
 
+### 1a. Verify publication authority
+
+Before creating or changing an externally visible, shared, exported, or generated artifact:
+
+1. Identify the source and current visibility of every project name, description, image, screenshot, code excerpt, brand, and derived asset.
+2. Verify that the requester authorized the exact item, transformation, and intended audience.
+3. Treat access, inspection, ownership, and presence in local context as separate from permission to publish.
+4. Use private, confidential, NDA-covered, or brand-sensitive material only after explicit item-level approval of the public, redacted, or brandless form.
+5. If authority is missing or ambiguous, omit the item and stop at the publication decision boundary.
+
+Permission for one item does not authorize neighboring content from the same source.
+
 ### 2. Classify each information item
 
 Classify information before deciding where it belongs:

@@ -21,11 +21,11 @@ When both shared and private sources can accept the item, ask for the scope only
 
 ## Capture
 
-1. Restate the item in one concrete sentence without expanding its scope.
+1. Restate the item in one concrete, portable sentence without expanding its scope or exposing source context that the target audience does not need.
 2. Inspect the chosen source and preserve its ordering and line endings.
    For todo.txt, follow an explicitly required project or source format when one exists; otherwise use the [official todo.txt format](https://github.com/todotxt/todo.txt) as the baseline. Treat priority, creation date, `+project`, and `@context` as optional, and do not infer stricter requirements from existing entries alone. Preserve local conventions that are compatible with the governing format.
 3. Preview the exact addition or specification delta.
-4. Apply only when the user requested the write or approves the preview.
+4. Apply only when the user requested the write or approves the preview. If the target audience is broader than the source context, treat a general write request as authorization to preview only and require approval of the exact target wording before writing.
 5. Re-read the bounded result and report the target and any unresolved routing decision.
 
 Do not duplicate the same item across sources. A later explicit promotion or relocation should preserve provenance and remove the source copy only when separately authorized.
