@@ -1,7 +1,7 @@
 use anyhow::{Result, bail};
 use arcantry_core::config::{
   Management, PROJECT_CONFIG_SCHEMA_LOCATION, RawSourceConfig, SchemaReference, Visibility,
-  parse_project_config, render_project_config,
+  is_private_project_path, parse_project_config, render_project_config,
 };
 use arcantry_core::knowledge::ProjectSource;
 
@@ -30,7 +30,7 @@ pub(super) fn add_configured_source(
       version: Some(arcantry_core::VERSION.to_owned()),
     });
   }
-  let default_visibility = if update.path.replace('\\', "/").starts_with(".local/") {
+  let default_visibility = if is_private_project_path(&update.path) {
     Visibility::Private
   } else {
     Visibility::Shared

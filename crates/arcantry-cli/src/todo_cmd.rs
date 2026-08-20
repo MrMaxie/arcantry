@@ -9,8 +9,13 @@ use chrono::Local;
 use std::fs;
 use std::path::Path;
 
-pub fn execute(command: TodoCommand, cwd: &Path, config: Option<&Path>) -> Result<i32> {
-  let inspection = project_inspection(cwd, config)?;
+pub fn execute(
+  command: TodoCommand,
+  cwd: &Path,
+  config: Option<&Path>,
+  cwd_explicit: bool,
+) -> Result<i32> {
+  let inspection = project_inspection(cwd, config, cwd_explicit)?;
   match command {
     TodoCommand::List { source } => {
       let sources: Vec<_> = if let Some(source) = source {

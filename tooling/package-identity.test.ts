@@ -80,4 +80,12 @@ describe('npm package identity', () => {
       expect(main.optionalDependencies[target.packageName], target.triple).toBe(main.version);
     }
   });
+
+  it('runs compatibility and native smoke coverage across the declared release matrix', () => {
+    const workflow = readFileSync(join(root, '.github', 'workflows', 'release.yml'), 'utf8');
+    for (const target of nativeTargets) expect(workflow, target.triple).toContain(`target: ${target.triple}`);
+    expect(workflow).toContain('run: cargo test --workspace');
+    expect(workflow).toContain('alpine:3.23');
+    expect(workflow).toContain('just package-target-smoke "${{ matrix.target }}"');
+  });
 });

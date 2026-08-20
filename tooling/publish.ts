@@ -117,19 +117,31 @@ const publishNpm = async ({ archives, existing }: PublishOptions): Promise<void>
 
 const createDraftRelease = async ({ tag, artifacts }: ReleaseOptions): Promise<void> => {
   const artifactRoot = resolve(artifacts);
-  await run('gh', [
-    'release',
-    'create',
-    tag,
-    '--draft',
-    '--verify-tag',
-    '--title',
-    tag,
+  const releaseArtifacts = [
     ...nativeTargets.map((target) => join(artifactRoot, target.archive)),
     join(artifactRoot, 'SHA256SUMS'),
     join(artifactRoot, 'arcantry-installer.sh'),
     join(artifactRoot, 'arcantry-installer.ps1'),
-  ]);
+  ];
+  const existing = await execa('gh', ['release', 'view', tag, '--json', 'isDraft,name,tagName'], {
+    env: cleanEnvironment,
+    extendEnv: false,
+    reject: false,
+    stdin: 'ignore',
+  });
+  if (existing.exitCode === 0) {
+    const release = JSON.parse(existing.stdout) as { isDraft: boolean; name: string; tagName: string };
+    if (!release.isDraft) throw new Error(`GitHub Release ${tag} is already public.`);
+    if (release.tagName !== tag || release.name !== tag) {
+      throw new Error(`Existing draft ${tag} does not match the verified release identity.`);
+    }
+    await run('gh', ['release', 'upload', tag, ...releaseArtifacts, '--clobber']);
+    return;
+  }
+  if (!`${existing.stdout}\n${existing.stderr}`.toLowerCase().includes('release not found')) {
+    throw new Error(existing.stderr || `Unable to inspect GitHub Release ${tag}.`);
+  }
+  await run('gh', ['release', 'create', tag, '--draft', '--verify-tag', '--title', tag, ...releaseArtifacts]);
 };
 
 const publishRelease = async ({ tag }: TagOptions): Promise<void> => {

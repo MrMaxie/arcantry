@@ -95,8 +95,15 @@ pub fn execute(command: SkillsCommand, cwd: &Path) -> Result<i32> {
       let options = SkillOptions::from(options);
       let operation = operation(cwd, &name, &options)?;
       let results = catalog::link(&operation.source, &name, &operation.targets, replace)?;
-      if let Some(root) = operation.private_root {
-        exclude_private_links(&root, &name, &operation.targets)?;
+      if let Some(root) = operation.private_root
+        && let Err(error) = exclude_private_links(&root, &name, &operation.targets)
+      {
+        catalog::rollback_links(&results).with_context(|| {
+          format!(
+            "Private skill exclusion failed and created links could not be rolled back: {error}"
+          )
+        })?;
+        return Err(error);
       }
       println!(
         "{}: {name}",
@@ -303,7 +310,11 @@ fn exclude_private_links(root: &Path, name: &str, targets: &[PathBuf]) -> Result
   } else {
     root.join(candidate)
   };
-  let mut content = fs::read_to_string(&path).unwrap_or_default();
+  let mut content = match fs::read_to_string(&path) {
+    Ok(content) => content,
+    Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
+    Err(error) => return Err(error.into()),
+  };
   let mut entries = vec![".local/".to_owned()];
   for target in targets {
     if let Ok(relative) = target.strip_prefix(root) {

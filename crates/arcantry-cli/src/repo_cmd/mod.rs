@@ -14,10 +14,15 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use transition::plan_transition;
 
-pub fn execute(command: RepoCommand, cwd: &Path, config: Option<&Path>) -> Result<i32> {
+pub fn execute(
+  command: RepoCommand,
+  cwd: &Path,
+  config: Option<&Path>,
+  cwd_explicit: bool,
+) -> Result<i32> {
   match command {
     RepoCommand::Inspect { json } => {
-      let inspection = project_inspection(cwd, config)?;
+      let inspection = project_inspection(cwd, config, cwd_explicit)?;
       if json {
         println!("{}", serde_json::to_string_pretty(&inspection)?);
       } else {
@@ -27,7 +32,7 @@ pub fn execute(command: RepoCommand, cwd: &Path, config: Option<&Path>) -> Resul
     }
     RepoCommand::Plan(args) => {
       let json = args.json;
-      let plan = plan_transition(&project_inspection(cwd, config)?, args)?;
+      let plan = plan_transition(&project_inspection(cwd, config, cwd_explicit)?, args)?;
       let code = i32::from(!plan.conflicts.is_empty());
       if json {
         print!("{}", serialize_plan(&plan)?);
@@ -68,16 +73,20 @@ pub fn execute(command: RepoCommand, cwd: &Path, config: Option<&Path>) -> Resul
       render_repository_changes(repository::remove(cwd, repository::Scope::parse(&scope)?)?);
       Ok(0)
     }
-    RepoCommand::Doctor => validate_repository_and_knowledge(cwd, config, true),
-    RepoCommand::Validate => validate_repository_and_knowledge(cwd, config, false),
+    RepoCommand::Doctor => validate_repository_and_knowledge(cwd, config, cwd_explicit, true),
+    RepoCommand::Validate => validate_repository_and_knowledge(cwd, config, cwd_explicit, false),
   }
 }
 
-pub fn project_inspection(cwd: &Path, config: Option<&Path>) -> Result<KnowledgeInspection> {
+pub fn project_inspection(
+  cwd: &Path,
+  config: Option<&Path>,
+  cwd_explicit: bool,
+) -> Result<KnowledgeInspection> {
   inspect_knowledge(&resolve_project(
     cwd,
     config,
-    true,
+    cwd_explicit,
     Some(arcantry_core::VERSION),
   )?)
 }
@@ -191,6 +200,7 @@ fn render_inspection(inspection: &KnowledgeInspection) {
 fn validate_repository_and_knowledge(
   cwd: &Path,
   config: Option<&Path>,
+  cwd_explicit: bool,
   doctor: bool,
 ) -> Result<i32> {
   let report = repository::validate(cwd, config, doctor)?;
@@ -218,7 +228,7 @@ fn validate_repository_and_knowledge(
   if report.valid {
     println!("Repository adoption is valid.");
   }
-  let inspection = project_inspection(cwd, config)?;
+  let inspection = project_inspection(cwd, config, cwd_explicit)?;
   for source in &inspection.sources {
     if source.management == Management::Ignore {
       continue;

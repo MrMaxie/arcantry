@@ -183,6 +183,30 @@ describe.runIf(nativeBinary !== undefined)('native CLI conformance', () => {
     expect(await runRust(left, ['repo', 'inspect', '--json'])).toEqual(await runTypeScript(left, ['repo', 'inspect', '--json']));
   });
 
+  it('matches project discovery from an implicit nested cwd', async () => {
+    const { left, right } = await pair();
+    const config = `config_version = 1
+
+[sources.tasks]
+kind = "todo-txt"
+path = "todo.txt"
+adapter = "todo-txt@1"
+`;
+    const leftNested = join(left, 'nested');
+    const rightNested = join(right, 'nested');
+    await Promise.all([
+      mkdir(leftNested),
+      mkdir(rightNested),
+      writeFile(join(left, 'arcantry.toml'), config),
+      writeFile(join(right, 'arcantry.toml'), config),
+    ]);
+
+    const args = ['todo', 'add', 'Nested task', '--source', 'tasks', '--apply'];
+    expect(await runRust(rightNested, args)).toEqual(await runTypeScript(leftNested, args));
+    expect(await files(right)).toEqual(await files(left));
+    expect(await readFile(join(right, 'todo.txt'), 'utf8')).toBe('Nested task\n');
+  });
+
   it('matches private init, validate, update and remove', async () => {
     const { left, right } = await pair();
     for (const args of [
@@ -199,6 +223,9 @@ describe.runIf(nativeBinary !== undefined)('native CLI conformance', () => {
 
   it('matches todo additions, completion and cross-scope moves', async () => {
     const { left, right } = await pair();
+    const legacy =
+      '\uFEFF(B) 2026-08-17 Verify +Arcantry @desk\r\n(a) lowercase priority\r\n  spaced task  \r\nowner:one owner:two +P +P @C @C\r\n';
+    await Promise.all([writeFile(join(left, 'todo.txt'), legacy), writeFile(join(right, 'todo.txt'), legacy)]);
     for (const args of [
       ['todo', 'add', '(A) 2026-08-20 Move me +project @desk', '--source', 'root', '--apply'],
       ['todo', 'complete', '1', '--source', 'root', '--date', '2026-08-20', '--apply'],
@@ -208,6 +235,9 @@ describe.runIf(nativeBinary !== undefined)('native CLI conformance', () => {
       expect(await runRust(right, args)).toEqual(await runTypeScript(left, args));
       expect(await files(right)).toEqual(await files(left));
     }
+    expect(await readFile(join(right, 'todo.txt'), 'utf8')).toBe(
+      '\uFEFF(a) lowercase priority\r\n  spaced task  \r\nowner:one owner:two +P +P @C @C\r\n(A) 2026-08-20 Move me +project @desk\r\n',
+    );
   });
 
   it('matches public catalog listing and inspection', async () => {
@@ -235,8 +265,28 @@ describe.runIf(nativeBinary !== undefined)('native CLI conformance', () => {
       expect(await runRust(left, args)).toEqual(await runTypeScript(left, args));
     }
     for (const args of [
-      ['skills', 'link', 'private-helper', '--scope', 'private', '--compat', 'claude'],
-      ['skills', 'unlink', 'private-helper', '--scope', 'private', '--compat', 'claude'],
+      [
+        'skills',
+        'link',
+        'private-helper',
+        '--scope',
+        'private',
+        '--compat',
+        'claude',
+        '--catalog-root',
+        process.cwd(),
+      ],
+      [
+        'skills',
+        'unlink',
+        'private-helper',
+        '--scope',
+        'private',
+        '--compat',
+        'claude',
+        '--catalog-root',
+        process.cwd(),
+      ],
     ]) {
       expect(await runRust(right, args)).toEqual(await runTypeScript(left, args));
       expect(await files(right)).toEqual(await files(left));

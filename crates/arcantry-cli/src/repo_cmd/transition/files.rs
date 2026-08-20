@@ -1,5 +1,5 @@
 use anyhow::Result;
-use arcantry_core::config::{Management, SourceKind, Visibility};
+use arcantry_core::config::{Management, SourceKind, Visibility, is_private_project_path};
 use arcantry_core::knowledge::{KnowledgeInspection, ProjectSource};
 use arcantry_core::project_plan::{
   PlanOperation, create_delete_operation, create_delete_tree_operation, create_write_operation,
@@ -220,7 +220,7 @@ pub(super) fn plan_path(root: &Path, path: &Path) -> String {
 
 pub(super) fn config_visibility(root: &Path, path: &Path) -> Visibility {
   let relative = plan_path(root, path);
-  if !is_within(root, path) || relative == ".local" || relative.starts_with(".local/") {
+  if !is_within(root, path) || is_private_project_path(&relative) {
     Visibility::Private
   } else {
     Visibility::Shared
@@ -229,7 +229,7 @@ pub(super) fn config_visibility(root: &Path, path: &Path) -> Visibility {
 
 pub(super) fn is_local_plan_path(root: &Path, path: &str) -> bool {
   let value = plan_path(root, &resolve_source_path(root, path));
-  value == ".local" || value.starts_with(".local/")
+  is_private_project_path(&value)
 }
 
 pub(super) fn is_within(parent: &Path, child: &Path) -> bool {

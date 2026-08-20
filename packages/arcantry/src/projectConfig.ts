@@ -373,9 +373,10 @@ const isWithin = (parent: string, child: string): boolean => {
   return value === '' || (!value.startsWith('..') && !isAbsolute(value));
 };
 
-const isPrivateProjectPath = (path: string): boolean => {
+export const isPrivateProjectPath = (path: string): boolean => {
   const normalized = path.replaceAll('\\', '/').replace(/^\.\//, '');
-  return normalized === '.local' || normalized.startsWith('.local/');
+  const [first = ''] = normalized.split('/');
+  return process.platform === 'win32' ? first.toLowerCase() === '.local' : first === '.local';
 };
 
 const isPrivateConfigPath = (path: string): boolean =>

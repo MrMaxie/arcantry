@@ -62,11 +62,18 @@ fn main() {
 }
 
 fn execute(cli: Cli) -> Result<i32> {
+  let cwd_explicit = cli.cwd.is_some();
   let cwd = absolutize(cli.cwd.as_deref().unwrap_or(Path::new(".")))?;
   match cli.command {
-    Command::Repo { command } => repo_cmd::execute(command, &cwd, cli.config.as_deref()),
-    Command::Todo { command } => todo_cmd::execute(command, &cwd, cli.config.as_deref()),
-    Command::Release { command } => release_cmd::execute(command, &cwd, cli.config.as_deref()),
+    Command::Repo { command } => {
+      repo_cmd::execute(command, &cwd, cli.config.as_deref(), cwd_explicit)
+    }
+    Command::Todo { command } => {
+      todo_cmd::execute(command, &cwd, cli.config.as_deref(), cwd_explicit)
+    }
+    Command::Release { command } => {
+      release_cmd::execute(command, &cwd, cli.config.as_deref(), cwd_explicit)
+    }
     Command::Skills { command } => skills_cmd::execute(command, &cwd),
   }
 }

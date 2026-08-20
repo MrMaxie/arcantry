@@ -20,6 +20,18 @@ fn arcantry() -> Command {
   cargo_bin_cmd!("arcantry")
 }
 
+fn private_skill(repository: &tempfile::TempDir, name: &str) {
+  let directory = repository.path().join(".local").join("skills").join(name);
+  fs::create_dir_all(&directory).unwrap();
+  fs::write(
+    directory.join("SKILL.md"),
+    format!(
+      "---\nname: {name}\ndescription: Private test skill with enough detail for validation.\n---\n"
+    ),
+  )
+  .unwrap();
+}
+
 #[test]
 fn native_binary_runs_without_language_runtimes_on_path() {
   let empty_path = tempfile::tempdir().unwrap();
@@ -126,5 +138,100 @@ fn applies_todo_add_and_move_without_javascript() {
     fs::read_to_string(repository.path().join(".git/info/exclude"))
       .unwrap()
       .contains(".local/")
+  );
+}
+
+#[test]
+fn discovers_the_project_root_from_an_implicit_nested_cwd() {
+  let repository = repository();
+  let nested = repository.path().join("nested");
+  fs::create_dir_all(&nested).unwrap();
+  fs::write(
+    repository.path().join("arcantry.toml"),
+    r#"config_version = 1
+
+[sources.tasks]
+kind = "todo-txt"
+path = "todo.txt"
+adapter = "todo-txt@1"
+"#,
+  )
+  .unwrap();
+
+  arcantry()
+    .current_dir(&nested)
+    .args(["todo", "add", "Nested task", "--source", "tasks", "--apply"])
+    .assert()
+    .success();
+
+  assert_eq!(
+    fs::read_to_string(repository.path().join("todo.txt")).unwrap(),
+    "Nested task\n"
+  );
+  assert!(!nested.join("todo.txt").exists());
+}
+
+#[test]
+fn leaves_no_partial_links_when_a_compatibility_target_is_blocked() {
+  let repository = repository();
+  private_skill(&repository, "private-helper");
+  fs::create_dir_all(repository.path().join(".claude")).unwrap();
+  fs::write(repository.path().join(".claude/skills"), "not a directory").unwrap();
+
+  let output = arcantry()
+    .args([
+      "--cwd",
+      repository.path().to_str().unwrap(),
+      "skills",
+      "link",
+      "private-helper",
+      "--scope",
+      "private",
+      "--compat",
+      "claude",
+    ])
+    .output()
+    .unwrap();
+  assert!(!output.status.success());
+
+  assert!(
+    !repository
+      .path()
+      .join(".agents/skills/private-helper")
+      .exists(),
+    "{}",
+    String::from_utf8_lossy(&output.stderr)
+  );
+}
+
+#[test]
+fn rolls_back_a_private_link_when_git_exclusion_cannot_be_updated() {
+  let repository = repository();
+  private_skill(&repository, "private-helper");
+  let exclude = repository.path().join(".git/info/exclude");
+  fs::remove_file(&exclude).unwrap();
+  fs::create_dir(&exclude).unwrap();
+
+  let output = arcantry()
+    .args([
+      "--cwd",
+      repository.path().to_str().unwrap(),
+      "skills",
+      "link",
+      "private-helper",
+      "--scope",
+      "private",
+    ])
+    .output()
+    .unwrap();
+  assert!(!output.status.success());
+
+  assert!(
+    !repository
+      .path()
+      .join(".agents/skills/private-helper")
+      .exists(),
+    "{}",
+    String::from_utf8_lossy(&output.stderr)
   );
 }

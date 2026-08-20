@@ -14,8 +14,8 @@ pub struct TodoDocument {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum TodoEntry {
-  Task(Simple),
-  Empty,
+  Task { raw: String, parsed: Simple },
+  Empty(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -58,9 +58,12 @@ impl TodoDocument {
       .into_iter()
       .map(|line| {
         if line.trim().is_empty() {
-          TodoEntry::Empty
+          TodoEntry::Empty(line.to_owned())
         } else {
-          TodoEntry::Task(parse_task(line))
+          TodoEntry::Task {
+            raw: line.to_owned(),
+            parsed: parse_task(line),
+          }
         }
       })
       .collect();
@@ -78,8 +81,8 @@ impl TodoDocument {
       .entries
       .iter()
       .map(|entry| match entry {
-        TodoEntry::Task(task) => task.to_string(),
-        TodoEntry::Empty => String::new(),
+        TodoEntry::Task { raw, .. } => raw.clone(),
+        TodoEntry::Empty(raw) => raw.clone(),
       })
       .collect::<Vec<_>>()
       .join(self.newline);
@@ -98,8 +101,8 @@ impl TodoDocument {
       .iter()
       .enumerate()
       .filter_map(|(index, entry)| match entry {
-        TodoEntry::Task(task) => Some(TodoTask::from_task(index + 1, task)),
-        TodoEntry::Empty => None,
+        TodoEntry::Task { raw, parsed } => Some(TodoTask::from_task(index + 1, raw, parsed)),
+        TodoEntry::Empty(_) => None,
       })
       .collect()
   }
@@ -109,7 +112,10 @@ impl TodoDocument {
     if normalized.is_empty() || normalized.contains(['\r', '\n']) {
       bail!("A todo.txt task must be one non-empty line.");
     }
-    self.entries.push(TodoEntry::Task(parse_task(normalized)));
+    self.entries.push(TodoEntry::Task {
+      raw: normalized.to_owned(),
+      parsed: parse_task(normalized),
+    });
     if self.entries.len() == 1 {
       self.trailing_newline = true;
     }
@@ -124,40 +130,39 @@ impl TodoDocument {
     let Some(entry) = self.entries.get_mut(line.saturating_sub(1)) else {
       bail!("todo.txt line {line} does not exist.");
     };
-    let TodoEntry::Task(task) = entry else {
+    let TodoEntry::Task { raw, parsed } = entry else {
       bail!("todo.txt line {line} does not contain a task.");
     };
-    if task.finished {
+    if parsed.finished {
       return Ok(());
     }
 
-    if !task.priority.is_lowest() {
-      task.tags.insert(
+    if !parsed.priority.is_lowest() {
+      parsed.tags.insert(
         "pri".to_owned(),
-        char::from(task.priority.clone()).to_string(),
+        char::from(parsed.priority.clone()).to_string(),
       );
-      task.priority = todo_txt::Priority::lowest();
+      parsed.priority = todo_txt::Priority::lowest();
     }
-    task.finished = true;
-    task.finish_date = Some(date);
+    parsed.finished = true;
+    parsed.finish_date = Some(date);
+    *raw = parsed.to_string();
     Ok(())
   }
 
-  pub fn remove(&mut self, line: usize) -> Result<Simple> {
+  fn remove(&mut self, line: usize) -> Result<TodoEntry> {
     let index = line.saturating_sub(1);
     match self.entries.get(index) {
       None => bail!("todo.txt line {line} does not exist."),
-      Some(TodoEntry::Empty) => bail!("todo.txt line {line} does not contain a task."),
-      Some(TodoEntry::Task(_)) => {}
+      Some(TodoEntry::Empty(_)) => bail!("todo.txt line {line} does not contain a task."),
+      Some(TodoEntry::Task { .. }) => {}
     }
-    let TodoEntry::Task(task) = self.entries.remove(index) else {
-      unreachable!("the selected todo.txt entry was validated as a task")
-    };
-    Ok(task)
+    Ok(self.entries.remove(index))
   }
 
-  pub fn push(&mut self, task: Simple) {
-    self.entries.push(TodoEntry::Task(task));
+  fn push(&mut self, task: TodoEntry) {
+    debug_assert!(matches!(&task, TodoEntry::Task { .. }));
+    self.entries.push(task);
     if self.entries.len() == 1 {
       self.trailing_newline = true;
     }
@@ -165,7 +170,7 @@ impl TodoDocument {
 }
 
 impl TodoTask {
-  fn from_task(line: usize, task: &Simple) -> Self {
+  fn from_task(line: usize, raw: &str, task: &Simple) -> Self {
     let mut metadata = task.tags.clone();
     if let Some(date) = task.due_date {
       metadata.insert("due".to_owned(), date.format("%Y-%m-%d").to_string());
@@ -175,7 +180,7 @@ impl TodoTask {
     }
     Self {
       line,
-      raw: task.to_string(),
+      raw: raw.to_owned(),
       completed: task.finished,
       priority: (!task.priority.is_lowest()).then(|| task.priority.to_string()),
       creation_date: task
@@ -260,6 +265,21 @@ mod tests {
       Some("maxie")
     );
     assert_eq!(document.render(), content);
+  }
+
+  #[test]
+  fn preserves_noncanonical_untouched_lines() {
+    let content = "\u{feff}x completed without date\r\n(a) lowercase priority\r\n  spaced task  \r\n   \r\nowner:one owner:two +P +P @C @C\r\n";
+    let completion_content = "\u{feff}First\r\n(a) lowercase priority\r\n  spaced task  \r\n   \r\nowner:one owner:two +P +P @C @C\r\n";
+
+    assert_eq!(
+      add_task(content, "New task").unwrap(),
+      format!("{content}New task\r\n")
+    );
+    assert_eq!(
+      complete_task(completion_content, 1, "2026-08-20").unwrap(),
+      "\u{feff}x 2026-08-20 First\r\n(a) lowercase priority\r\n  spaced task  \r\n   \r\nowner:one owner:two +P +P @C @C\r\n"
+    );
   }
 
   #[test]

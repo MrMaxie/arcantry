@@ -15,6 +15,7 @@ import {
 import {
   parseProjectConfig,
   renderProjectConfig,
+  isPrivateProjectPath,
   type ProjectSourceConfig,
   type Transition,
   transitionSchema,
@@ -372,7 +373,7 @@ const planPath = (root: string, path: string): string => {
 };
 
 const configVisibility = (root: string, path: string): Visibility =>
-  !isWithin(root, path) || planPath(root, path).startsWith('.local/') ? 'private' : 'shared';
+  !isWithin(root, path) || isPrivateProjectPath(planPath(root, path)) ? 'private' : 'shared';
 
 const isWithin = (parent: string, child: string): boolean => {
   const value = relative(resolve(parent), resolve(child));
@@ -381,5 +382,5 @@ const isWithin = (parent: string, child: string): boolean => {
 
 const isLocalPlanPath = (root: string, path: string): boolean => {
   const value = planPath(root, resolveSourcePath(root, path));
-  return value === '.local' || value.startsWith('.local/');
+  return isPrivateProjectPath(value);
 };

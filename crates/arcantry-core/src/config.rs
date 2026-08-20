@@ -575,10 +575,15 @@ fn valid_adapter(adapter: &str) -> bool {
       && version.parse::<u32>().is_ok()
   })
 }
-fn is_private_project_path(path: &str) -> bool {
+pub fn is_private_project_path(path: &str) -> bool {
   let normalized = path.replace('\\', "/");
   let normalized = normalized.strip_prefix("./").unwrap_or(&normalized);
-  normalized == ".local" || normalized.starts_with(".local/")
+  let first = normalized.split('/').next().unwrap_or_default();
+  if cfg!(windows) {
+    first.eq_ignore_ascii_case(".local")
+  } else {
+    first == ".local"
+  }
 }
 fn is_private_config_path(path: &Path) -> bool {
   path
@@ -648,6 +653,26 @@ from = ["intent"]
         .unwrap_err()
         .to_string()
         .contains("cannot depend on private OpenSpec")
+    );
+  }
+
+  #[cfg(windows)]
+  #[test]
+  fn treats_local_paths_case_insensitively_on_windows() {
+    let content = r#"config_version = 1
+
+[sources.tasks]
+kind = "todo-txt"
+path = ".LOCAL/todo.txt"
+visibility = "shared"
+adapter = "todo-txt@1"
+"#;
+
+    assert!(
+      parse_project_config(content, None, false)
+        .unwrap_err()
+        .to_string()
+        .contains("inside .local")
     );
   }
 

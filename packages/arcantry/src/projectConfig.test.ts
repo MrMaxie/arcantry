@@ -49,6 +49,17 @@ adapter = "todo-txt@1"
     expect(config.sources.todo_private?.visibility).toBe('private');
   });
 
+  it.runIf(process.platform === 'win32')('treats .local paths case-insensitively on Windows', () => {
+    expect(() => parseProjectConfig(`config_version = 1
+
+[sources.tasks]
+kind = "todo-txt"
+path = ".LOCAL/todo.txt"
+visibility = "shared"
+adapter = "todo-txt@1"
+`)).toThrow('inside .local');
+  });
+
   it('rejects cycles, missing semantic authorities and unsupported tools', () => {
     const cyclic = configured().replace('adapter = "openspec@1"', 'adapter = "openspec@1"\nfrom = ["history"]');
     expect(() => parseProjectConfig(cyclic)).toThrow('source dependency cycle');

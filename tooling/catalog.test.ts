@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -91,5 +91,16 @@ describe('skill catalog validation', () => {
         'skills/example-skill must have unique tags',
       ]),
     );
+  });
+});
+
+describe('todo-writing skill contract', () => {
+  it('keeps explicit source conventions ahead of the official fallback', () => {
+    for (const name of ['capture-project-work', 'promote-todo-to-openspec']) {
+      const source = readFileSync(join(process.cwd(), 'skills', name, 'SKILL.md'), 'utf8');
+      expect(source, name).toMatch(/explicit(?:ly)? (?:compatible|required).*source (?:convention|format)/u);
+      expect(source, name).toContain('official');
+      expect(source, name).toContain('optional');
+    }
   });
 });

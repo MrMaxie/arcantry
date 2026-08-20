@@ -64,7 +64,7 @@ const CATALOG: &[u8] = include_bytes!("../../../catalog.json");
 const MANIFEST: &str = include_str!(concat!(env!("OUT_DIR"), "/asset-manifest.json"));
 const OWNERSHIP_FILE: &str = ".arcantry-owned.json";
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct AssetManifestEntry {
   path: String,
   sha256: String,
@@ -164,10 +164,14 @@ fn write(root: &Path, relative: &str, content: &[u8]) -> Result<()> {
 }
 
 fn verify(root: &Path) -> Result<()> {
-  let entries: Vec<AssetManifestEntry> = serde_json::from_str(MANIFEST)?;
+  verify_manifest(root, MANIFEST)
+}
+
+fn verify_manifest(root: &Path, manifest: &str) -> Result<()> {
+  let entries: Vec<AssetManifestEntry> = serde_json::from_str(manifest)?;
   let mut expected_files =
     std::collections::BTreeSet::from([OWNERSHIP_FILE.to_owned(), "asset-manifest.json".to_owned()]);
-  for entry in entries {
+  for entry in &entries {
     let actual = Sha256::digest(fs::read(root.join(&entry.path))?)
       .iter()
       .map(|byte| format!("{byte:02x}"))
@@ -175,27 +179,42 @@ fn verify(root: &Path) -> Result<()> {
     if actual != entry.sha256 {
       bail!("Embedded asset digest mismatch: {}", entry.path);
     }
-    expected_files.insert(entry.path);
+    expected_files.insert(entry.path.clone());
   }
-  let actual: std::collections::BTreeSet<_> = WalkDir::new(root)
-    .min_depth(1)
-    .into_iter()
-    .collect::<std::result::Result<Vec<_>, _>>()?
-    .into_iter()
-    .filter(|entry| entry.file_type().is_file())
-    .map(|entry| {
-      entry
-        .path()
-        .strip_prefix(root)
-        .unwrap()
-        .to_string_lossy()
-        .replace('\\', "/")
-    })
-    .collect();
-  if actual != expected_files {
+  if actual_files(root)? != expected_files {
     bail!("Embedded asset cache contains unexpected or missing files.");
   }
   Ok(())
+}
+
+fn actual_files(root: &Path) -> Result<std::collections::BTreeSet<String>> {
+  Ok(
+    WalkDir::new(root)
+      .min_depth(1)
+      .into_iter()
+      .collect::<std::result::Result<Vec<_>, _>>()?
+      .into_iter()
+      .filter(|entry| entry.file_type().is_file())
+      .map(|entry| {
+        entry
+          .path()
+          .strip_prefix(root)
+          .unwrap()
+          .to_string_lossy()
+          .replace('\\', "/")
+      })
+      .collect(),
+  )
+}
+
+fn manifest_paths_match(root: &Path, manifest: &str) -> bool {
+  let Ok(entries) = serde_json::from_str::<Vec<AssetManifestEntry>>(manifest) else {
+    return false;
+  };
+  let mut expected =
+    std::collections::BTreeSet::from([OWNERSHIP_FILE.to_owned(), "asset-manifest.json".to_owned()]);
+  expected.extend(entries.into_iter().map(|entry| entry.path));
+  actual_files(root).is_ok_and(|actual| actual == expected)
 }
 
 fn ownership_marker() -> OwnershipMarker {
@@ -207,18 +226,24 @@ fn ownership_marker() -> OwnershipMarker {
 }
 
 fn is_owned_materialization(target: &Path) -> bool {
-  fs::read_to_string(target.join(OWNERSHIP_FILE))
+  let marker = fs::read_to_string(target.join(OWNERSHIP_FILE))
     .ok()
-    .and_then(|content| serde_json::from_str::<OwnershipMarker>(&content).ok())
-    .is_some_and(|marker| {
-      marker.product == "arcantry"
-        && marker.version == arcantry_core::VERSION
-        && marker.manifest_sha256 == manifest_digest()
-    })
+    .and_then(|content| serde_json::from_str::<OwnershipMarker>(&content).ok());
+  let manifest = fs::read_to_string(target.join("asset-manifest.json")).ok();
+  marker.zip(manifest).is_some_and(|(marker, manifest)| {
+    marker.product == "arcantry"
+      && marker.version == arcantry_core::VERSION
+      && marker.manifest_sha256 == manifest_digest_for(&manifest)
+      && manifest_paths_match(target, &manifest)
+  })
 }
 
 fn manifest_digest() -> String {
-  Sha256::digest(MANIFEST.as_bytes())
+  manifest_digest_for(MANIFEST)
+}
+
+fn manifest_digest_for(manifest: &str) -> String {
+  Sha256::digest(manifest.as_bytes())
     .iter()
     .map(|byte| format!("{byte:02x}"))
     .collect()
@@ -234,6 +259,38 @@ mod tests {
     let target = materialize_in(temporary.path()).unwrap();
     assert_eq!(target, materialize_in(temporary.path()).unwrap());
     fs::write(target.join("catalog.json"), "corrupt").unwrap();
+    assert_eq!(target, materialize_in(temporary.path()).unwrap());
+    verify(&target).unwrap();
+  }
+
+  #[test]
+  fn refreshes_an_owned_catalog_from_an_older_build_of_the_same_version() {
+    let temporary = tempfile::tempdir().unwrap();
+    let target = materialize_in(temporary.path()).unwrap();
+    let mut entries: Vec<AssetManifestEntry> =
+      serde_json::from_str(&fs::read_to_string(target.join("asset-manifest.json")).unwrap())
+        .unwrap();
+    let catalog = entries
+      .iter_mut()
+      .find(|entry| entry.path == "catalog.json")
+      .unwrap();
+    fs::write(target.join("catalog.json"), "older-build").unwrap();
+    catalog.sha256 = Sha256::digest(b"older-build")
+      .iter()
+      .map(|byte| format!("{byte:02x}"))
+      .collect();
+    let old_manifest = format!("{}\n", serde_json::to_string_pretty(&entries).unwrap());
+    fs::write(target.join("asset-manifest.json"), &old_manifest).unwrap();
+    let marker_path = target.join(OWNERSHIP_FILE);
+    let mut marker: OwnershipMarker =
+      serde_json::from_str(&fs::read_to_string(&marker_path).unwrap()).unwrap();
+    marker.manifest_sha256 = manifest_digest_for(&old_manifest);
+    fs::write(
+      &marker_path,
+      format!("{}\n", serde_json::to_string_pretty(&marker).unwrap()),
+    )
+    .unwrap();
+
     assert_eq!(target, materialize_in(temporary.path()).unwrap());
     verify(&target).unwrap();
   }

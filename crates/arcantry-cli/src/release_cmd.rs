@@ -4,8 +4,13 @@ use anyhow::Result;
 use arcantry_core::config::resolve_project;
 use std::path::Path;
 
-pub fn execute(command: ReleaseCommand, cwd: &Path, config: Option<&Path>) -> Result<i32> {
-  let project = resolve_project(cwd, config, true, Some(arcantry_core::VERSION))?;
+pub fn execute(
+  command: ReleaseCommand,
+  cwd: &Path,
+  config: Option<&Path>,
+  cwd_explicit: bool,
+) -> Result<i32> {
+  let project = resolve_project(cwd, config, cwd_explicit, Some(arcantry_core::VERSION))?;
   match command {
     ReleaseCommand::Baseline {
       version,

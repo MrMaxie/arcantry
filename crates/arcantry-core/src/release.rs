@@ -1,4 +1,4 @@
-use crate::config::{ResolvedProject, Visibility, effective_visibility};
+use crate::config::{ResolvedProject, Visibility, effective_visibility, is_private_project_path};
 use crate::project_plan::{ProjectPlan, create_write_operation};
 use anyhow::{Context, Result, bail};
 use chrono::NaiveDate;
@@ -643,8 +643,7 @@ fn path_visibility(root: &Path, path: &str) -> Visibility {
   if path.is_absolute() && !path.starts_with(root) {
     return Visibility::Private;
   }
-  let normalized = path.to_string_lossy().replace('\\', "/");
-  if normalized == ".local" || normalized.starts_with(".local/") {
+  if is_private_project_path(&path.to_string_lossy()) {
     Visibility::Private
   } else {
     Visibility::Shared
