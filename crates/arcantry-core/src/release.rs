@@ -218,12 +218,67 @@ pub fn check(project: &ResolvedProject, sealed: bool) -> Result<()> {
     if active > 0 {
       bail!("active OpenSpec changes are not release-complete");
     }
-    let output = duct::cmd("git", ["status", "--porcelain=v1", "--untracked-files=all"])
-      .dir(&configuration.root)
-      .read()?;
-    if !output.trim().is_empty() {
-      bail!("repository contains unsealed working tree changes");
+    let unassigned = unassigned_changes(&state);
+    if !unassigned.is_empty() {
+      bail!(
+        "archived OpenSpec changes are not assigned to a release: {}",
+        unassigned.join(", ")
+      );
     }
+    validate_git_seal(&configuration, &state)?;
+  }
+  Ok(())
+}
+
+fn unassigned_changes(state: &State) -> Vec<String> {
+  state
+    .archived
+    .keys()
+    .filter(|id| !state.assigned.contains(*id))
+    .cloned()
+    .collect()
+}
+
+fn validate_git_seal(configuration: &Configuration, state: &State) -> Result<()> {
+  let latest = state
+    .manifests
+    .last()
+    .context("release sealing requires at least one release manifest")?;
+  let status = duct::cmd("git", ["status", "--porcelain=v1", "--untracked-files=all"])
+    .dir(&configuration.root)
+    .read()?;
+  if !status.trim().is_empty() {
+    bail!("repository contains unsealed working tree changes");
+  }
+  let manifest_path = format!(
+    "{}/{}.yaml",
+    configuration.releases.trim_end_matches(['/', '\\']),
+    latest.version
+  );
+  let manifest_commit = duct::cmd(
+    "git",
+    [
+      "log",
+      "--diff-filter=A",
+      "-1",
+      "--format=%H",
+      "--",
+      &manifest_path,
+    ],
+  )
+  .dir(&configuration.root)
+  .read()?;
+  if manifest_commit.trim().is_empty() {
+    bail!("latest release manifest is not committed: {manifest_path}");
+  }
+  let head = duct::cmd("git", ["rev-parse", "HEAD"])
+    .dir(&configuration.root)
+    .read()?;
+  if head.trim() != manifest_commit.trim() {
+    bail!(
+      "repository HEAD is not sealed by release {}",
+      latest.version
+    );
   }
   Ok(())
 }
@@ -647,5 +702,84 @@ fn path_visibility(root: &Path, path: &str) -> Visibility {
     Visibility::Private
   } else {
     Visibility::Shared
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn git(root: &Path, arguments: &[&str]) {
+    duct::cmd("git", arguments).dir(root).run().unwrap();
+  }
+
+  fn release_configuration(root: &Path) -> Configuration {
+    Configuration {
+      root: root.to_path_buf(),
+      releases: "releases".to_owned(),
+      changelog: "CHANGELOG.md".to_owned(),
+      changelog_visibility: Visibility::Shared,
+      openspec: Vec::new(),
+      repository_url: None,
+      tag_prefix: "v".to_owned(),
+      version_sources: Vec::new(),
+    }
+  }
+
+  #[test]
+  fn finds_unassigned_archived_changes() {
+    let state = State {
+      archived: BTreeMap::from([(
+        "pending".to_owned(),
+        Artifact {
+          category: "fixed".to_owned(),
+          impact: "patch".to_owned(),
+          visibility: "public".to_owned(),
+          title: "Pending".to_owned(),
+          body: "Pending change.".to_owned(),
+        },
+      )]),
+      manifests: Vec::new(),
+      assigned: BTreeSet::new(),
+    };
+
+    assert_eq!(unassigned_changes(&state), ["pending"]);
+  }
+
+  #[test]
+  fn requires_head_to_be_the_manifest_commit() {
+    let directory = tempfile::tempdir().unwrap();
+    let root = directory.path();
+    fs::create_dir(root.join("releases")).unwrap();
+    fs::write(root.join("releases/1.0.0.yaml"), "version: 1.0.0\n").unwrap();
+    git(root, &["init", "--quiet"]);
+    git(root, &["config", "user.name", "Arcantry Tests"]);
+    git(root, &["config", "user.email", "tests@arcantry.invalid"]);
+    git(root, &["add", "releases/1.0.0.yaml"]);
+    git(root, &["commit", "--quiet", "-m", "release: add manifest"]);
+
+    let state = State {
+      archived: BTreeMap::new(),
+      manifests: vec![ReleaseManifest {
+        version: "1.0.0".to_owned(),
+        date: "2026-08-20".to_owned(),
+        changes: Vec::new(),
+        baseline: Some(true),
+      }],
+      assigned: BTreeSet::new(),
+    };
+    let configuration = release_configuration(root);
+    validate_git_seal(&configuration, &state).unwrap();
+
+    fs::write(root.join("later.txt"), "later\n").unwrap();
+    git(root, &["add", "later.txt"]);
+    git(root, &["commit", "--quiet", "-m", "feat: add later work"]);
+
+    assert!(
+      validate_git_seal(&configuration, &state)
+        .unwrap_err()
+        .to_string()
+        .contains("repository HEAD is not sealed")
+    );
   }
 }

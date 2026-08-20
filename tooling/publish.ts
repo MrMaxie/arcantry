@@ -75,6 +75,11 @@ const preflightNpm = async ({ archives, output }: ArchiveOptions): Promise<void>
       },
     );
     if (versionResult.exitCode === 0) {
+      if (metadata.name === 'arcantry') {
+        throw new Error(
+          `${metadata.name}@${metadata.version} already exists; refusing duplicate main-package publication.`,
+        );
+      }
       const actual = JSON.parse(versionResult.stdout) as string;
       if (actual !== expected) {
         throw new Error(`${metadata.name}@${metadata.version} exists with different integrity.`);

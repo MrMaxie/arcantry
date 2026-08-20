@@ -1,11 +1,14 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const { execaMock } = vi.hoisted(() => ({ execaMock: vi.fn() }));
 
 vi.mock('execa', () => ({ execa: execaMock }));
 
+import { npmPackageManifests } from './native-targets.js';
 import { createPublishProgram } from './publish.js';
 
 const result = (overrides: Partial<{ exitCode: number; stdout: string; stderr: string }> = {}) => ({
@@ -29,6 +32,46 @@ const runCreateDraft = async (): Promise<void> => {
 
 afterEach(() => {
   execaMock.mockReset();
+});
+
+it('rejects an existing main package even when its integrity matches', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'arcantry-publish-'));
+  const archives = join(root, 'archives');
+  mkdirSync(archives);
+  const archiveContent = 'verified archive';
+  const expectedIntegrity = `sha512-${createHash('sha512').update(archiveContent).digest('base64')}`;
+  const manifests = npmPackageManifests.map(
+    (path) => JSON.parse(readFileSync(path, 'utf8')) as { name: string; version: string },
+  );
+  for (const metadata of manifests) {
+    const name = `${metadata.name.replace(/^@/, '').replace('/', '-')}-${metadata.version}.tgz`;
+    writeFileSync(join(archives, name), archiveContent);
+  }
+  execaMock.mockImplementation(async (_command: string, arguments_: string[]) => {
+    const requested = arguments_[1] ?? '';
+    if (arguments_[2] === 'dist.integrity') {
+      return requested.startsWith('arcantry@')
+        ? result({ stdout: JSON.stringify(expectedIntegrity) })
+        : result({ exitCode: 1, stderr: 'E404' });
+    }
+    return result({ stdout: JSON.stringify(requested) });
+  });
+
+  try {
+    await expect(
+      createPublishProgram().parseAsync([
+        'node',
+        'publish.ts',
+        'preflight-npm',
+        '--archives',
+        archives,
+        '--output',
+        join(root, 'existing.txt'),
+      ]),
+    ).rejects.toThrow('refusing duplicate main-package publication');
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+  }
 });
 
 describe('GitHub Release publication', () => {

@@ -88,4 +88,14 @@ describe('npm package identity', () => {
     expect(workflow).toContain('alpine:3.23');
     expect(workflow).toContain('just package-target-smoke "${{ matrix.target }}"');
   });
+
+  it('documents the active trusted-publishing workflow', () => {
+    const releaseGuide = readFileSync(
+      join(root, 'apps', 'docs', 'src', 'content', 'docs', 'lifecycle', 'releases.mdx'),
+      'utf8',
+    );
+
+    expect(releaseGuide).toContain('workflow `release.yml`');
+    expect(releaseGuide).not.toContain('workflow `publish-npm.yml`');
+  });
 });
