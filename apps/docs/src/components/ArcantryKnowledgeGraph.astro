@@ -207,6 +207,24 @@ const faviconHref = `${import.meta.env.BASE_URL}favicon.svg`;
       ))}
     </div>
   </arcantry-knowledge-graph>
+
+  <section class="setup-invitation" aria-labelledby="setup-invitation-title">
+    <p>Your setup</p>
+    <h3 id="setup-invitation-title">
+      Every project has different boundaries. Build a setup that keeps its knowledge <span>safe</span>.
+    </h3>
+    <div class="setup-actions">
+      <a class="setup-primary" href="/arcantry/adoption/#choose-an-adoption-path">
+        <strong>Configure your setup</strong>
+        <Icon name="right-arrow" />
+      </a>
+      <a class="setup-next" href="/arcantry/getting-started/" transition:name="arcantry-next-action">
+        <small>Learn more</small>
+        <strong>Explore the details</strong>
+        <Icon name="right-arrow" />
+      </a>
+    </div>
+  </section>
 </section>
 
 <script>
@@ -560,6 +578,112 @@ arcantry-knowledge-graph {
 .scope-column li[data-active='false'] .source-mode {
   display: none;
 }
+.setup-invitation {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.55fr) minmax(0, 1.45fr);
+  gap: 0.5rem 1.5rem;
+  margin: 2.4rem 0 0 !important;
+}
+.setup-invitation > p {
+  margin: 0.35rem 0 0 !important;
+  color: var(--ar-accent-blue);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.setup-invitation h3 {
+  max-width: 46rem;
+  margin: 0 !important;
+  color: var(--ar-text);
+  font-family: var(--ar-font-serif);
+  font-size: clamp(1.55rem, 3vw, 2.25rem) !important;
+  line-height: 1.12 !important;
+  letter-spacing: -0.025em;
+}
+.setup-invitation h3 span {
+  background: linear-gradient(90deg, var(--ar-accent-blue), var(--ar-accent-violet), var(--ar-accent-pink));
+  background-clip: text;
+  color: transparent;
+}
+.setup-actions {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 2fr) minmax(12rem, 1fr);
+  gap: 0.75rem;
+  margin: 1.25rem 0 0 !important;
+}
+.setup-actions a {
+  position: relative;
+  min-width: 0;
+  min-height: 4.6rem;
+  margin: 0 !important;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  background:
+    linear-gradient(var(--ar-bg), var(--ar-bg)) padding-box,
+    linear-gradient(105deg, var(--ar-accent-blue), var(--ar-accent-violet), var(--ar-accent-pink)) border-box;
+  color: var(--ar-text);
+  text-decoration: none;
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.setup-actions a:hover {
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--ar-accent-violet) 7%, var(--ar-bg)),
+      color-mix(in srgb, var(--ar-accent-violet) 7%, var(--ar-bg))
+    )
+    padding-box,
+    linear-gradient(105deg, var(--ar-accent-blue), var(--ar-accent-violet), var(--ar-accent-pink)) border-box;
+  box-shadow: 0 0 2rem color-mix(in srgb, var(--ar-accent-violet) 16%, transparent);
+}
+.setup-actions a:focus-visible {
+  outline: 2px solid var(--ar-accent-blue);
+  outline-offset: 3px;
+}
+.setup-actions svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--ar-accent-pink);
+}
+.setup-primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+}
+.setup-primary strong {
+  font-size: 1rem;
+  line-height: 1.25;
+}
+.setup-next {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  gap: 0.15rem 0.75rem;
+  padding: 0.8rem 1rem;
+}
+.setup-next small {
+  color: var(--ar-text-muted);
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+.setup-next strong {
+  overflow: hidden;
+  font-size: 0.9rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.setup-next svg {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
 
 @media (max-width: 64rem) {
   .scope-column li {
@@ -629,6 +753,21 @@ arcantry-knowledge-graph {
   }
   .source-mode {
     font-size: 0.7rem;
+  }
+  .setup-invitation {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+    margin-top: 2rem !important;
+  }
+  .setup-invitation > p {
+    margin-top: 0 !important;
+  }
+  .setup-actions {
+    grid-template-columns: 1fr;
+    margin-top: 0.9rem !important;
+  }
+  .setup-actions a {
+    min-height: 4.2rem;
   }
 }
 @media (max-width: 24rem) {

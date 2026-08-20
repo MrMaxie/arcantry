@@ -1,12 +1,9 @@
 ---
-import { fileURLToPath } from 'node:url';
 import { Icon } from '@astrojs/starlight/components';
 import Search from '@astrojs/starlight/components/Search.astro';
-import { buildVersionModel } from '../../../../tooling/version.js';
+import packageManifest from '../../../../packages/arcantry/package.json';
 import wordmark from '../assets/arcantry-wordmark-approved.svg';
 
-const repositoryRoot = fileURLToPath(new URL('../../../../', import.meta.url));
-const { currentRelease } = buildVersionModel(repositoryRoot);
 const faviconHref = `${import.meta.env.BASE_URL}favicon.svg`;
 ---
 
@@ -16,7 +13,7 @@ const faviconHref = `${import.meta.env.BASE_URL}favicon.svg`;
       <img class="brand-wordmark" src={wordmark.src} alt="">
       <img class="brand-symbol" src={faviconHref} alt="">
     </span>
-    <span class="brand-version">v{currentRelease}</span>
+    <span class="brand-version">v{packageManifest.version}</span>
   </a>
   <div class="header-search" transition:name="arcantry-search"><Search /></div>
   <div class="header-actions" transition:name="arcantry-actions">
