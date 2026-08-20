@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { copyFile, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { z } from 'zod';
 import { transitionSchema, visibilitySchema, type Transition, type Visibility } from './projectConfig.js';
 
@@ -32,6 +32,9 @@ const projectPlanSchema = z
   .superRefine((plan, context) => {
     const paths = new Set<string>();
     for (const [index, operation] of plan.operations.entries()) {
+      if (!isAbsolute(operation.path) && !isWithin(plan.root, resolve(plan.root, operation.path))) {
+        context.addIssue({ code: 'custom', message: `plan operation path must stay within the project: ${operation.path}`, path: ['operations', index, 'path'] });
+      }
       if (paths.has(operation.path)) {
         context.addIssue({ code: 'custom', message: `plan contains duplicate operation path: ${operation.path}`, path: ['operations', index, 'path'] });
       }
@@ -134,6 +137,7 @@ export const applyProjectPlan = async (plan: ProjectPlan, toolVersion: string): 
   if (validated.conflicts.length > 0) throw new Error(`Cannot apply plan: ${validated.conflicts.join('; ')}`);
 
   for (const operation of validated.operations) {
+    await ensurePlanPathBoundary(validated.root, operation.path);
     const currentHash = await hashPath(resolvePlanPath(validated.root, operation.path));
     if (currentHash !== operation.expectedHash) {
       throw new Error(`Refusing to change ${operation.path}; it changed after the plan was created.`);
@@ -233,3 +237,28 @@ export const hashPath = async (path: string): Promise<string | null> => {
 };
 
 export const resolvePlanPath = (root: string, path: string): string => (isAbsolute(path) ? resolve(path) : resolve(root, path));
+
+const isWithin = (parent: string, child: string): boolean => {
+  const value = relative(resolve(parent), resolve(child));
+  return value === '' || (!value.startsWith('..') && !isAbsolute(value));
+};
+
+const ensurePlanPathBoundary = async (root: string, path: string): Promise<void> => {
+  if (isAbsolute(path)) return;
+  const canonicalRoot = await realpath(root);
+  let existing = resolvePlanPath(root, path);
+  while (true) {
+    try {
+      const canonicalExisting = await realpath(existing);
+      if (!isWithin(canonicalRoot, canonicalExisting)) {
+        throw new Error(`plan operation path resolves outside the project: ${path}`);
+      }
+      return;
+    } catch (error) {
+      if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
+      const parent = dirname(existing);
+      if (parent === existing) throw new Error(`Plan operation has no existing project ancestor: ${path}`);
+      existing = parent;
+    }
+  }
+};

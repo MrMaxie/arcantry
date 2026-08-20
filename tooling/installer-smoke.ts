@@ -65,10 +65,13 @@ const main = async (): Promise<void> => {
   };
 
   try {
-    const installers: Array<[string, string[]]> = [
-      ['bash', [join(artifacts, 'arcantry-installer.sh'), '--no-modify-path']],
-      ['pwsh', ['-NoProfile', '-File', join(artifacts, 'arcantry-installer.ps1'), '-NoModifyPath']],
-    ];
+    const installers: Array<[string, string[]]> =
+      process.platform === 'win32'
+        ? [['pwsh', ['-NoProfile', '-File', join(artifacts, 'arcantry-installer.ps1'), '-NoModifyPath']]]
+        : [
+            ['bash', [join(artifacts, 'arcantry-installer.sh'), '--no-modify-path']],
+            ['pwsh', ['-NoProfile', '-File', join(artifacts, 'arcantry-installer.ps1'), '-NoModifyPath']],
+          ];
     for (const [index, [command, args]] of installers.entries()) {
       const installDirectory = join(temporary, `install-${index}`);
       const installed = await execute(command, args, installDirectory);
@@ -93,7 +96,7 @@ const main = async (): Promise<void> => {
       }
     }
     process.stdout.write(
-      'Shell and PowerShell installers passed install, version, and checksum rejection smoke tests.\n',
+      `${process.platform === 'win32' ? 'PowerShell installer' : 'Shell and PowerShell installers'} passed install, version, and checksum rejection smoke tests.\n`,
     );
   } finally {
     await new Promise<void>((resolveClose) => server.close(() => resolveClose()));

@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
@@ -166,6 +166,7 @@ pub fn apply(plan: &ProjectPlan) -> Result<Vec<PlanOperation>> {
     bail!("Cannot apply plan: {}", plan.conflicts.join("; "));
   }
   for operation in &plan.operations {
+    ensure_plan_path_boundary(&plan.root, &operation.path)?;
     if hash_path(&resolve_plan_path(&plan.root, &operation.path))? != operation.expected_hash {
       bail!(
         "Refusing to change {}; it changed after the plan was created.",
@@ -355,6 +356,12 @@ fn validate(plan: &ProjectPlan) -> Result<()> {
   }
   let mut paths = BTreeSet::new();
   for operation in &plan.operations {
+    if relative_path_escapes(&operation.path) {
+      bail!(
+        "plan operation path must stay within the project: {}",
+        operation.path
+      );
+    }
     if !paths.insert(&operation.path) {
       bail!("plan contains duplicate operation path: {}", operation.path);
     }
@@ -379,6 +386,38 @@ fn resolve_plan_path(root: &Path, path: &str) -> PathBuf {
     root.join(path)
   }
 }
+
+fn relative_path_escapes(path: &str) -> bool {
+  let portable = path.replace('\\', "/");
+  let path = Path::new(&portable);
+  !path.is_absolute()
+    && matches!(
+      crate::config::normalize_path_lexically(path)
+        .components()
+        .next(),
+      Some(std::path::Component::ParentDir)
+    )
+}
+
+fn ensure_plan_path_boundary(root: &Path, path: &str) -> Result<()> {
+  if Path::new(path).is_absolute() {
+    return Ok(());
+  }
+  let canonical_root = dunce::canonicalize(root)
+    .with_context(|| format!("Could not resolve project root {}.", root.display()))?;
+  let target = resolve_plan_path(root, path);
+  let mut existing = target.as_path();
+  while !existing.exists() {
+    existing = existing
+      .parent()
+      .context("Plan operation has no existing project ancestor.")?;
+  }
+  let canonical_existing = dunce::canonicalize(existing)?;
+  if !canonical_existing.starts_with(&canonical_root) {
+    bail!("plan operation path resolves outside the project: {path}");
+  }
+  Ok(())
+}
 fn action_name(action: &Action) -> &'static str {
   match action {
     Action::Write => "write",
@@ -389,4 +428,21 @@ fn action_name(action: &Action) -> &'static str {
 
 fn hex_digest(bytes: &[u8]) -> String {
   bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn rejects_relative_plan_paths_that_escape_the_project() {
+    for path in [
+      "../outside.txt",
+      "nested/../../outside.txt",
+      "..\\outside.txt",
+    ] {
+      assert!(relative_path_escapes(path));
+    }
+    assert!(!relative_path_escapes("nested/../inside.txt"));
+  }
 }

@@ -9,6 +9,8 @@ This page describes how the Arcantry project releases itself. It is not a requir
 
 An Arcantry release is a dated set of archived OpenSpec changes. The internal release keeps repository state complete even when no package, Git tag, or GitHub Release is published.
 
+This repository currently uses continuous 1.0 delivery. Product and distributable versions stay at `1.0.0` until a maintainer explicitly authorizes a version change. Updating `master` or GitHub Pages is normal delivery, not a release.
+
 ## `release.md`
 
 Each Arcantry change carries its release-facing outcome and version impact:
@@ -31,7 +33,7 @@ The body describes the delivered outcome, not an implementation summary.
 
 `category` is `added`, `changed`, `fixed`, `deprecated`, `removed`, or `security`.
 
-Completed changes use `patch`, `minor`, or `major`. Planning rejects an unassigned `none` change and uses the highest impact among the release set.
+Completed changes record `patch`, `minor`, or `major` impact. When a release is authorized, planning rejects an unassigned `none` change and uses the highest impact in the release set. Recording impact does not authorize a version change.
 
 `visibility: public` publishes the entry in `CHANGELOG.md`. `internal` keeps the change in release state without publishing its prose.
 
@@ -60,11 +62,11 @@ Change ids must resolve to `openspec/changes/archive/` and may belong to only on
     release --> seal[Seal: align versions, commit the complete state, and run CI]`}
 />
 
-`release-cut` creates the manifest from the computed plan. It does not ask commits what changed.
+`release-cut` creates the manifest from the computed plan. It does not ask commits what changed and is run only as part of an explicitly authorized release.
 
 `release-check` rejects active changes, unassigned archives, distribution version drift, stale generated changelog content, uncommitted work, and commits after the latest release manifest. `just check` runs it automatically.
 
-The commit that introduces the newest release manifest is the Arcantry release seal. It must also contain the archived OpenSpec changes, aligned distribution versions, and generated changelog. A later commit opens a new Arcantry change cycle and requires a newer internal release before final validation can pass again.
+The commit that introduces an authorized release manifest is the Arcantry release seal. It must also contain the archived OpenSpec changes, aligned distribution versions, and generated changelog. Later work on `master` continues under the unchanged `1.0.0` policy and does not by itself authorize another release.
 
 ## Changelog provenance
 

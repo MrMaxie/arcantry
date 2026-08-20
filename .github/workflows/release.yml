@@ -80,10 +80,6 @@ jobs:
     needs: native
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    permissions:
-      contents: write
-      id-token: write
-    environment: npm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -117,6 +113,51 @@ jobs:
             target/npm
           if-no-files-found: error
           retention-days: 14
+
+  installer-smoke:
+    needs: assemble
+    strategy:
+      fail-fast: true
+      matrix:
+        runner:
+          - ubuntu-24.04
+          - windows-2025
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4
+      - run: just ci-setup
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: release-v1.0.0
+          path: target
+      - name: Smoke installers on their native operating system
+        run: just installer-smoke target/distrib
+
+  publish:
+    needs:
+      - assemble
+      - installer-smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
+    environment: npm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4
+      - run: just ci-setup
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: release-v1.0.0
+          path: target
       - name: Verify existing npm versions for retry-safe publication
         run: nub tooling/publish.ts preflight-npm --archives target/npm --output target/npm/existing-packages.txt
       - name: Create draft GitHub Release

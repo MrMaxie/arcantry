@@ -17,6 +17,7 @@ const publicIdentitySurfaces = [
   'apps/docs/src/content/docs/getting-started.mdx',
   'apps/docs/src/content/docs/lifecycle/releases.mdx',
   'apps/docs/src/components/ArcantryCommandPicker.astro',
+  'apps/docs/src/components/ArcantryAgentPrompt.astro',
   'apps/docs/src/components/ArcantryHero.astro',
   'apps/docs/src/components/ArcantryCopyCommands.astro',
   'packages/arcantry/scripts/check-package.mjs',
@@ -42,15 +43,34 @@ describe('npm package identity', () => {
     }
   });
 
-  it('keeps authored launcher examples aligned with the manifest', () => {
+  it('keeps authored installation and launcher examples aligned with the manifest', () => {
     const commandPicker = readFileSync(
       join(root, 'apps', 'docs', 'src', 'components', 'ArcantryCommandPicker.astro'),
       'utf8',
     );
+    const gettingStarted = readFileSync(
+      join(root, 'apps', 'docs', 'src', 'content', 'docs', 'getting-started.mdx'),
+      'utf8',
+    );
+    const agentPrompt = readFileSync(
+      join(root, 'apps', 'docs', 'src', 'components', 'ArcantryAgentPrompt.astro'),
+      'utf8',
+    );
     expect(commandPicker).toContain('const packageName = packageManifest.name');
+    expect(commandPicker).toContain('value: `npm install --global ${packageName}`');
     expect(commandPicker).toContain('value: `npx ${packageName} repo inspect`');
     expect(commandPicker).toContain('value: `pnpm dlx ${packageName} repo inspect`');
+    expect(commandPicker).toContain('value: `bunx ${packageName} repo inspect`');
     expect(commandPicker).toContain('value: `nubx ${packageName} repo inspect`');
+    expect(commandPicker).toContain('arcantry-installer.ps1');
+    expect(commandPicker).toContain('arcantry-installer.sh');
+    expect(commandPicker).not.toContain('Install native CLI');
+    expect(commandPicker).not.toContain('Run once');
+    expect(gettingStarted).toContain('cargo install --locked --path crates/arcantry-cli');
+    expect(gettingStarted).toContain('public 1.0 package or GitHub Release');
+    expect(gettingStarted).toContain('<ArcantryAgentPrompt variant="full" />');
+    expect(agentPrompt).toContain('Install Arcantry on this computer using the official getting-started guide.');
+    expect(agentPrompt).toContain('Do not adopt Arcantry into a repository or change project files unless I ask.');
   });
 
   it('keeps supported agent manifests aligned with the package identity', () => {
@@ -87,6 +107,10 @@ describe('npm package identity', () => {
     expect(workflow).toContain('run: cargo test --workspace');
     expect(workflow).toContain('alpine:3.23');
     expect(workflow).toContain('just package-target-smoke "${{ matrix.target }}"');
+    expect(workflow).toContain('installer-smoke:');
+    expect(workflow).toContain('windows-2025');
+    expect(workflow).toContain('Smoke installers on their native operating system');
+    expect(workflow).toMatch(/publish:\s+needs:\s+- assemble\s+- installer-smoke/u);
   });
 
   it('documents the active trusted-publishing workflow', () => {

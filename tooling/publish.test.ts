@@ -110,6 +110,6 @@ it('pins every GitHub artifact action to a full commit SHA', () => {
   const workflow = readFileSync(resolve('.github/workflows/release.yml'), 'utf8');
   const artifactActions = workflow.match(/actions\/(?:upload|download)-artifact@[^\s]+/gu) ?? [];
 
-  expect(artifactActions).toHaveLength(3);
+  expect(artifactActions).toHaveLength(5);
   for (const action of artifactActions) expect(action).toMatch(/@[0-9a-f]{40}$/u);
 });

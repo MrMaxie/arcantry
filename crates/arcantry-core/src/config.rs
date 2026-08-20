@@ -223,6 +223,9 @@ pub fn parse_project_config(
     if Path::new(&source.path).is_absolute() && !allow_absolute_paths {
       bail!("Absolute source path requires an explicit external configuration: {id}.");
     }
+    if path_escapes_project(&source.path) {
+      bail!("Source {id} path must stay within the project.");
+    }
     if is_private_project_path(&source.path) && source.visibility == Some(Visibility::Shared) {
       bail!("Source {id} is inside .local and cannot be shared.");
     }
@@ -310,6 +313,9 @@ pub fn parse_project_config(
     if Path::new(&release.manifests_path).is_absolute() && !allow_absolute_paths {
       bail!("Absolute release manifests path requires an explicit external configuration.");
     }
+    if path_escapes_project(&release.manifests_path) {
+      bail!("Release manifests path must stay within the project.");
+    }
     for source in &release.version_sources {
       if source.path.trim().is_empty() {
         bail!("release version source path must not be empty.");
@@ -325,6 +331,9 @@ pub fn parse_project_config(
       }
       if Path::new(&source.path).is_absolute() && !allow_absolute_paths {
         bail!("Absolute release version source path requires an explicit external configuration.");
+      }
+      if path_escapes_project(&source.path) {
+        bail!("Release version source path must stay within the project.");
       }
     }
   }
@@ -609,6 +618,16 @@ pub(crate) fn normalize_path_lexically(path: &Path) -> PathBuf {
   }
   normalized
 }
+
+fn path_escapes_project(path: &str) -> bool {
+  let portable = path.replace('\\', "/");
+  matches!(
+    normalize_path_lexically(Path::new(&portable))
+      .components()
+      .next(),
+    Some(std::path::Component::ParentDir)
+  )
+}
 fn is_private_config_path(path: &Path) -> bool {
   path
     .file_name()
@@ -716,6 +735,47 @@ adapter = "todo-txt@1"
         .unwrap_err()
         .to_string()
         .contains("inside .local")
+    );
+  }
+
+  #[test]
+  fn rejects_paths_that_escape_the_project() {
+    let source = CONFIGURED.replace("path = \"openspec\"", "path = \"../openspec\"");
+    assert!(
+      parse_project_config(&source, None, false)
+        .unwrap_err()
+        .to_string()
+        .contains("must stay within the project")
+    );
+
+    let manifests = format!(
+      r#"{CONFIGURED}
+[release]
+adapter = "openspec-release@1"
+manifests_path = "history/../../releases"
+changelog_source = "history"
+tag_prefix = "v"
+
+[[release.version_sources]]
+path = "package.json"
+adapter = "json-package@1"
+"#,
+    );
+    assert!(
+      parse_project_config(&manifests, None, false)
+        .unwrap_err()
+        .to_string()
+        .contains("Release manifests path must stay within the project")
+    );
+
+    let version_source = manifests
+      .replace("history/../../releases", "releases")
+      .replace("path = \"package.json\"", "path = \"../package.json\"");
+    assert!(
+      parse_project_config(&version_source, None, false)
+        .unwrap_err()
+        .to_string()
+        .contains("Release version source path must stay within the project")
     );
   }
 

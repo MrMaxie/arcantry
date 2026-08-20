@@ -51,8 +51,7 @@ struct State {
 
 pub fn baseline(project: &ResolvedProject, version: &str, date: &str) -> Result<ProjectPlan> {
   plan_result(project, || {
-    Version::parse(version)
-      .with_context(|| format!("Release version must be full stable SemVer: {version}."))?;
+    parse_stable_version(version)?;
     validate_date(date)?;
     let configuration = configuration(project)?;
     if !read_manifests(&configuration)?.is_empty() {
@@ -513,7 +512,7 @@ fn read_manifests(configuration: &Configuration) -> Result<Vec<ReleaseManifest>>
     if entry.path().file_stem().and_then(|value| value.to_str()) != Some(&manifest.version) {
       bail!("release manifest filename must match version");
     }
-    Version::parse(&manifest.version)?;
+    let version = parse_stable_version(&manifest.version)?;
     validate_date(&manifest.date)?;
     if manifest.baseline == Some(true) && !manifest.changes.is_empty() {
       bail!("baseline release cannot assign changes");
@@ -521,13 +520,25 @@ fn read_manifests(configuration: &Configuration) -> Result<Vec<ReleaseManifest>>
     if manifest.baseline != Some(true) && manifest.changes.is_empty() {
       bail!("non-baseline release must assign changes");
     }
-    manifests.push(manifest);
+    manifests.push((version, manifest));
   }
-  manifests.sort_by(|left, right| {
-    Version::parse(&left.version)
-      .unwrap()
-      .cmp(&Version::parse(&right.version).unwrap())
-  });
+  manifests.sort_by(|(left, _), (right, _)| left.cmp(right));
+  let manifests = manifests
+    .into_iter()
+    .map(|(_, manifest)| manifest)
+    .collect::<Vec<_>>();
+  let baselines = manifests
+    .iter()
+    .enumerate()
+    .filter(|(_, manifest)| manifest.baseline == Some(true))
+    .map(|(index, _)| index)
+    .collect::<Vec<_>>();
+  if baselines.len() > 1 {
+    bail!("release history may contain only one baseline manifest");
+  }
+  if baselines.first().is_some_and(|index| *index != 0) {
+    bail!("release baseline must be the oldest manifest");
+  }
   Ok(manifests)
 }
 fn render_manifest(manifest: &ReleaseManifest) -> Result<String> {
@@ -602,13 +613,36 @@ fn render_changelog(configuration: &Configuration, state: &State) -> String {
   }
   let mut result = format!("{}\n", lines.join("\n").trim_end());
   if let (Some(url), Some(latest)) = (&configuration.repository_url, state.manifests.last()) {
+    let url = url.trim_end_matches('/');
     result.push('\n');
     result.push_str(&format!(
       "[Unreleased]: {}/compare/{}{}...HEAD\n",
-      url.trim_end_matches('/'),
-      configuration.tag_prefix,
-      latest.version
+      url, configuration.tag_prefix, latest.version
     ));
+    for (index, manifest) in state.manifests.iter().enumerate() {
+      if manifest.baseline == Some(true) {
+        continue;
+      }
+      if let Some(previous) = index
+        .checked_sub(1)
+        .and_then(|value| state.manifests.get(value))
+      {
+        result.push_str(&format!(
+          "[{}]: {}/compare/{}{}...{}{}\n",
+          manifest.version,
+          url,
+          configuration.tag_prefix,
+          previous.version,
+          configuration.tag_prefix,
+          manifest.version
+        ));
+      } else {
+        result.push_str(&format!(
+          "[{}]: {}/releases/tag/{}{}\n",
+          manifest.version, url, configuration.tag_prefix, manifest.version
+        ));
+      }
+    }
   }
   result
 }
@@ -640,11 +674,24 @@ fn update_version(root: &Path, path: &str, adapter: &str, version: &str) -> Resu
   if adapter == "json-package@1" {
     let mut value: serde_json::Value = serde_json::from_str(&content)?;
     value["version"] = serde_json::Value::String(version.to_owned());
-    return Ok(format!(
-      "{}{}",
-      serde_json::to_string_pretty(&value)?,
-      if content.ends_with('\n') { "\n" } else { "" }
-    ));
+    let indentation = json_indentation(&content);
+    let formatter = serde_json::ser::PrettyFormatter::with_indent(indentation.as_bytes());
+    let mut bytes = Vec::new();
+    let mut serializer = serde_json::Serializer::with_formatter(&mut bytes, formatter);
+    value.serialize(&mut serializer)?;
+    let mut rendered = String::from_utf8(bytes)?;
+    let newline = if content.contains("\r\n") {
+      "\r\n"
+    } else {
+      "\n"
+    };
+    if newline == "\r\n" {
+      rendered = rendered.replace('\n', newline);
+    }
+    if content.ends_with('\n') {
+      rendered.push_str(newline);
+    }
+    return Ok(rendered);
   }
   if adapter == "cargo-workspace@1" {
     let mut document = content.parse::<toml_edit::DocumentMut>()?;
@@ -661,6 +708,29 @@ fn validate_versions(configuration: &Configuration, expected: &str) -> Result<()
     }
   }
   Ok(())
+}
+
+fn parse_stable_version(value: &str) -> Result<Version> {
+  let version = Version::parse(value)
+    .with_context(|| format!("Release version must be full stable SemVer: {value}."))?;
+  if !version.pre.is_empty() || !version.build.is_empty() {
+    bail!("Release version must be full stable SemVer: {value}.");
+  }
+  Ok(version)
+}
+
+fn json_indentation(content: &str) -> String {
+  content
+    .lines()
+    .skip(1)
+    .find_map(|line| {
+      let trimmed = line.trim_start_matches([' ', '\t']);
+      trimmed
+        .starts_with('"')
+        .then(|| line[..line.len() - trimmed.len()].to_owned())
+    })
+    .filter(|value| !value.is_empty())
+    .unwrap_or_else(|| "  ".to_owned())
 }
 fn validate_date(date: &str) -> Result<()> {
   if date.len() != 10 || NaiveDate::parse_from_str(date, "%Y-%m-%d").is_err() {
@@ -744,6 +814,109 @@ mod tests {
     };
 
     assert_eq!(unassigned_changes(&state), ["pending"]);
+  }
+
+  #[test]
+  fn rejects_non_stable_release_versions() {
+    for version in ["1.0.0-alpha", "1.0.0+build"] {
+      assert!(
+        parse_stable_version(version)
+          .unwrap_err()
+          .to_string()
+          .contains("full stable SemVer")
+      );
+    }
+  }
+
+  #[test]
+  fn requires_one_oldest_release_baseline() {
+    let directory = tempfile::tempdir().unwrap();
+    let root = directory.path();
+    fs::create_dir(root.join("releases")).unwrap();
+    fs::write(
+      root.join("releases/1.0.0.yaml"),
+      "version: 1.0.0\ndate: 2026-08-20\nchanges: []\nbaseline: true\n",
+    )
+    .unwrap();
+    fs::write(
+      root.join("releases/1.1.0.yaml"),
+      "version: 1.1.0\ndate: 2026-08-21\nchanges: []\nbaseline: true\n",
+    )
+    .unwrap();
+    let configuration = release_configuration(root);
+    assert!(
+      read_manifests(&configuration)
+        .unwrap_err()
+        .to_string()
+        .contains("only one baseline")
+    );
+
+    fs::write(
+      root.join("releases/1.0.0.yaml"),
+      "version: 1.0.0\ndate: 2026-08-20\nchanges:\n  - first\n",
+    )
+    .unwrap();
+    assert!(
+      read_manifests(&configuration)
+        .unwrap_err()
+        .to_string()
+        .contains("baseline must be the oldest")
+    );
+  }
+
+  #[test]
+  fn renders_version_comparison_links() {
+    let mut configuration = release_configuration(Path::new("."));
+    configuration.repository_url = Some("https://github.com/example/project/".to_owned());
+    let state = State {
+      archived: BTreeMap::from([(
+        "new-cli".to_owned(),
+        Artifact {
+          category: "added".to_owned(),
+          impact: "minor".to_owned(),
+          visibility: "public".to_owned(),
+          title: "Native CLI".to_owned(),
+          body: "Run the native CLI.".to_owned(),
+        },
+      )]),
+      manifests: vec![
+        ReleaseManifest {
+          version: "1.0.0".to_owned(),
+          date: "2026-08-20".to_owned(),
+          changes: Vec::new(),
+          baseline: Some(true),
+        },
+        ReleaseManifest {
+          version: "1.1.0".to_owned(),
+          date: "2026-08-21".to_owned(),
+          changes: vec!["new-cli".to_owned()],
+          baseline: None,
+        },
+      ],
+      assigned: BTreeSet::from(["new-cli".to_owned()]),
+    };
+
+    let changelog = render_changelog(&configuration, &state);
+    assert!(
+      changelog.contains("[Unreleased]: https://github.com/example/project/compare/v1.1.0...HEAD")
+    );
+    assert!(
+      changelog.contains("[1.1.0]: https://github.com/example/project/compare/v1.0.0...v1.1.0")
+    );
+  }
+
+  #[test]
+  fn preserves_json_version_source_formatting() {
+    let directory = tempfile::tempdir().unwrap();
+    let root = directory.path();
+    let source =
+      "{\r\n    \"z\": true,\r\n    \"version\": \"1.0.0\",\r\n    \"name\": \"fixture\"\r\n}\r\n";
+    fs::write(root.join("package.json"), source).unwrap();
+
+    assert_eq!(
+      update_version(root, "package.json", "json-package@1", "1.1.0").unwrap(),
+      source.replace("\"1.0.0\"", "\"1.1.0\"")
+    );
   }
 
   #[test]

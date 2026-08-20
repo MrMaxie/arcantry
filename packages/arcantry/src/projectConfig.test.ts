@@ -261,6 +261,68 @@ adapter = "todo-txt@1"
     await expect(resolveProject({ cwd: project, configPath })).rejects.toThrow('Absolute source path requires');
   });
 
+  it('rejects project-local paths that escape the project root', () => {
+    expect(() => parseProjectConfig(`config_version = 1
+
+[sources.tasks]
+kind = "todo-txt"
+path = "queue/../../todo.txt"
+adapter = "todo-txt@1"
+`)).toThrow('Source tasks path must stay within the project');
+
+    expect(() => parseProjectConfig(`config_version = 1
+
+[sources.intent]
+kind = "openspec"
+path = "openspec"
+management = "manage"
+adapter = "openspec@1"
+
+[sources.history]
+kind = "changelog"
+path = "CHANGELOG.md"
+management = "manage"
+adapter = "keep-a-changelog@2"
+from = ["intent"]
+
+[release]
+adapter = "openspec-release@1"
+manifests_path = "../releases"
+changelog_source = "history"
+tag_prefix = "v"
+
+[[release.version_sources]]
+path = "package.json"
+adapter = "json-package@1"
+`)).toThrow('Release manifests path must stay within the project');
+
+    expect(() => parseProjectConfig(`config_version = 1
+
+[sources.intent]
+kind = "openspec"
+path = "openspec"
+management = "manage"
+adapter = "openspec@1"
+
+[sources.history]
+kind = "changelog"
+path = "CHANGELOG.md"
+management = "manage"
+adapter = "keep-a-changelog@2"
+from = ["intent"]
+
+[release]
+adapter = "openspec-release@1"
+manifests_path = "releases"
+changelog_source = "history"
+tag_prefix = "v"
+
+[[release.version_sources]]
+path = "../package.json"
+adapter = "json-package@1"
+`)).toThrow('Release version source path must stay within the project');
+  });
+
   it('treats a project without configuration as a valid wild project', async () => {
     const root = await createFixtureDirectory('arcantry-wild-');
     await expect(resolveProject({ cwd: root, toolVersion: '0.3.2' })).resolves.toEqual({

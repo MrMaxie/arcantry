@@ -75,7 +75,7 @@ const releasePair = async () => {
     const root = await mkdtemp(join(tmpdir(), 'arcantry-native-release-'));
     roots.push(root);
     await mkdir(join(root, 'openspec', 'changes', 'archive'), { recursive: true });
-    await writeFile(join(root, 'package.json'), '{\n  "name": "fixture",\n  "version": "0.8.0"\n}\n');
+    await writeFile(join(root, 'package.json'), '{\r\n    "z": true,\r\n    "version": "0.8.0",\r\n    "name": "fixture"\r\n}\r\n');
     await writeFile(
       join(root, 'arcantry.toml'),
       `config_version = 1
@@ -98,6 +98,7 @@ adapter = "openspec-release@1"
 manifests_path = "releases"
 changelog_source = "changelog"
 tag_prefix = "v"
+repository_url = "https://github.com/example/project"
 
 [[release.version_sources]]
 path = "package.json"
@@ -415,6 +416,14 @@ Arcantry now runs through the native executable.
     ]) {
       expect(await runRust(right, args)).toEqual(await runTypeScript(left, args));
       expect(await files(right)).toEqual(await files(left));
+    }
+  });
+
+  it('matches rejection of non-stable release baselines', async () => {
+    const { left, right } = await releasePair();
+    for (const version of ['0.8.0-alpha', '0.8.0+build']) {
+      const args = ['release', 'baseline', version, '--date', '2026-06-11'];
+      expect(await runRust(right, args)).toEqual(await runTypeScript(left, args));
     }
   });
 
