@@ -67,7 +67,7 @@ Applies an unchanged plan. `-` reads standard input. Apply rejects conflicts, ch
 | Command | Contract |
 | --- | --- |
 | `todo list [--source <id>]` | List one or all detected queues. `root` and `local` are aliases. |
-| `todo add <task> [--source <id>] [--apply]` | Preview or add one format-preserving task. |
+| `todo add <task> [--source <id>] [--apply]` | Preview or add one task. |
 | `todo complete <line> [--source <id>] [--date <YYYY-MM-DD>] [--apply]` | Preview or complete one task. |
 | `todo move <line> --from <id> --to <id> [--apply]` | Preview or move one line between queues. |
 

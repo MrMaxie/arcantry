@@ -1,0 +1,1 @@
+{"name":"@arcantry/cli-darwin-arm64","version":"1.0.0","description":"Arcantry native CLI for macOS ARM64.","license":"Apache-2.0","repository":{"type":"git","url":"https://github.com/MrMaxie/arcantry.git"},"os":["darwin"],"cpu":["arm64"],"files":["bin/arcantry","README.md","LICENSE"],"exports":{"./bin/arcantry":"./bin/arcantry"},"publishConfig":{"access":"public"}}

@@ -1,0 +1,129 @@
+name: Native release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4
+      - run: just ci-setup
+      - run: just publish-check "$GITHUB_REF_NAME"
+      - run: just ci
+
+  native:
+    needs: verify
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            runner: windows-2025
+          - target: aarch64-pc-windows-msvc
+            runner: windows-11-arm
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+          - target: aarch64-apple-darwin
+            runner: macos-15
+          - target: x86_64-unknown-linux-musl
+            runner: ubuntu-24.04
+          - target: aarch64-unknown-linux-musl
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4
+      - run: just ci-setup
+      - name: Install musl tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes musl-tools
+      - name: Build target archive
+        run: mise exec -- dist build --artifacts=local --target=${{ matrix.target }} --tag=${{ github.ref_name }} --allow-dirty
+      - name: Smoke native executable
+        run: cargo run -p xtask -- smoke-target --target "${{ matrix.target }}"
+      - name: Smoke static Linux executable on Alpine musl
+        if: runner.os == 'Linux'
+        run: docker run --rm -v "$PWD:/work" -w /work alpine:3.23 "/work/target/${{ matrix.target }}/dist/arcantry" --version
+      - name: Smoke npm launcher and platform package
+        run: just package-target-smoke "${{ matrix.target }}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-${{ matrix.target }}
+          path: |
+            target/distrib
+            target/${{ matrix.target }}/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  assemble:
+    needs: native
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      id-token: write
+    environment: npm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4
+      - run: just ci-setup
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: native-*
+          path: .artifacts/native
+      - name: Collect cargo-dist target artifacts
+        run: cargo run -p xtask -- collect-release --input .artifacts/native --output target/distrib
+      - name: Build installer templates
+        run: CARGO_TARGET_DIR=target/installer-dist mise exec -- dist build --artifacts=lies --tag="$GITHUB_REF_NAME" --allow-dirty
+      - name: Build installers and checksum manifest
+        run: cargo run -p xtask -- assemble-release --artifacts target/distrib --installer-artifacts target/installer-dist/distrib
+      - name: Smoke shell and PowerShell installers
+        run: just installer-smoke target/distrib
+      - name: Build seven npm archives
+        run: just package-release .artifacts/native target/npm
+      - name: Verify npm trusted-publishing support
+        run: nub tooling/publish.ts verify-npm-cli
+      - name: Verify all npm packages through a local registry
+        run: nub tooling/registry-smoke.ts --archives target/npm
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-v1.0.0
+          path: |
+            target/distrib
+            target/npm
+          if-no-files-found: error
+          retention-days: 14
+      - name: Verify existing npm versions for retry-safe publication
+        run: nub tooling/publish.ts preflight-npm --archives target/npm --output target/npm/existing-packages.txt
+      - name: Create draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: nub tooling/publish.ts create-draft-release --tag "$GITHUB_REF_NAME" --artifacts target/distrib
+      - name: Publish platform packages, then the main package
+        run: nub tooling/publish.ts publish-npm --archives target/npm --existing target/npm/existing-packages.txt
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: nub tooling/publish.ts publish-release --tag "$GITHUB_REF_NAME"

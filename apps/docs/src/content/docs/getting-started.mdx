@@ -7,9 +7,35 @@ import ArcantryCommandPicker from '../../components/ArcantryCommandPicker.astro'
 
 Arcantry can describe an empty directory or an established project without creating files. Start with inspection, then decide whether any source needs an explicit responsibility.
 
-## Requirements
+## Install Arcantry
 
-Run the CLI with Node.js 24 or newer. Node is required only in the environment that launches Arcantry. Using a package runner does not add Node, a package manifest, a lockfile, or an Arcantry dependency to the target project.
+On macOS or Linux:
+
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/MrMaxie/arcantry/releases/download/v1.0.0/arcantry-installer.sh | sh
+```
+
+On Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/MrMaxie/arcantry/releases/download/v1.0.0/arcantry-installer.ps1 | iex"
+```
+
+Both installers verify the published SHA-256 checksum before installing. Direct downloads use the same `SHA256SUMS` manifest.
+
+| System | x64 archive | ARM64 archive |
+| --- | --- | --- |
+| Windows | `arcantry-cli-x86_64-pc-windows-msvc.zip` | `arcantry-cli-aarch64-pc-windows-msvc.zip` |
+| macOS | `arcantry-cli-x86_64-apple-darwin.tar.xz` | `arcantry-cli-aarch64-apple-darwin.tar.xz` |
+| Linux | `arcantry-cli-x86_64-unknown-linux-musl.tar.xz` | `arcantry-cli-aarch64-unknown-linux-musl.tar.xz` |
+
+The Linux archives work on both glibc and musl systems. Download the archive and `SHA256SUMS` from the same GitHub Release, then verify the manifest before extracting `arcantry`.
+
+You can also install Arcantry from npm:
+
+```sh
+npm install --global arcantry
+```
 
 ## Inspect the current directory
 
@@ -17,7 +43,7 @@ Choose the package runner already available on your machine:
 
 <ArcantryCommandPicker idPrefix="getting-started-command" />
 
-These commands run the package through the runner's cache. `repo inspect` is read-only: it does not create `arcantry.toml`, initialize Git, or modify a recognized source.
+These commands run Arcantry through the selected package runner. `repo inspect` is read-only: it does not create `arcantry.toml`, initialize Git, or modify a recognized source.
 
 If Arcantry is already installed as a command, the equivalent invocation is:
 

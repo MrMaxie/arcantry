@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { nativeTargets } from './native-targets.js';
 
 const root = process.cwd();
 const packageManifest = JSON.parse(readFileSync(join(root, 'packages', 'arcantry', 'package.json'), 'utf8')) as {
@@ -56,6 +57,27 @@ describe('npm package identity', () => {
     for (const relativePath of agentManifestPaths) {
       const manifest = JSON.parse(readFileSync(join(root, relativePath), 'utf8')) as { name: string; version: string };
       expect(manifest, relativePath).toMatchObject({ name: packageManifest.name, version: packageManifest.version });
+    }
+  });
+
+  it('keeps native target metadata aligned with platform packages', () => {
+    const main = JSON.parse(readFileSync(join(root, 'packages', 'arcantry', 'package.json'), 'utf8')) as {
+      version: string;
+      optionalDependencies: Record<string, string>;
+    };
+    expect(new Set(nativeTargets.map((target) => target.triple)).size).toBe(nativeTargets.length);
+    for (const target of nativeTargets) {
+      const manifest = JSON.parse(
+        readFileSync(join(root, 'packages', target.packageDirectory, 'package.json'), 'utf8'),
+      ) as { name: string; version: string; os: string[]; cpu: string[]; libc?: string[] };
+      expect(manifest, target.triple).toMatchObject({
+        name: target.packageName,
+        version: main.version,
+        os: [target.os],
+        cpu: [target.cpu],
+      });
+      expect(manifest.libc, target.triple).toBeUndefined();
+      expect(main.optionalDependencies[target.packageName], target.triple).toBe(main.version);
     }
   });
 });

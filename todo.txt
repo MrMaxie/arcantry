@@ -3,3 +3,4 @@
 2026-08-19 Evaluate Open Policy Agent and its Rego policy language (https://www.openpolicyagent.org/) as technologies worth promoting alongside OpenSpec, todo.txt, and Varlock, and decide whether Arcantry should support an OPA/Rego-based policy integration path or a custom policy format. @project-expansion @deep-thinking
 2026-08-19 Evaluate how to structure todo.txt usage so projects adopting Arcantry can use the format more easily and effectively. @project-expansion @deep-thinking
 2026-08-19 Evaluate whether Arcantry should replace todo.txt with a similar custom or existing format, or retain and improve todo.txt. @project-expansion @deep-thinking
+2026-08-20 Evaluate Homebrew tap and Scoop bucket distribution for Arcantry, including repository ownership, release automation credentials, checksum verification, and retry-safe publication. @project-expansion @deep-thinking

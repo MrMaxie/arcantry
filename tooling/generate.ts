@@ -1,14 +1,23 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { Command } from 'commander';
 import { readCatalog, readSkillAgent, readSkillFrontmatter, readSkillMetadata, validateCatalog } from './catalog.js';
 import { buildVersionModel } from './version.js';
 
 const root = process.cwd();
-const check = process.argv.includes('--check');
-const docsOnly = process.argv.includes('--docs-only');
+const options = new Command()
+  .name('generate.ts')
+  .description('Generate Arcantry package and documentation projections.')
+  .option('--check', 'Verify tracked generated files without writing them.')
+  .option('--docs-only', 'Generate only documentation projections.')
+  .showHelpAfterError()
+  .parse()
+  .opts<{ check?: boolean; docsOnly?: boolean }>();
+const check = options.check ?? false;
+const docsOnly = options.docsOnly ?? false;
 let stale = false;
 
-function project(path: string, content: string, tracked = true): void {
+const project = (path: string, content: string, tracked = true): void => {
   const current = existsSync(path) ? readFileSync(path, 'utf8') : undefined;
   if (current === content) return;
   if (tracked) stale = true;
@@ -16,7 +25,7 @@ function project(path: string, content: string, tracked = true): void {
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, content, 'utf8');
   }
-}
+};
 
 const generatedDocsRoot = join(root, 'apps', 'docs', 'src', 'content', 'docs', '_generated');
 const detailsRoot = join(generatedDocsRoot, 'skills');
@@ -35,14 +44,14 @@ project(
   false,
 );
 
-function escapeHtml(value: string): string {
+const escapeHtml = (value: string): string => {
   return value
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
-}
+};
 
 const validationErrors = validateCatalog(root);
 if (validationErrors.length > 0) throw new Error(validationErrors.join('\n'));

@@ -1,4 +1,5 @@
 set dotenv-load := false
+set indentation := "  "
 
 _default:
   @just --list
@@ -6,8 +7,9 @@ _default:
 setup:
   nub install --frozen-lockfile
 
+[private]
 ci-setup: setup
-  echo "$(dirname "$(nub node which)")" >> "$GITHUB_PATH"
+  nub tooling/ci-setup.ts
 
 check:
   nub tooling/generate.ts --check
@@ -21,11 +23,47 @@ check:
   nub tooling/validate-catalog.ts
   nub tooling/release.ts check
   nub exec --cwd apps/docs astro check
+  just --fmt --check
+  cargo fmt --all -- --check
+  cargo clippy --workspace --all-targets -- -D warnings
+  cargo test --workspace
+  mise exec -- cargo deny check
 
 build:
   nub tooling/generate.ts --docs-only
   nub exec --cwd packages/arcantry tsup
   nub exec --cwd apps/docs astro build
+  cargo build --workspace
+
+format:
+  just --fmt
+  cargo fmt --all
+  nub exec biome format --write
+
+[private]
+format-check:
+  just --fmt --check
+  cargo fmt --all -- --check
+
+[private]
+rust-clippy:
+  cargo clippy --workspace --all-targets -- -D warnings
+
+[private]
+rust-test:
+  cargo test --workspace
+
+[private]
+rust-deny:
+  mise exec -- cargo deny check
+
+native-conformance:
+  cargo build -p arcantry-cli
+  nub tooling/native-conformance.ts
+
+[private]
+dist-plan:
+  mise exec -- dist plan --tag v1.0.0 --allow-dirty
 
 docs port="9796":
   nub tooling/generate.ts --docs-only
@@ -34,36 +72,74 @@ docs port="9796":
 generate:
   nub tooling/generate.ts
 
+[private]
 generate-check:
   nub tooling/generate.ts --check
 
+[private]
 catalog-validate:
   nub tooling/validate-catalog.ts
 
 package-check:
   nub exec --cwd packages/arcantry tsup
   nub tooling/prepare-package.ts
-  nub --node packages/arcantry/scripts/check-package.mjs
+  cargo build -p arcantry-cli
+  nub tooling/package-smoke.ts --binary target/debug/arcantry{{ if os_family() == "windows" { ".exe" } else { "" } }}
 
+[private]
+package-target-smoke target:
+  nub exec --cwd packages/arcantry tsup
+  nub tooling/prepare-package.ts
+  nub tooling/package-smoke.ts --target {{ quote(target) }}
+
+[private]
+package-release artifacts output:
+  nub exec --cwd packages/arcantry tsup
+  nub tooling/prepare-package.ts
+  nub tooling/package-native.ts --output {{ quote(output) }} --main --artifacts {{ quote(artifacts) }}
+
+[private]
 package-archive output:
   nub exec --cwd packages/arcantry tsup
   nub tooling/prepare-package.ts
-  nub --node packages/arcantry/scripts/check-package.mjs --output {{ quote(output) }}
+  cargo build -p arcantry-cli
+  nub tooling/package-smoke.ts --binary target/debug/arcantry{{ if os_family() == "windows" { ".exe" } else { "" } }} --output {{ quote(output) }}
 
+[private]
+package-native target binary output:
+  nub tooling/package-native.ts --output {{ quote(output) }} --binary {{ quote(target + "=" + binary) }}
+
+[private]
+registry-smoke archives:
+  nub tooling/registry-smoke.ts --archives {{ quote(archives) }}
+
+[private]
+installer-smoke artifacts:
+  nub tooling/installer-smoke.ts --artifacts {{ quote(artifacts) }}
+
+[private]
 arcantry-build:
   nub exec --cwd packages/arcantry tsup
 
-arcantry-init: arcantry-build
-  nub packages/arcantry/dist/cli.js --cwd . repo init --scope private
+[private]
+arcantry-native-build:
+  cargo build -p arcantry-cli
 
-arcantry-doctor: arcantry-build
-  nub packages/arcantry/dist/cli.js --cwd . repo doctor
+[private]
+arcantry-init: arcantry-native-build
+  target/debug/arcantry{{ if os_family() == "windows" { ".exe" } else { "" } }} --cwd . repo init --scope private
 
-arcantry-validate: arcantry-build
-  nub packages/arcantry/dist/cli.js --cwd . repo validate
+[private]
+arcantry-doctor: arcantry-native-build
+  target/debug/arcantry{{ if os_family() == "windows" { ".exe" } else { "" } }} --cwd . repo doctor
 
-arcantry-skills-doctor: arcantry-build
-  nub packages/arcantry/dist/cli.js --cwd . skills doctor
+[private]
+arcantry-validate: arcantry-native-build
+  target/debug/arcantry{{ if os_family() == "windows" { ".exe" } else { "" } }} --cwd . repo validate
+
+[private]
+arcantry-skills-doctor: arcantry-native-build
+  target/debug/arcantry{{ if os_family() == "windows" { ".exe" } else { "" } }} --cwd . skills doctor
 
 release-plan:
   nub tooling/release.ts plan
@@ -87,4 +163,4 @@ openspec-validate:
   nub exec openspec schema validate arcantry
   nub exec openspec validate --all --strict --no-interactive
 
-ci: openspec-validate check build package-check arcantry-init arcantry-validate arcantry-skills-doctor
+ci: openspec-validate check build native-conformance dist-plan package-check arcantry-init arcantry-validate arcantry-skills-doctor
