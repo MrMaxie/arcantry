@@ -51,11 +51,14 @@ pub struct LinkResult {
 }
 
 pub fn load(root: &Path) -> Result<Catalog> {
-  let catalog: Catalog = serde_json::from_str(&fs::read_to_string(root.join("catalog.json"))?)?;
-  if catalog.schema != "./schemas/catalog.schema.json" {
-    bail!("catalog.json has an unsupported schema.");
-  }
-  Ok(catalog)
+  let value: serde_json::Value =
+    serde_json::from_str(&fs::read_to_string(root.join("catalog.json"))?)?;
+  validate_json_document(
+    &root.join("schemas").join("catalog.schema.json"),
+    &value,
+    "catalog.json",
+  )?;
+  Ok(serde_json::from_value(value)?)
 }
 
 pub fn inspect(root: &Path, name: &str) -> Result<SkillInspection> {
@@ -66,11 +69,7 @@ pub fn inspect(root: &Path, name: &str) -> Result<SkillInspection> {
     .find(|entry| entry.name == name)
     .with_context(|| format!("Skill is not present in catalog.json: {name}"))?;
   let directory = root.join("skills").join(name);
-  let metadata: SkillMetadata =
-    serde_json::from_str(&fs::read_to_string(directory.join("arcantry.json"))?)?;
-  if metadata.schema != "../../schemas/skill-metadata.schema.json" {
-    bail!("skills/{name}/arcantry.json has an unsupported schema.");
-  }
+  let metadata = load_skill_metadata(root, name)?;
   Ok(SkillInspection {
     entry,
     metadata,
@@ -151,6 +150,21 @@ pub fn validate(root: &Path) -> (bool, Vec<String>, Option<Catalog>) {
   if names.iter().collect::<BTreeSet<_>>().len() != names.len() {
     errors.push("catalog.json skill names must be unique.".to_owned());
   }
+  let skill_root = root.join("skills");
+  match fs::read_dir(&skill_root) {
+    Ok(entries) => {
+      let mut directories: Vec<_> = entries
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_dir()))
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect();
+      directories.sort();
+      if directories != sorted {
+        errors.push("catalog.json membership must exactly match skills/ directories.".to_owned());
+      }
+    }
+    Err(error) => errors.push(format!("skills/: {error}")),
+  }
   for entry in &catalog.skills {
     if validate_name(&entry.name).is_err() {
       errors.push(format!("skills/{} has an invalid name.", entry.name));
@@ -168,29 +182,65 @@ pub fn validate(root: &Path) -> (bool, Vec<String>, Option<Catalog>) {
         errors.push(format!("skills/{} is missing {required}.", entry.name));
       }
     }
-    if let Ok((name, description)) = fs::read_to_string(directory.join("SKILL.md"))
+    match fs::read_to_string(directory.join("SKILL.md"))
       .and_then(|source| read_frontmatter(&source).map_err(std::io::Error::other))
     {
-      if name != entry.name {
+      Ok((name, description)) => {
+        if name != entry.name {
+          errors.push(format!(
+            "skills/{} frontmatter name must match its directory.",
+            entry.name
+          ));
+        }
+        if description.len() < 30 {
+          errors.push(format!("skills/{} description is too short.", entry.name));
+        }
+      }
+      Err(error) => errors.push(format!("skills/{}/SKILL.md: {error}", entry.name)),
+    }
+    if let Err(error) = load_skill_metadata(root, &entry.name) {
+      errors.push(error.to_string());
+    }
+    match fs::read_to_string(directory.join("agents").join("openai.yaml")) {
+      Ok(source) if !source.contains(&format!("${}", entry.name)) => {
         errors.push(format!(
-          "skills/{} frontmatter name must match its directory.",
-          entry.name
+          "skills/{}/agents/openai.yaml must mention ${}.",
+          entry.name, entry.name
         ));
       }
-      if description.len() < 30 {
-        errors.push(format!("skills/{} description is too short.", entry.name));
-      }
-    }
-    if let Ok(source) = fs::read_to_string(directory.join("agents").join("openai.yaml"))
-      && !source.contains(&format!("${}", entry.name))
-    {
-      errors.push(format!(
-        "skills/{}/agents/openai.yaml must mention ${}.",
-        entry.name, entry.name
-      ));
+      Err(error) => errors.push(format!("skills/{}/agents/openai.yaml: {error}", entry.name)),
+      _ => {}
     }
   }
   (errors.is_empty(), errors, Some(catalog))
+}
+
+fn load_skill_metadata(root: &Path, name: &str) -> Result<SkillMetadata> {
+  let path = root.join("skills").join(name).join("arcantry.json");
+  let value: serde_json::Value = serde_json::from_str(&fs::read_to_string(&path)?)?;
+  validate_json_document(
+    &root.join("schemas").join("skill-metadata.schema.json"),
+    &value,
+    &format!("skills/{name}/arcantry.json"),
+  )?;
+  Ok(serde_json::from_value(value)?)
+}
+
+fn validate_json_document(
+  schema_path: &Path,
+  value: &serde_json::Value,
+  label: &str,
+) -> Result<()> {
+  let schema: serde_json::Value = serde_json::from_str(&fs::read_to_string(schema_path)?)?;
+  let validator = jsonschema::validator_for(&schema)?;
+  let errors: Vec<_> = validator
+    .iter_errors(value)
+    .map(|error| error.to_string())
+    .collect();
+  if !errors.is_empty() {
+    bail!("{label}: {}", errors.join("; "));
+  }
+  Ok(())
 }
 
 pub fn link(
@@ -519,5 +569,49 @@ mod tests {
 
     assert!(!target.join("example").exists());
     assert!(fs::symlink_metadata(target.join("example")).is_err());
+  }
+
+  #[test]
+  fn schema_validation_rejects_unknown_catalog_fields() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let value = serde_json::json!({
+      "$schema": "./schemas/catalog.schema.json",
+      "skills": [{
+        "name": "example",
+        "family": "repo-safely",
+        "tags": ["example"],
+        "unsupported": true
+      }]
+    });
+
+    assert!(
+      validate_json_document(
+        &root.join("schemas/catalog.schema.json"),
+        &value,
+        "catalog.json"
+      )
+      .unwrap_err()
+      .to_string()
+      .contains("Additional properties")
+    );
+  }
+
+  #[test]
+  fn schema_validation_rejects_invalid_skill_metadata() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let value = serde_json::json!({
+      "$schema": "../../schemas/skill-metadata.schema.json",
+      "summary": "Too short",
+      "scenarios": []
+    });
+
+    assert!(
+      validate_json_document(
+        &root.join("schemas/skill-metadata.schema.json"),
+        &value,
+        "skills/example/arcantry.json"
+      )
+      .is_err()
+    );
   }
 }
