@@ -1,5 +1,6 @@
 use crate::config::{
   Management, RawSourceConfig, ResolvedProject, SourceKind, Visibility, effective_visibility,
+  normalize_path_lexically,
 };
 use anyhow::Result;
 use serde::Serialize;
@@ -242,5 +243,12 @@ fn resolve_source(root: &Path, path: &str) -> PathBuf {
   }
 }
 fn normalize(path: &Path) -> String {
-  path.to_string_lossy().to_lowercase()
+  let value = normalize_path_lexically(path)
+    .to_string_lossy()
+    .into_owned();
+  if cfg!(windows) {
+    value.to_lowercase()
+  } else {
+    value
+  }
 }

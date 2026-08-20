@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createFixtureDirectory, removeFixtures } from './testHelpers.js';
 import {
   findNearestProjectConfig,
+  isPrivateProjectPath,
   parseProjectConfig,
   projectConfigSchemaLocation,
   renderProjectConfig,
@@ -55,6 +56,18 @@ adapter = "todo-txt@1"
 [sources.tasks]
 kind = "todo-txt"
 path = ".LOCAL/todo.txt"
+visibility = "shared"
+adapter = "todo-txt@1"
+`)).toThrow('inside .local');
+  });
+
+  it('classifies normalized .local paths as private', () => {
+    expect(isPrivateProjectPath('public/../.local/todo.txt')).toBe(true);
+    expect(() => parseProjectConfig(`config_version = 1
+
+[sources.tasks]
+kind = "todo-txt"
+path = "public/../.local/todo.txt"
 visibility = "shared"
 adapter = "todo-txt@1"
 `)).toThrow('inside .local');

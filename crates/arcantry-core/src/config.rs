@@ -576,14 +576,38 @@ fn valid_adapter(adapter: &str) -> bool {
   })
 }
 pub fn is_private_project_path(path: &str) -> bool {
-  let normalized = path.replace('\\', "/");
-  let normalized = normalized.strip_prefix("./").unwrap_or(&normalized);
-  let first = normalized.split('/').next().unwrap_or_default();
+  let portable = path.replace('\\', "/");
+  let normalized = normalize_path_lexically(Path::new(&portable));
+  let first = normalized
+    .components()
+    .find_map(|component| match component {
+      std::path::Component::Normal(value) => value.to_str(),
+      _ => None,
+    })
+    .unwrap_or_default();
   if cfg!(windows) {
     first.eq_ignore_ascii_case(".local")
   } else {
     first == ".local"
   }
+}
+
+pub(crate) fn normalize_path_lexically(path: &Path) -> PathBuf {
+  let mut normalized = PathBuf::new();
+  for component in path.components() {
+    match component {
+      std::path::Component::CurDir => {}
+      std::path::Component::ParentDir => match normalized.components().next_back() {
+        Some(std::path::Component::Normal(_)) => {
+          normalized.pop();
+        }
+        Some(std::path::Component::RootDir | std::path::Component::Prefix(_)) => {}
+        _ => normalized.push(component.as_os_str()),
+      },
+      _ => normalized.push(component.as_os_str()),
+    }
+  }
+  normalized
 }
 fn is_private_config_path(path: &Path) -> bool {
   path
@@ -664,6 +688,25 @@ from = ["intent"]
 [sources.tasks]
 kind = "todo-txt"
 path = ".LOCAL/todo.txt"
+visibility = "shared"
+adapter = "todo-txt@1"
+"#;
+
+    assert!(
+      parse_project_config(content, None, false)
+        .unwrap_err()
+        .to_string()
+        .contains("inside .local")
+    );
+  }
+
+  #[test]
+  fn rejects_shared_visibility_for_normalized_local_paths() {
+    let content = r#"config_version = 1
+
+[sources.tasks]
+kind = "todo-txt"
+path = "public/../.local/todo.txt"
 visibility = "shared"
 adapter = "todo-txt@1"
 "#;

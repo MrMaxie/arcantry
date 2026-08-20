@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { execa } from 'execa';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   doctorRepository,
@@ -14,6 +15,18 @@ import { createFixtureRepository, removeFixtures } from './testHelpers.js';
 afterEach(removeFixtures);
 
 describe('repository adoption', () => {
+  const commit = async (root: string, message: string): Promise<void> => {
+    await execa('git', ['config', 'user.name', 'Arcantry Tests'], { cwd: root });
+    await execa('git', ['config', 'user.email', 'tests@arcantry.invalid'], { cwd: root });
+    await execa('git', ['commit', '--quiet', '-m', message], { cwd: root });
+  };
+
+  const configureRemoteHead = async (root: string): Promise<void> => {
+    await execa('git', ['remote', 'add', 'origin', 'https://example.invalid/repository.git'], { cwd: root });
+    await execa('git', ['update-ref', 'refs/remotes/origin/master', 'HEAD'], { cwd: root });
+    await execa('git', ['symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/master'], { cwd: root });
+  };
+
   it('initializes only minimal private state', async () => {
     const root = await createFixtureRepository();
     await writeFile(join(root, 'package.json'), '{"private":true}\n');
@@ -38,6 +51,42 @@ describe('repository adoption', () => {
     expect(await readFile(join(root, 'AGENTS.md'), 'utf8')).toContain('# Project rules');
     expect(await readFile(join(root, 'AGENTS.md'), 'utf8')).toContain('Use `arcantry.toml`');
     await expect(readFile(join(root, '.local/arcantry.toml'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('preserves .local when the configured default remote tracks it', async () => {
+    const root = await createFixtureRepository();
+    await mkdir(join(root, '.local'));
+    await writeFile(join(root, '.local/tracked.txt'), 'tracked\n');
+    await execa('git', ['add', '.local/tracked.txt'], { cwd: root });
+    await commit(root, 'test: track local state');
+    await configureRemoteHead(root);
+
+    const plan = await planRepositoryInit(root, 'private');
+
+    expect(plan.changes).toEqual([]);
+    expect(plan.conflicts).toContainEqual(expect.objectContaining({
+      path: '.local/',
+      reason: expect.stringContaining('Configured default remote branch'),
+    }));
+  });
+
+  it('requires separate authorization when only the index tracks .local', async () => {
+    const root = await createFixtureRepository();
+    await writeFile(join(root, 'tracked.txt'), 'tracked\n');
+    await execa('git', ['add', 'tracked.txt'], { cwd: root });
+    await commit(root, 'test: add baseline');
+    await configureRemoteHead(root);
+    await mkdir(join(root, '.local'));
+    await writeFile(join(root, '.local/indexed.txt'), 'indexed\n');
+    await execa('git', ['add', '.local/indexed.txt'], { cwd: root });
+
+    const plan = await planRepositoryInit(root, 'private');
+
+    expect(plan.changes).toEqual([]);
+    expect(plan.conflicts).toContainEqual(expect.objectContaining({
+      path: '.local/',
+      reason: expect.stringContaining('separate explicitly authorized operation'),
+    }));
   });
 
   it('adds Claude compatibility as an import without duplicating guidance', async () => {

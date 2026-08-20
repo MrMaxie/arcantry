@@ -374,8 +374,15 @@ const isWithin = (parent: string, child: string): boolean => {
 };
 
 export const isPrivateProjectPath = (path: string): boolean => {
-  const normalized = path.replaceAll('\\', '/').replace(/^\.\//, '');
-  const [first = ''] = normalized.split('/');
+  const segments: string[] = [];
+  for (const segment of path.replaceAll('\\', '/').split('/')) {
+    if (segment === '' || segment === '.') continue;
+    if (segment === '..') {
+      if (segments.length > 0 && segments.at(-1) !== '..') segments.pop();
+      else segments.push(segment);
+    } else segments.push(segment);
+  }
+  const [first = ''] = segments;
   return process.platform === 'win32' ? first.toLowerCase() === '.local' : first === '.local';
 };
 

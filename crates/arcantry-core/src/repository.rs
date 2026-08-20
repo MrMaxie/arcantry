@@ -43,6 +43,13 @@ struct PlannedChange {
   expected: Option<String>,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum LocalTrackingPolicy {
+  Private,
+  RemoteTracked(String),
+  IndexOnly,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct RepositoryDiagnostic {
   pub severity: &'static str,
@@ -77,6 +84,9 @@ pub fn resolve_repository_root(cwd: &Path) -> Result<PathBuf> {
 
 pub fn init(cwd: &Path, scope: Scope, compatibility: bool) -> Result<Vec<RepositoryChange>> {
   let root = resolve_repository_root(cwd)?;
+  if scope == Scope::Private {
+    enforce_private_local_policy(&root)?;
+  }
   let mut changes = Vec::new();
   let config_relative = config_path(scope);
   let config_absolute = root.join(config_relative);
@@ -118,6 +128,9 @@ pub fn init(cwd: &Path, scope: Scope, compatibility: bool) -> Result<Vec<Reposit
 
 pub fn update(cwd: &Path, scope: Scope, compatibility: bool) -> Result<Vec<RepositoryChange>> {
   let root = resolve_repository_root(cwd)?;
+  if scope == Scope::Private {
+    enforce_private_local_policy(&root)?;
+  }
   let config_relative = config_path(scope);
   let Some(config) = read_optional(&root.join(config_relative))? else {
     bail!("Run repo init --scope {} before repo update.", scope.name());
@@ -363,6 +376,64 @@ fn plan_git_exclude(
   Ok(())
 }
 
+fn enforce_private_local_policy(root: &Path) -> Result<()> {
+  match local_tracking_policy(root)? {
+    LocalTrackingPolicy::Private => Ok(()),
+    LocalTrackingPolicy::RemoteTracked(reference) => bail!(
+      "Configured default remote branch {reference} tracks .local; preserving that repository policy instead of applying Arcantry's private-local convention."
+    ),
+    LocalTrackingPolicy::IndexOnly => bail!(
+      "The current Git index tracks .local while the configured default remote branch does not. Remove it from the index in a separate explicitly authorized operation before private adoption."
+    ),
+  }
+}
+
+fn local_tracking_policy(root: &Path) -> Result<LocalTrackingPolicy> {
+  let default_remote = configured_default_remote_reference(root)?;
+  if let Some(reference) = &default_remote {
+    let tracked = git_read(
+      root,
+      &["ls-tree", "-r", "--name-only", reference, "--", ".local"],
+    )?;
+    if !tracked.trim().is_empty() {
+      return Ok(LocalTrackingPolicy::RemoteTracked(reference.clone()));
+    }
+  }
+  let indexed = git_read(root, &["ls-files", "--", ".local"])?;
+  if !indexed.trim().is_empty() {
+    return Ok(LocalTrackingPolicy::IndexOnly);
+  }
+  Ok(LocalTrackingPolicy::Private)
+}
+
+fn configured_default_remote_reference(root: &Path) -> Result<Option<String>> {
+  let remotes = git_read(root, &["remote"])?;
+  let mut remotes: Vec<_> = remotes
+    .lines()
+    .filter(|remote| !remote.is_empty())
+    .collect();
+  remotes.sort_by_key(|remote| if *remote == "origin" { 0 } else { 1 });
+  for remote in remotes {
+    let candidate = format!("refs/remotes/{remote}/HEAD");
+    let reference = duct::cmd("git", ["symbolic-ref", "--quiet", &candidate])
+      .dir(root)
+      .stderr_null()
+      .unchecked()
+      .read()?;
+    if !reference.trim().is_empty() {
+      return Ok(Some(reference.trim().to_owned()));
+    }
+  }
+  Ok(None)
+}
+
+fn git_read(root: &Path, arguments: &[&str]) -> Result<String> {
+  duct::cmd("git", arguments)
+    .dir(root)
+    .read()
+    .map_err(Into::into)
+}
+
 fn validate_section(
   root: &Path,
   relative: &str,
@@ -423,6 +494,29 @@ fn validate_git_exclude(
   doctor: bool,
   diagnostics: &mut Vec<RepositoryDiagnostic>,
 ) -> Result<()> {
+  match local_tracking_policy(root)? {
+    LocalTrackingPolicy::RemoteTracked(reference) => {
+      diagnostics.push(RepositoryDiagnostic {
+        severity: "error",
+        path: ".local/".to_owned(),
+        message: format!(
+          "Configured default remote branch {reference} tracks .local; this conflicts with Arcantry's private-local convention."
+        ),
+        repair: None,
+      });
+      return Ok(());
+    }
+    LocalTrackingPolicy::IndexOnly => {
+      diagnostics.push(RepositoryDiagnostic {
+        severity: "error",
+        path: ".local/".to_owned(),
+        message: "The current Git index tracks .local while the configured default remote branch does not. Remove it from the index only through a separate explicitly authorized operation.".to_owned(),
+        repair: None,
+      });
+      return Ok(());
+    }
+    LocalTrackingPolicy::Private => {}
+  }
   let output = duct::cmd("git", ["rev-parse", "--git-path", "info/exclude"])
     .dir(root)
     .read()?;
@@ -505,4 +599,96 @@ fn display_path(root: &Path, path: &Path) -> String {
 
 fn native_relative(path: &str) -> String {
   path.replace('/', std::path::MAIN_SEPARATOR_STR)
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn git(root: &Path, arguments: &[&str]) {
+    duct::cmd("git", arguments).dir(root).run().unwrap();
+  }
+
+  fn repository() -> tempfile::TempDir {
+    let directory = tempfile::tempdir().unwrap();
+    git(directory.path(), &["init", "--quiet"]);
+    git(directory.path(), &["config", "user.name", "Arcantry Tests"]);
+    git(
+      directory.path(),
+      &["config", "user.email", "tests@arcantry.invalid"],
+    );
+    directory
+  }
+
+  fn configure_remote_head(root: &Path) {
+    git(
+      root,
+      &[
+        "remote",
+        "add",
+        "origin",
+        "https://example.invalid/repository.git",
+      ],
+    );
+    git(root, &["update-ref", "refs/remotes/origin/master", "HEAD"]);
+    git(
+      root,
+      &[
+        "symbolic-ref",
+        "refs/remotes/origin/HEAD",
+        "refs/remotes/origin/master",
+      ],
+    );
+  }
+
+  #[test]
+  fn detects_local_state_tracked_by_the_default_remote() {
+    let directory = repository();
+    let root = directory.path();
+    fs::create_dir(root.join(".local")).unwrap();
+    fs::write(root.join(".local/tracked.txt"), "tracked\n").unwrap();
+    git(root, &["add", ".local/tracked.txt"]);
+    git(
+      root,
+      &["commit", "--quiet", "-m", "test: track local state"],
+    );
+    configure_remote_head(root);
+
+    assert!(matches!(
+      local_tracking_policy(root).unwrap(),
+      LocalTrackingPolicy::RemoteTracked(_)
+    ));
+    assert!(
+      init(root, Scope::Private, false)
+        .unwrap_err()
+        .to_string()
+        .contains("preserving that repository policy")
+    );
+    assert!(!root.join(".local/arcantry.toml").exists());
+  }
+
+  #[test]
+  fn detects_local_state_tracked_only_by_the_index() {
+    let directory = repository();
+    let root = directory.path();
+    fs::write(root.join("tracked.txt"), "tracked\n").unwrap();
+    git(root, &["add", "tracked.txt"]);
+    git(root, &["commit", "--quiet", "-m", "test: add baseline"]);
+    configure_remote_head(root);
+    fs::create_dir(root.join(".local")).unwrap();
+    fs::write(root.join(".local/indexed.txt"), "indexed\n").unwrap();
+    git(root, &["add", ".local/indexed.txt"]);
+
+    assert_eq!(
+      local_tracking_policy(root).unwrap(),
+      LocalTrackingPolicy::IndexOnly
+    );
+    assert!(
+      init(root, Scope::Private, false)
+        .unwrap_err()
+        .to_string()
+        .contains("separate explicitly authorized operation")
+    );
+    assert!(!root.join(".local/arcantry.toml").exists());
+  }
 }
