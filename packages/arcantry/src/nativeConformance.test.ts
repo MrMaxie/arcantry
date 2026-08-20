@@ -7,6 +7,7 @@ import { runCli } from './program.js';
 import { createFixtureRepository } from './testHelpers.js';
 
 const nativeBinary = process.env.ARCANTRY_NATIVE_BIN;
+const repositoryRoot = join(process.cwd(), '..', '..');
 const roots: string[] = [];
 
 afterEach(async () => {
@@ -275,7 +276,7 @@ adapter = "todo-txt@1"
         '--compat',
         'claude',
         '--catalog-root',
-        process.cwd(),
+        repositoryRoot,
       ],
       [
         'skills',
@@ -286,7 +287,7 @@ adapter = "todo-txt@1"
         '--compat',
         'claude',
         '--catalog-root',
-        process.cwd(),
+        repositoryRoot,
       ],
     ]) {
       expect(await runRust(right, args)).toEqual(await runTypeScript(left, args));
