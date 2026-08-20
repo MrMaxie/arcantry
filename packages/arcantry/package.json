@@ -42,8 +42,8 @@
   ],
   "scripts": {
     "build": "tsup",
-    "package:check": "pnpm run prepack && node scripts/check-package.mjs",
-    "prepack": "pnpm run build && pnpm --dir ../.. exec tsx tooling/prepare-package.ts",
+    "package:check": "nub run prepack && nub scripts/check-package.mjs",
+    "prepack": "nub run build && nub --cwd ../.. tooling/prepare-package.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -69,6 +69,14 @@
     "smol-toml": "1.7.1",
     "yaml": "2.9.0",
     "zod": "4.4.3"
+  },
+  "optionalDependencies": {
+    "@arcantry/cli-win32-x64": "1.0.0",
+    "@arcantry/cli-win32-arm64": "1.0.0",
+    "@arcantry/cli-darwin-x64": "1.0.0",
+    "@arcantry/cli-darwin-arm64": "1.0.0",
+    "@arcantry/cli-linux-x64": "1.0.0",
+    "@arcantry/cli-linux-arm64": "1.0.0"
   },
   "devDependencies": {
     "@types/node": "25.7.0",

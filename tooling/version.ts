@@ -1,4 +1,4 @@
-import { readArchivedChanges, readManifests, type ReleaseArtifact, type ReleaseManifest } from './release.js';
+import { type ReleaseArtifact, type ReleaseManifest, readArchivedChanges, readManifests } from './release.js';
 
 export interface VersionModel {
   currentRelease: string;
@@ -32,4 +32,3 @@ export function createVersionModel(
     skillReleases,
   };
 }
-

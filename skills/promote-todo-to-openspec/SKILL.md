@@ -69,7 +69,7 @@ Re-read the source and targets before editing. If either drifted, revise the aff
 
 Use the project's current OpenSpec schema, templates, and validation commands. Create or update only the accepted targets. Do not implement or archive the proposed product changes.
 
-Remove a todo entry only when its accepted transformation explicitly authorizes full promotion and every target validates. For `partial`, retain the unpromoted portion in valid todo.txt form. For `relocate`, verify the private target before removing the source copy.
+Remove a todo entry only when its accepted transformation explicitly authorizes full promotion and every target validates. For `partial`, retain the unpromoted portion using an explicit compatible source convention when one exists; otherwise use the official one-task-per-line todo.txt baseline without inventing optional priority, dates, projects, contexts, or metadata. For `relocate`, verify the private target before removing the source copy.
 
 After applying, re-read the bounded todo result, validate every changed OpenSpec target, and reconcile the coverage ledger. Report applied IDs, retained entries, validation results, and anything unresolved.
 

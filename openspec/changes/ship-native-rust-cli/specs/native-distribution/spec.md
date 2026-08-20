@@ -16,15 +16,21 @@ Arcantry MUST publish native executables for `x86_64-pc-windows-msvc`, `aarch64-
 - **THEN** Arcantry documentation and package launchers report that the platform is unsupported
 - **AND** do not substitute an unverified artifact
 
-### Requirement: Native archives are deterministic and verifiable
+### Requirement: Native archives and installers are deterministic and verifiable
 
-Every sealed release MUST attach one ZIP archive for each Windows target, one TAR.GZ archive for each macOS and Linux target, and one `SHA256SUMS` manifest covering all six archives. Archive names and embedded CLI versions MUST derive from the sealed release version. Each archive MUST contain the target executable and the public license and MUST exclude source-only, private, local and repository-management state.
+Every sealed release MUST attach one ZIP archive for each Windows target, one TAR.XZ archive for each macOS and Linux target, one `SHA256SUMS` manifest covering all six archives, `arcantry-installer.sh` and `arcantry-installer.ps1`. Archive names and embedded CLI versions MUST derive from the sealed release version. Each archive MUST contain the target executable and the public license and MUST exclude source-only, private, local and repository-management state. The installers MUST use cargo-dist's supported PATH and unmanaged-install behavior, select only a declared target archive and verify the same SHA-256 digest recorded for that archive in `SHA256SUMS` before installation.
 
 #### Scenario: A native release is prepared
 
 - **WHEN** the six release archives are built from a sealed release
 - **THEN** their names, executable versions and checksum manifest identify the same release and target triples
 - **AND** recomputing every archive checksum matches `SHA256SUMS`
+
+#### Scenario: A user runs a native installer
+
+- **WHEN** a supported user runs `arcantry-installer.sh` or `arcantry-installer.ps1` for a sealed version
+- **THEN** the installer selects the matching declared archive and verifies its checksum before installation
+- **AND** a missing target or checksum mismatch stops installation
 
 #### Scenario: An archive contains drift
 

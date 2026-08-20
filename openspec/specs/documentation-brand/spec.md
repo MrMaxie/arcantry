@@ -15,7 +15,7 @@ The desktop documentation shell MUST present a full-height left navigation rail,
 
 ### Requirement: Brand assets are structural UI
 
-The documentation shell MUST show exactly one Arcantry brand lockup at a time. The desktop lockup MUST use the wordmark and the narrow layout MUST use the compact mark. The wordmark's first glyph MUST reuse the compact mark geometry rather than a similar alternate drawing.
+The documentation shell MUST show exactly one Arcantry brand lockup at a time. The desktop lockup MUST use the full wordmark and the narrow layout MUST use the favicon `a` with its complete right side. No third compact logo geometry MAY be introduced.
 
 #### Scenario: A reader moves between viewport sizes
 
@@ -69,7 +69,7 @@ Documentation components MUST use semantic theme variables for colors that diffe
 
 ### Requirement: Brand remains legible in both themes
 
-The canonical Arcantry mark and wordmark MUST remain visually legible in light and dark themes without substituting alternate brand geometry.
+The canonical Arcantry favicon mark and full wordmark MUST remain visually legible in light and dark themes without substituting alternate brand geometry.
 
 #### Scenario: Brand assets render in each theme
 

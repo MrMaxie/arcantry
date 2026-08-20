@@ -1,0 +1,72 @@
+---
+title: Get started
+description: Inspect a project with Arcantry before choosing shared, private, or configuration-free use.
+---
+
+import ArcantryCommandPicker from '../../components/ArcantryCommandPicker.astro';
+import ArcantryAgentPrompt from '../../components/ArcantryAgentPrompt.astro';
+
+Arcantry can describe an empty directory or an established project without creating files. Choose an installation path, inspect the project, then decide which sources Arcantry should only read and which it should manage.
+
+## Install Arcantry
+
+Choose a persistent installation or use the package launcher already available on your computer:
+
+<ArcantryCommandPicker idPrefix="getting-started-install" />
+
+- `npm` installs the `arcantry` command globally.
+- `npx`, `pnpm`, Bun, and Nub download Arcantry for one command without keeping a global installation.
+- PowerShell and `sh` install the native CLI from the matching GitHub Release and verify its SHA-256 checksum.
+
+The npm and native installer routes require the corresponding public 1.0 package or GitHub Release. To use the current source directly, install the native CLI from a checkout:
+
+```sh
+git clone https://github.com/MrMaxie/arcantry.git
+cd arcantry
+cargo install --locked --path crates/arcantry-cli
+```
+
+## Ask an agent to install Arcantry
+
+Copy this prompt when you want a coding agent to choose the appropriate installation route, explain material choices, and verify the result without changing a project:
+
+<ArcantryAgentPrompt variant="full" />
+
+## Inspect a project
+
+After a persistent installation, inspect the current directory:
+
+```sh
+arcantry repo inspect
+```
+
+`repo inspect` is read-only: it does not create `arcantry.toml`, initialize Git, or modify a recognized source.
+
+Use `--cwd` to inspect another directory:
+
+```sh
+arcantry --cwd ../project repo inspect
+```
+
+Add `--json` when another tool needs the complete machine-readable result.
+
+## Read the result
+
+Inspection reports:
+
+- the resolved project root and whether configuration was found;
+- discovered or configured OpenSpec, changelog, and todo.txt sources;
+- each source's path, visibility, management level, adapter, and compatibility;
+- missing sources as valid absence rather than an initialization error.
+
+An empty result is valid. Git and `arcantry.toml` are not prerequisites.
+
+## Choose what happens next
+
+- Keep using configuration-free inspection when you only need a trace-free observer.
+- Run `arcantry repo init --scope private` for untracked project context and private agent guidance.
+- Run `arcantry repo init --scope shared` when collaborators need the same configuration and guidance.
+- Use an explicit external `arcantry.toml` when the target project must remain unchanged.
+- Use [todo.txt queues](/arcantry/guides/todo-txt/) or [skills](/arcantry/skills/) independently.
+- Follow [Adoption paths](/arcantry/adoption/) before planning a source transition.
+- Use [Inspect, plan and apply](/arcantry/reference/repository-workflow/) when a source must change.

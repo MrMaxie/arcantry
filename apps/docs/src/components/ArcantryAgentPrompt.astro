@@ -1,0 +1,163 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+
+interface Props {
+  variant?: 'button' | 'full';
+}
+
+const { variant = 'button' } = Astro.props;
+const agentPrompt = `Install Arcantry on this computer using the official getting-started guide.
+
+- Detect the operating system, architecture, and available package managers or runtimes before choosing a method.
+- Prefer the official native installer for Windows, macOS, or Linux. Use the global npm package when it is available and fits the existing toolchain. Use the documented source installation only as a fallback.
+- Ask me only if the available methods differ in installation scope, required permissions, PATH changes, or another choice I need to make.
+- Before running a command, show it to me and explain where Arcantry will be installed and whether it changes PATH or installs globally.
+- Do not adopt Arcantry into a repository or change project files unless I ask.
+- After installation, run \`arcantry --version\`. If the current directory is the project I want to inspect, also run \`arcantry repo inspect\`; otherwise ask which project to inspect.
+- If the public package or GitHub Release is unavailable, stop and explain the documented fallback instead of inventing a URL or command.`;
+---
+
+<arcantry-agent-prompt class:list={['agent-prompt', `agent-prompt-${variant}`, 'not-content']}>
+  {variant === 'full' && (
+    <pre><code>{agentPrompt}</code></pre>
+  )}
+  <button type="button" data-copy={agentPrompt} aria-label="Copy agent installation prompt">
+    <span class="copy-icon copy-idle" aria-hidden="true"><Icon name="document" /></span>
+    <span class="copy-icon copy-done" aria-hidden="true"><Icon name="approve-check" /></span>
+    <span data-copy-label>Copy agent prompt</span>
+  </button>
+</arcantry-agent-prompt>
+
+<script>
+async function copyAgentPrompt(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const input = document.createElement('textarea');
+    input.value = text;
+    input.setAttribute('readonly', '');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.append(input);
+    input.select();
+    const legacyDocument = document as unknown as { execCommand(command: 'copy'): boolean };
+    const copied = legacyDocument.execCommand('copy');
+    input.remove();
+    return copied;
+  }
+}
+
+class ArcantryAgentPrompt extends HTMLElement {
+  connectedCallback(): void {
+    this.querySelector('button')?.addEventListener('click', this.copy);
+  }
+
+  disconnectedCallback(): void {
+    this.querySelector('button')?.removeEventListener('click', this.copy);
+  }
+
+  private copy = async (): Promise<void> => {
+    const button = this.querySelector<HTMLButtonElement>('button');
+    const label = this.querySelector<HTMLElement>('[data-copy-label]');
+    if (!button || !label || !(await copyAgentPrompt(button.dataset.copy ?? ''))) return;
+    button.dataset.copied = 'true';
+    button.setAttribute('aria-label', 'Agent installation prompt copied');
+    label.textContent = 'Prompt copied';
+    window.setTimeout(() => {
+      delete button.dataset.copied;
+      button.setAttribute('aria-label', 'Copy agent installation prompt');
+      label.textContent = 'Copy agent prompt';
+    }, 3000);
+  };
+}
+
+if (!customElements.get('arcantry-agent-prompt')) {
+  customElements.define('arcantry-agent-prompt', ArcantryAgentPrompt);
+}
+</script>
+
+<style>
+@layer starlight.core {
+  .agent-prompt {
+    display: block;
+    margin: 0 !important;
+  }
+  .agent-prompt-button {
+    flex: 0 0 auto;
+  }
+  .agent-prompt button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.48rem;
+    min-height: 2.7rem;
+    margin: 0 !important;
+    padding: 0.68rem 0.9rem;
+    border: 1px solid var(--ar-border);
+    border-radius: 0.2rem;
+    background: transparent;
+    color: var(--ar-text);
+    cursor: pointer;
+    font-family: var(--ar-font-sans) !important;
+    font-size: 0.8rem !important;
+    font-weight: 650 !important;
+    line-height: 1 !important;
+    transition:
+      border-color 150ms ease,
+      background-color 150ms ease,
+      transform 150ms ease;
+  }
+  .agent-prompt button:hover {
+    border-color: var(--ar-text-soft);
+    background: var(--ar-bg-subtle);
+    transform: translateY(-1px);
+  }
+  .agent-prompt button:focus-visible {
+    outline: 2px solid var(--ar-accent-violet);
+    outline-offset: 2px;
+  }
+  .copy-icon {
+    display: grid;
+    width: 0.9rem;
+    height: 0.9rem;
+    place-items: center;
+  }
+  .copy-icon :global(svg) {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+  .copy-done {
+    display: none;
+    color: var(--ar-accent-blue);
+  }
+  button[data-copied='true'] .copy-idle {
+    display: none;
+  }
+  button[data-copied='true'] .copy-done {
+    display: grid;
+  }
+  .agent-prompt-full {
+    display: grid;
+    gap: 0.65rem;
+    margin-block: 1.25rem !important;
+  }
+  .agent-prompt-full pre {
+    max-height: none;
+    margin: 0 !important;
+    padding: 1rem;
+    overflow: auto;
+    border: 1px solid var(--ar-border);
+    border-radius: 0.2rem;
+    background: var(--ar-bg-subtle);
+    white-space: pre-wrap;
+  }
+  .agent-prompt-full code {
+    font-size: 0.82rem;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+  .agent-prompt-full button {
+    justify-self: start;
+  }
+}
+</style>

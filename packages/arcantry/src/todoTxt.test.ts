@@ -3,7 +3,8 @@ import { addTodoTask, completeTodoTask, inspectTodoTasks, moveTodoTask, parseTod
 
 describe('todo.txt adapter', () => {
   it('preserves BOM, CRLF, arbitrary tags and metadata', () => {
-    const content = '\uFEFF(A) 2026-08-18 Ship +Arcantry @digitalroom owner:maxie\r\nFree form @desk\r\n';
+    const content =
+      '\uFEFF(A) 2026-08-18 Ship +Arcantry @digitalroom owner:maxie\r\n(a) lowercase priority\r\n  Free form @desk  \r\nowner:one owner:two +P +P @C @C\r\n';
 
     const tasks = inspectTodoTasks(content);
     const updated = addTodoTask(content, 'Review +Arcantry @home custom:value');
@@ -16,7 +17,7 @@ describe('todo.txt adapter', () => {
       metadata: { owner: 'maxie' },
     });
     expect(parseTodoDocument(updated)).toMatchObject({ bom: true, newline: '\r\n', trailingNewline: true });
-    expect(updated).toContain('Review +Arcantry @home custom:value\r\n');
+    expect(updated).toBe(`${content}Review +Arcantry @home custom:value\r\n`);
   });
 
   it('completes a task using standard order and retains priority as metadata', () => {

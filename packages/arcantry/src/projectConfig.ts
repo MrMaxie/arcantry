@@ -208,6 +208,7 @@ export const parseProjectConfig = (
       if (isAbsolute(source.path) && options.allowAbsolutePaths !== true) {
         throw new Error(`Absolute source path requires an explicit external configuration: ${id}.`);
       }
+      if (pathEscapesProject(source.path)) throw new Error(`Source ${id} path must stay within the project.`);
       const pathVisibility = isPrivateProjectPath(source.path) ? 'private' : 'shared';
       if (pathVisibility === 'private' && source.visibility === 'shared') {
         throw new Error(`Source ${id} is inside .local and cannot be shared.`);
@@ -237,6 +238,7 @@ export const parseProjectConfig = (
       if (isAbsolute(path) && options.allowAbsolutePaths !== true) {
         throw new Error(`Absolute ${label} path requires an explicit external configuration.`);
       }
+      if (pathEscapesProject(path)) throw new Error(`${label[0]!.toUpperCase()}${label.slice(1)} path must stay within the project.`);
     }
   }
 
@@ -368,14 +370,36 @@ const scopesOverlap = (left: string, right: string): boolean => {
   return a === '' || b === '' || a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`);
 };
 
+const pathEscapesProject = (path: string): boolean => {
+  let depth = 0;
+  for (const segment of path.replaceAll('\\', '/').split('/')) {
+    if (segment === '' || segment === '.') continue;
+    if (segment === '..') {
+      if (depth === 0) return true;
+      depth -= 1;
+    } else {
+      depth += 1;
+    }
+  }
+  return false;
+};
+
 const isWithin = (parent: string, child: string): boolean => {
   const value = relative(resolve(parent), resolve(child));
   return value === '' || (!value.startsWith('..') && !isAbsolute(value));
 };
 
-const isPrivateProjectPath = (path: string): boolean => {
-  const normalized = path.replaceAll('\\', '/').replace(/^\.\//, '');
-  return normalized === '.local' || normalized.startsWith('.local/');
+export const isPrivateProjectPath = (path: string): boolean => {
+  const segments: string[] = [];
+  for (const segment of path.replaceAll('\\', '/').split('/')) {
+    if (segment === '' || segment === '.') continue;
+    if (segment === '..') {
+      if (segments.length > 0 && segments.at(-1) !== '..') segments.pop();
+      else segments.push(segment);
+    } else segments.push(segment);
+  }
+  const [first = ''] = segments;
+  return process.platform === 'win32' ? first.toLowerCase() === '.local' : first === '.local';
 };
 
 const isPrivateConfigPath = (path: string): boolean =>

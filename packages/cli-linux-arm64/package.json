@@ -1,0 +1,1 @@
+{"name":"@arcantry/cli-linux-arm64","version":"1.0.0","description":"Arcantry static native CLI for Linux ARM64.","license":"Apache-2.0","repository":{"type":"git","url":"https://github.com/MrMaxie/arcantry.git"},"os":["linux"],"cpu":["arm64"],"files":["bin/arcantry","README.md","LICENSE"],"exports":{"./bin/arcantry":"./bin/arcantry"},"publishConfig":{"access":"public"}}
