@@ -4,52 +4,43 @@ description: Inspect a project with Arcantry before choosing shared, private, or
 ---
 
 import ArcantryCommandPicker from '../../components/ArcantryCommandPicker.astro';
+import ArcantryAgentPrompt from '../../components/ArcantryAgentPrompt.astro';
 
-Arcantry can describe an empty directory or an established project without creating files. Start with inspection, then decide whether any source needs an explicit responsibility.
+Arcantry can describe an empty directory or an established project without creating files. Choose an installation path, inspect the project, then decide which sources Arcantry should only read and which it should manage.
 
 ## Install Arcantry
 
-On macOS or Linux:
+Choose a persistent installation or use the package launcher already available on your computer:
+
+<ArcantryCommandPicker idPrefix="getting-started-install" />
+
+- `npm` installs the `arcantry` command globally.
+- `npx`, `pnpm`, Bun, and Nub download Arcantry for one command without keeping a global installation.
+- PowerShell and `sh` install the native CLI from the matching GitHub Release and verify its SHA-256 checksum.
+
+The npm and native installer routes require the corresponding public 1.0 package or GitHub Release. To use the current source directly, install the native CLI from a checkout:
 
 ```sh
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/MrMaxie/arcantry/releases/download/v1.0.0/arcantry-installer.sh | sh
+git clone https://github.com/MrMaxie/arcantry.git
+cd arcantry
+cargo install --locked --path crates/arcantry-cli
 ```
 
-On Windows PowerShell:
+## Ask an agent to install Arcantry
 
-```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/MrMaxie/arcantry/releases/download/v1.0.0/arcantry-installer.ps1 | iex"
-```
+Copy this prompt when you want a coding agent to choose the appropriate installation route, explain material choices, and verify the result without changing a project:
 
-Both installers verify the published SHA-256 checksum before installing. Direct downloads use the same `SHA256SUMS` manifest.
+<ArcantryAgentPrompt variant="full" />
 
-| System | x64 archive | ARM64 archive |
-| --- | --- | --- |
-| Windows | `arcantry-cli-x86_64-pc-windows-msvc.zip` | `arcantry-cli-aarch64-pc-windows-msvc.zip` |
-| macOS | `arcantry-cli-x86_64-apple-darwin.tar.xz` | `arcantry-cli-aarch64-apple-darwin.tar.xz` |
-| Linux | `arcantry-cli-x86_64-unknown-linux-musl.tar.xz` | `arcantry-cli-aarch64-unknown-linux-musl.tar.xz` |
+## Inspect a project
 
-The Linux archives work on both glibc and musl systems. Download the archive and `SHA256SUMS` from the same GitHub Release, then verify the manifest before extracting `arcantry`.
-
-You can also install Arcantry from npm:
-
-```sh
-npm install --global arcantry
-```
-
-## Inspect the current directory
-
-Choose the package runner already available on your machine:
-
-<ArcantryCommandPicker idPrefix="getting-started-command" />
-
-These commands run Arcantry through the selected package runner. `repo inspect` is read-only: it does not create `arcantry.toml`, initialize Git, or modify a recognized source.
-
-If Arcantry is already installed as a command, the equivalent invocation is:
+After a persistent installation, inspect the current directory:
 
 ```sh
 arcantry repo inspect
 ```
+
+`repo inspect` is read-only: it does not create `arcantry.toml`, initialize Git, or modify a recognized source.
 
 Use `--cwd` to inspect another directory:
 

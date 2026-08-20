@@ -2,6 +2,7 @@ node_modules/
 dist/
 target/
 .astro/
+.playwright-cli/
 .DS_Store
 *.log
 *.tgz

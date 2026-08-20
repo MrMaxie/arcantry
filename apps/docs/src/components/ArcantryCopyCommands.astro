@@ -8,7 +8,7 @@ import packageManifest from '../../../../packages/arcantry/package.json';
 const packageName = document.querySelector<HTMLElement>('arcantry-copy-commands')?.dataset.package ?? '';
 const escapedPackageName = packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const commandPattern = new RegExp(
-  `^(?:arcantry\\b|npx\\s+${escapedPackageName}\\b|pnpm\\s+dlx\\s+${escapedPackageName}\\b|nubx\\s+${escapedPackageName}\\b)`,
+  `^(?:arcantry\\b|npm\\s+(?:install|i)\\s+(?:--global|-g)\\s+${escapedPackageName}\\b|npx\\s+${escapedPackageName}\\b|pnpm\\s+dlx\\s+${escapedPackageName}\\b|bunx\\s+${escapedPackageName}\\b|nubx\\s+${escapedPackageName}\\b)`,
   'i',
 );
 

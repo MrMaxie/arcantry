@@ -1,5 +1,6 @@
 ---
 import type {} from '@astrojs/starlight';
+import ArcantryAgentPrompt from './ArcantryAgentPrompt.astro';
 import ArcantryAmbientCanvas from './ArcantryAmbientCanvas.astro';
 import ArcantryCommandPicker from './ArcantryCommandPicker.astro';
 
@@ -37,6 +38,7 @@ const homeHref = Astro.locals.starlightRoute.siteTitleHref;
               {action.text}
             </a>
           ))}
+          <ArcantryAgentPrompt variant="button" />
         </div>
       )}
     </div>
