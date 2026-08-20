@@ -21,7 +21,7 @@ If the user supplies a transcript, excerpts, or a Markdown export, analyze that 
 
 If the user supplies a specific problem, analyze it first. Report additional issues only when they are high-confidence and material. Without a supplied problem, review communication, instruction use, skill selection, context gathering, scope, authorization boundaries, unnecessary questions, and missed obvious inferences.
 
-Do not use prompt-writing advice as the primary remedy. Offer it only when the user explicitly asks for prompt help. The default remedy is a concrete change to the agent's setup, routing, or guidance when evidence supports one.
+Do not use prompt-writing advice as the primary remedy. Offer it only when the user explicitly asks for prompt help. First separate any implementation, retest, acceptance-criteria check, or correction still owed by the analyzed task. That is current-task remediation, not a `P` proposal; report it separately and do not use self-improvement to defer it. For the remaining durable mechanism gap, the default remedy is a concrete change to the agent's setup, routing, or guidance when evidence supports one.
 
 ## Resolve the project
 
@@ -69,6 +69,8 @@ Read the narrowest relevant set:
 - `.local/AGENTS.md` and `.local/WORKFLOW.md` when present and relevant;
 - skills explicitly used, visibly routed, or clearly applicable but omitted;
 - source-of-truth workflow files only when needed to verify a claimed project rule.
+
+Use `protect-local-boundary` before reading or changing any `.local/` target. It owns the private directory boundary and exclusion checks; this skill owns diagnosis and proposal decisions.
 
 Do not bulk-read `.local`. Do not open credential stores or copy credential values. Treat an installed skill's current text as a current snapshot unless historical evidence establishes the earlier version.
 

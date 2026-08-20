@@ -153,6 +153,11 @@ Never copy or display secrets, tokens, credentials, or sensitive local identifie
 
 ## Local context versus project context
 
+When work will operate on `.local/`, use `protect-local-boundary` for creation,
+access, promotion, tooling isolation, and handoff verification. Keep this section
+focused on classifying local information and deciding whether it belongs in a
+shared or product context.
+
 Classify every setup file, hidden directory, environment variable, note, or workaround as one of:
 
 1. Agent working material.
@@ -164,7 +169,6 @@ Apply these rules:
 
 - Keep agent working material and private configuration out of commits, product behavior, architecture, primary documentation, and pull-request descriptions.
 - Follow the project's rules for private working directories. Keep them locally excluded without turning them into shared project conventions unless explicitly required.
-- For a `.local` private workspace in a Git repository, ensure `.local` is present in `.git/info/exclude`; do not add it to `.gitignore` unless explicitly requested.
 - Do not adapt the project architecture to an agent-only tool or workaround.
 - Do not document a temporary local workaround as the official project architecture.
 - Do not commit hidden files merely because a tool generated them.

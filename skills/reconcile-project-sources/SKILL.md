@@ -7,6 +7,8 @@ description: Explain drift between shared and private OpenSpec, changelog, or to
 
 Treat every configured source as independent. Reconciliation is an explicit reviewed transition, not background synchronization.
 
+Use `protect-local-boundary` whenever an inspected source is under `.local/` or a transition crosses the private boundary. It owns filesystem handling and promotion safety; this skill owns semantic reconciliation.
+
 ## Workflow
 
 1. Run `arcantry repo inspect` and identify the active configuration, shadowed configuration, source scopes, management levels, adapters, and dependencies.

@@ -57,7 +57,7 @@ The defaults scan the universal `~/.agents/skills`, the Claude compatibility dir
 - Do not edit, move, disable, install, uninstall, consolidate, or rewrite anything during an audit.
 - Do not access the network or send catalog contents to external services.
 - Do not expose private paths or full descriptions outside the requested audience.
-- Do not create a repository report unless requested. When a private repository report is requested, follow its `.local` policy and exclusion rules.
+- Do not create a repository report unless requested. Before creating a private repository report under `.local/`, use `protect-local-boundary` to resolve its policy and exclusion.
 - Require a separate explicit implementation request before applying any recommendation.
 
 ## Output

@@ -28,4 +28,4 @@ Do not move private paths, credentials, personal service setup, or machine-speci
 6. Validate nesting, language, commands, privacy boundaries, managed-section ownership, and any requested compatibility import.
 7. Report applied IDs and leave rejected or undecided proposals unchanged.
 
-If `.local` is used in a Git repository, verify that `.local/` is present in `.git/info/exclude`. Do not edit `.gitignore` for private agent state unless the user explicitly requests a shared policy.
+When an operation reads or changes `.local/AGENTS.md`, use `protect-local-boundary` first. It owns the private directory and Git exclusion boundary; this skill owns guidance scope and content.
