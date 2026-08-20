@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { runCli } from './program.js';
+import { runNativeCli } from './nativeLauncher.js';
 
-const result = await runCli();
-process.exitCode = result.exitCode;
+process.exitCode = runNativeCli(process.argv.slice(2));

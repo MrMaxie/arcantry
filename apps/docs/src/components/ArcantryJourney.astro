@@ -1,0 +1,310 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+import ArcantryKnowledgeGraph from './ArcantryKnowledgeGraph.astro';
+---
+
+<section class="value" aria-labelledby="value-title">
+  <div class="value-heading">
+    <p>Why Arcantry</p>
+    <div>
+      <h2 id="value-title">Keep project meaning clear while agents help maintain it</h2>
+      <p>
+        Arcantry connects specifications, changelogs, task queues, agent guidance, and focused skills without confusing
+        their roles. Inspect the whole project, automate repeated work, validate one boundary, or plan one controlled
+        change without forcing a new repository shape.
+      </p>
+    </div>
+  </div>
+  <div class="value-grid">
+    <article>
+      <Icon name="approve-check-circle" />
+      <h3>See shared and private sources</h3>
+      <p>
+        One inspection finds active and shadowed configuration, source roles, visibility, versions, and compatibility.
+      </p>
+    </article>
+    <article>
+      <Icon name="puzzle" />
+      <h3>Adopt only the boundary you need</h3>
+      <p>
+        Start without configuration, keep setup private, control the project externally, or track one shared contract.
+      </p>
+    </article>
+    <article>
+      <Icon name="approve-check" />
+      <h3>Scale verification with risk</h3>
+      <p>Combine static, automated, live, independent, and user checks only where they can change the decision.</p>
+    </article>
+  </div>
+
+  <div class="outcome-stage">
+    <article class="outcome-feature">
+      <span class="outcome-index">01</span>
+      <Icon name="approve-check" />
+      <div>
+        <h3>Start with any project</h3>
+        <p>
+          An empty folder, a non-Git codebase, and a mature monorepo can all be inspected before Arcantry owns anything.
+        </p>
+      </div>
+    </article>
+    <div class="outcome-stack">
+      <article>
+        <span class="outcome-index">02</span>
+        <Icon name="database" />
+        <div>
+          <h3>Keep meaning at the source</h3>
+          <p>
+            Todo captures incoming work, specifications hold accepted intent, changelogs explain releases, and skills
+            automate procedures.
+          </p>
+        </div>
+      </article>
+      <article>
+        <span class="outcome-index">03</span>
+        <Icon name="code-branch" />
+        <div>
+          <h3>Stop stale changes before they land</h3>
+          <p>
+            Plans capture the inputs they expect, so a changed source stops application and asks for a fresh decision.
+          </p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="comparison" aria-labelledby="comparison-title">
+  <div class="comparison-heading">
+    <p>With and without</p>
+    <h2 id="comparison-title">Replace repeated guesswork with one explicit project model</h2>
+  </div>
+  <div class="comparison-table-shell">
+    <table class="comparison-flow">
+      <colgroup>
+        <col class="comparison-area-column">
+        <col>
+        <col>
+      </colgroup>
+      <thead>
+        <tr>
+          <th scope="col">Area</th>
+          <th class="comparison-before-heading" scope="col">Without Arcantry</th>
+          <th class="comparison-after-heading" scope="col">With Arcantry</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">
+            <span>01</span>
+            <div>
+              <Icon name="magnifier" />
+              <h3>Discovery</h3>
+            </div>
+          </th>
+          <td class="comparison-before">
+            <p><strong>Every tool</strong> scans the project again and builds a different picture of what exists.</p>
+          </td>
+          <td class="comparison-after">
+            <p><strong>One inspection</strong> returns the same map of present, missing, and configured sources.</p>
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">
+            <span>02</span>
+            <div>
+              <Icon name="database" />
+              <h3>Responsibility</h3>
+            </div>
+          </th>
+          <td class="comparison-before">
+            <p>
+              <strong>OpenSpec</strong>, <strong>Changelog</strong>, <strong>todo.txt</strong>, and skills look like
+              interchangeable files.
+            </p>
+          </td>
+          <td class="comparison-after">
+            <p><strong>Each source keeps one role</strong>, owner, visibility, version, and management boundary.</p>
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">
+            <span>03</span>
+            <div>
+              <Icon name="puzzle" />
+              <h3>Adoption</h3>
+            </div>
+          </th>
+          <td class="comparison-before">
+            <p>
+              <strong>Trying one workflow</strong>
+              can require the framework's complete structure and configuration.
+            </p>
+          </td>
+          <td class="comparison-after">
+            <p><strong>Connect one capability</strong>, keep it private, or adopt the complete project model.</p>
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">
+            <span>04</span>
+            <div>
+              <Icon name="code-branch" />
+              <h3>Change</h3>
+            </div>
+          </th>
+          <td class="comparison-before">
+            <p><strong>A script can discover, decide, and write</strong> before anyone sees the exact effect.</p>
+          </td>
+          <td class="comparison-after">
+            <p>A <strong>reviewable plan</strong> separates the intended transition from later file writes.</p>
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">
+            <span>05</span>
+            <div>
+              <Icon name="warning" />
+              <h3>Drift</h3>
+            </div>
+          </th>
+          <td class="comparison-before">
+            <p><strong>A source changed after review</strong> can be overwritten by an older automation decision.</p>
+          </td>
+          <td class="comparison-after">
+            <p>Arcantry checks the <strong>expected inputs</strong> and stops when the project changed.</p>
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">
+            <span>06</span>
+            <div>
+              <Icon name="setting" />
+              <h3>Automation</h3>
+            </div>
+          </th>
+          <td class="comparison-before">
+            <p><strong>Tools duplicate compatibility rules</strong> and disagree about project boundaries.</p>
+          </td>
+          <td class="comparison-after">
+            <p>People and tools read the <strong>same source map</strong>, evidence, and boundaries.</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="contract-map" aria-labelledby="contract-title">
+  <div class="contract-heading">
+    <p>Explore Arcantry</p>
+    <h2 id="contract-title">Go from the project map to the decision you need</h2>
+  </div>
+  <div class="contract-lanes">
+    <a class="local-lane" href="/arcantry/reference/repository-contract/#roles-in-the-stack">
+      <div class="lane-title"><Icon name="database" /><span>Project knowledge stack</span></div>
+      <h3>Understand the model before changing anything</h3>
+      <p>
+        See why authority, release projections, queues, skills, private state, and integrity evidence stay separate even
+        when one tool can inspect them together.
+      </p>
+      <span class="lane-action">Understand the source roles <Icon name="right-arrow" /></span>
+    </a>
+    <ol class="product-lane">
+      <li>
+        <a href="/arcantry/getting-started/"
+          ><Icon name="approve-check-circle" />
+          <span
+            ><strong>Inspect a project safely</strong
+            ><small>Get the source map without creating or rewriting project files</small></span
+          ><Icon name="right-arrow" /></a
+        >
+      </li>
+      <li>
+        <a href="/arcantry/adoption/#choose-an-adoption-path"
+          ><Icon name="code-branch" />
+          <span
+            ><strong>Choose the right footprint</strong
+            ><small>Compare zero-footprint, external, tracked, selective, and full integration</small></span
+          ><Icon name="right-arrow" /></a
+        >
+      </li>
+      <li>
+        <a href="/arcantry/guides/todo-txt/"
+          ><Icon name="document" />
+          <span
+            ><strong>Make queues reviewable</strong
+            ><small>Preview shared or private todo.txt changes before writing them</small></span
+          ><Icon name="right-arrow" /></a
+        >
+      </li>
+      <li>
+        <a href="/arcantry/skills/#three-families"
+          ><Icon name="puzzle" />
+          <span
+            ><strong>Give an agent one procedure</strong
+            ><small>Choose a focused skill in user or repository scope</small></span
+          ><Icon name="right-arrow" /></a
+        >
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="journey" id="quickstart" aria-labelledby="quickstart-title">
+  <div class="journey-heading">
+    <p>Adoption strategies</p>
+    <div>
+      <h2 id="quickstart-title">Prefer complete integration, keep selective use available</h2>
+      <p>
+        Arcantry is most valuable when it can describe the complete project knowledge stack. That is the recommended
+        destination for both new and existing projects, but every source and capability remains independently adoptable.
+      </p>
+    </div>
+  </div>
+  <ol class="journey-steps">
+    <li>
+      <span class="step-icon"><Icon name="padlock" /></span>
+      <div>
+        <span class="step-number">01</span>
+        <span class="step-label">For personal or workstation-specific project context</span>
+        <h3>Keep adoption private</h3>
+        <p>
+          Use `.local/arcantry.toml`, private agent guidance, and independent private sources without tracking them.
+        </p>
+        <strong class="step-outcome">Benefit: project-aware tools with private state kept off Git.</strong>
+        <a href="/arcantry/adoption/#private-setup">Adopt private scope <Icon name="right-arrow" /></a>
+      </div>
+    </li>
+    <li>
+      <span class="step-icon"><Icon name="puzzle" /></span>
+      <div>
+        <span class="step-number">02</span>
+        <span class="step-label">For focused agent-user collaboration</span>
+        <h3>Link selected skills</h3>
+        <p>
+          Choose focused self-improvement, repository safety, or content safety procedures in user or repository scope.
+        </p>
+        <strong class="step-outcome"
+          >Benefit: repeatable workflows consume less context and keep clear approval boundaries.</strong
+        >
+        <a href="/arcantry/skills/#three-families">Explore the skill families <Icon name="right-arrow" /></a>
+      </div>
+    </li>
+    <li>
+      <span class="step-icon"><Icon name="star" /></span>
+      <div>
+        <span class="step-number">03</span>
+        <span class="step-label">For teams sharing the project contract</span>
+        <h3>Adopt shared scope</h3>
+        <p>Track configuration and agent guidance while keeping private sources independent under `.local`.</p>
+        <strong class="step-outcome"
+          >Benefit: collaborators and automation start from the same explicit boundary.</strong
+        >
+        <a href="/arcantry/adoption/#shared-setup">Adopt shared scope <Icon name="right-arrow" /></a>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<ArcantryKnowledgeGraph />

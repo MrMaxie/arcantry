@@ -242,7 +242,10 @@ const uniqueId = (candidate: string, sources: ProjectSource[]): string => {
   return `${candidate}-${suffix}`;
 };
 
-const normalizePath = (path: string): string => resolve(path).toLowerCase();
+const normalizePath = (path: string): string => {
+  const normalized = resolve(path);
+  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+};
 
 const pathExists = async (path: string): Promise<boolean> => (await pathKind(path)) !== 'missing';
 

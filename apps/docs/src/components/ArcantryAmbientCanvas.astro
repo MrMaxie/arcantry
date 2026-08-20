@@ -1,0 +1,375 @@
+<arcantry-ambient-canvas aria-hidden="true">
+  <span class="ambient-bloom"></span>
+  <canvas></canvas>
+</arcantry-ambient-canvas>
+
+<script>
+type Mote = {
+  x: number;
+  y: number;
+  radius: number;
+  phase: number;
+  speed: number;
+  color: '--ar-accent-blue' | '--ar-accent-violet' | '--ar-accent-pink';
+};
+
+type FogBlob = Mote & { opacity: number };
+
+type ShootingStar = {
+  x: number;
+  length: number;
+  phase: number;
+  speed: number;
+  color: '--ar-accent-blue' | '--ar-accent-violet' | '--ar-accent-pink';
+};
+
+class ArcantryAmbientCanvas extends HTMLElement {
+  private canvas: HTMLCanvasElement | null = null;
+  private context: CanvasRenderingContext2D | null = null;
+  private frame = 0;
+  private elapsed = 0;
+  private lastFrameTime = 0;
+  private width = 0;
+  private height = 0;
+  private pixelRatio = 1;
+  private pointer = { x: 0.58, y: 0.46, active: false };
+  private hero: Element | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+  private intersectionObserver: IntersectionObserver | null = null;
+  private visible = true;
+  private reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  private paletteTheme = '';
+  private palette = new Map<string, [number, number, number]>();
+  private motes: Mote[] = [
+    { x: 0.18, y: 0.22, radius: 1.1, phase: 0.2, speed: 0.22, color: '--ar-accent-blue' },
+    { x: 0.31, y: 0.13, radius: 1.7, phase: 2.1, speed: 0.16, color: '--ar-accent-pink' },
+    { x: 0.43, y: 0.29, radius: 1.2, phase: 4.2, speed: 0.19, color: '--ar-accent-violet' },
+    { x: 0.58, y: 0.12, radius: 1.1, phase: 1.3, speed: 0.25, color: '--ar-accent-blue' },
+    { x: 0.76, y: 0.24, radius: 1.6, phase: 5.2, speed: 0.15, color: '--ar-accent-pink' },
+    { x: 0.9, y: 0.16, radius: 1, phase: 3.6, speed: 0.23, color: '--ar-accent-violet' },
+    { x: 0.13, y: 0.48, radius: 1.5, phase: 4.8, speed: 0.18, color: '--ar-accent-violet' },
+    { x: 0.26, y: 0.61, radius: 1, phase: 2.9, speed: 0.26, color: '--ar-accent-blue' },
+    { x: 0.45, y: 0.5, radius: 1.8, phase: 0.7, speed: 0.14, color: '--ar-accent-pink' },
+    { x: 0.67, y: 0.64, radius: 1.2, phase: 3.1, speed: 0.2, color: '--ar-accent-blue' },
+    { x: 0.82, y: 0.46, radius: 1, phase: 5.8, speed: 0.24, color: '--ar-accent-violet' },
+    { x: 0.94, y: 0.68, radius: 1.6, phase: 1.8, speed: 0.17, color: '--ar-accent-pink' },
+    { x: 0.2, y: 0.83, radius: 1, phase: 5.4, speed: 0.22, color: '--ar-accent-pink' },
+    { x: 0.38, y: 0.75, radius: 1.4, phase: 2.4, speed: 0.17, color: '--ar-accent-blue' },
+    { x: 0.58, y: 0.88, radius: 1, phase: 4.4, speed: 0.25, color: '--ar-accent-violet' },
+    { x: 0.78, y: 0.8, radius: 1.5, phase: 0.9, speed: 0.16, color: '--ar-accent-pink' },
+    { x: 0.08, y: 0.31, radius: 0.9, phase: 1.7, speed: 0.2, color: '--ar-accent-pink' },
+    { x: 0.36, y: 0.4, radius: 1, phase: 3.8, speed: 0.24, color: '--ar-accent-blue' },
+    { x: 0.52, y: 0.69, radius: 1.3, phase: 5.9, speed: 0.18, color: '--ar-accent-violet' },
+    { x: 0.71, y: 0.36, radius: 0.9, phase: 2.7, speed: 0.27, color: '--ar-accent-pink' },
+    { x: 0.86, y: 0.57, radius: 1.2, phase: 0.45, speed: 0.21, color: '--ar-accent-blue' },
+    { x: 0.97, y: 0.37, radius: 0.8, phase: 4.95, speed: 0.25, color: '--ar-accent-violet' },
+    { x: 0.29, y: 0.91, radius: 1.1, phase: 3.35, speed: 0.19, color: '--ar-accent-blue' },
+    { x: 0.69, y: 0.93, radius: 0.9, phase: 1.05, speed: 0.26, color: '--ar-accent-pink' },
+    { x: 0.04, y: 0.72, radius: 0.8, phase: 2.15, speed: 0.23, color: '--ar-accent-blue' },
+    { x: 0.16, y: 0.94, radius: 0.9, phase: 4.65, speed: 0.18, color: '--ar-accent-violet' },
+    { x: 0.24, y: 0.37, radius: 0.75, phase: 5.55, speed: 0.27, color: '--ar-accent-pink' },
+    { x: 0.49, y: 0.18, radius: 0.9, phase: 3.05, speed: 0.2, color: '--ar-accent-violet' },
+    { x: 0.63, y: 0.47, radius: 0.8, phase: 1.55, speed: 0.24, color: '--ar-accent-pink' },
+    { x: 0.74, y: 0.74, radius: 1, phase: 4.35, speed: 0.19, color: '--ar-accent-blue' },
+    { x: 0.88, y: 0.88, radius: 0.75, phase: 2.55, speed: 0.28, color: '--ar-accent-violet' },
+    { x: 0.98, y: 0.82, radius: 0.9, phase: 5.15, speed: 0.21, color: '--ar-accent-pink' },
+  ];
+  private fog: FogBlob[] = [
+    { x: 0.35, y: 0.35, radius: 0.24, opacity: 0.1, phase: 0.2, speed: 0.08, color: '--ar-accent-blue' },
+    { x: 0.54, y: 0.24, radius: 0.28, opacity: 0.085, phase: 2.3, speed: 0.06, color: '--ar-accent-violet' },
+    { x: 0.73, y: 0.35, radius: 0.25, opacity: 0.082, phase: 4.8, speed: 0.07, color: '--ar-accent-pink' },
+    { x: 0.43, y: 0.56, radius: 0.3, opacity: 0.078, phase: 3.4, speed: 0.05, color: '--ar-accent-violet' },
+    { x: 0.66, y: 0.58, radius: 0.32, opacity: 0.086, phase: 1.1, speed: 0.06, color: '--ar-accent-blue' },
+    { x: 0.82, y: 0.67, radius: 0.22, opacity: 0.078, phase: 5.6, speed: 0.08, color: '--ar-accent-pink' },
+    { x: 0.52, y: 0.78, radius: 0.24, opacity: 0.072, phase: 4.1, speed: 0.07, color: '--ar-accent-pink' },
+  ];
+  private shootingStars: ShootingStar[] = [
+    { x: 0.06, length: 34, phase: 0.04, speed: 0.075, color: '--ar-accent-blue' },
+    { x: 0.29, length: 46, phase: 0.38, speed: 0.062, color: '--ar-accent-violet' },
+    { x: 0.52, length: 30, phase: 0.71, speed: 0.082, color: '--ar-accent-pink' },
+    { x: 0.72, length: 52, phase: 0.19, speed: 0.056, color: '--ar-accent-blue' },
+    { x: 0.88, length: 38, phase: 0.56, speed: 0.068, color: '--ar-accent-pink' },
+    { x: 0.14, length: 42, phase: 0.82, speed: 0.058, color: '--ar-accent-pink' },
+    { x: 0.39, length: 28, phase: 0.27, speed: 0.086, color: '--ar-accent-blue' },
+    { x: 0.61, length: 44, phase: 0.48, speed: 0.064, color: '--ar-accent-violet' },
+    { x: 0.8, length: 32, phase: 0.9, speed: 0.078, color: '--ar-accent-violet' },
+    { x: 0.96, length: 48, phase: 0.31, speed: 0.06, color: '--ar-accent-blue' },
+    { x: 0.47, length: 36, phase: 0.08, speed: 0.071, color: '--ar-accent-pink' },
+    { x: 0.02, length: 30, phase: 0.63, speed: 0.084, color: '--ar-accent-violet' },
+    { x: 0.2, length: 50, phase: 0.14, speed: 0.054, color: '--ar-accent-blue' },
+    { x: 0.33, length: 34, phase: 0.92, speed: 0.074, color: '--ar-accent-pink' },
+    { x: 0.57, length: 40, phase: 0.34, speed: 0.066, color: '--ar-accent-blue' },
+    { x: 0.67, length: 26, phase: 0.76, speed: 0.09, color: '--ar-accent-pink' },
+    { x: 0.84, length: 46, phase: 0.02, speed: 0.059, color: '--ar-accent-violet' },
+    { x: 0.93, length: 32, phase: 0.67, speed: 0.081, color: '--ar-accent-blue' },
+  ];
+
+  connectedCallback(): void {
+    this.canvas = this.querySelector('canvas');
+    this.context = this.canvas?.getContext('2d') ?? null;
+    if (!this.canvas || !this.context) return;
+
+    this.resizeObserver = new ResizeObserver(this.resize);
+    this.resizeObserver.observe(this);
+    this.intersectionObserver = new IntersectionObserver(([entry]) => {
+      this.visible = entry?.isIntersecting ?? true;
+      if (this.visible) this.start();
+      else this.stop();
+    });
+    this.intersectionObserver.observe(this);
+    this.hero = this.closest('.hero-shell');
+    this.hero?.addEventListener('pointermove', this.trackPointer);
+    this.hero?.addEventListener('pointerleave', this.clearPointer);
+    window.addEventListener('scroll', this.clearPointer, { passive: true });
+    window.addEventListener('blur', this.clearPointer);
+    this.reducedMotion.addEventListener('change', this.motionChanged);
+    this.resize();
+  }
+
+  disconnectedCallback(): void {
+    this.stop();
+    this.resizeObserver?.disconnect();
+    this.intersectionObserver?.disconnect();
+    this.hero?.removeEventListener('pointermove', this.trackPointer);
+    this.hero?.removeEventListener('pointerleave', this.clearPointer);
+    window.removeEventListener('scroll', this.clearPointer);
+    window.removeEventListener('blur', this.clearPointer);
+    this.reducedMotion.removeEventListener('change', this.motionChanged);
+    this.hero = null;
+  }
+
+  private resize = (): void => {
+    if (!this.canvas || !this.context) return;
+    const bounds = this.getBoundingClientRect();
+    this.width = Math.max(1, bounds.width);
+    this.height = Math.max(1, bounds.height);
+    this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    this.canvas.width = Math.round(this.width * this.pixelRatio);
+    this.canvas.height = Math.round(this.height * this.pixelRatio);
+    this.context.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
+    this.draw(this.elapsed);
+    this.start();
+  };
+
+  private motionChanged = (): void => {
+    if (this.reducedMotion.matches) {
+      this.stop();
+      this.draw(this.elapsed);
+    } else {
+      this.start();
+    }
+  };
+
+  private trackPointer = (event: Event): void => {
+    if (!(event instanceof PointerEvent)) return;
+    const bounds = this.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
+    const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height));
+    this.pointer = { x, y, active: true };
+    this.style.setProperty('--ambient-x', `${(x - 0.5) * 12}px`);
+    this.style.setProperty('--ambient-y', `${(y - 0.5) * 9}px`);
+    this.style.setProperty('--ambient-focus-x', `${x * 100}%`);
+    this.style.setProperty('--ambient-focus-y', `${y * 100}%`);
+    this.style.setProperty('--ambient-focus-opacity', '1');
+  };
+
+  private clearPointer = (): void => {
+    this.pointer.active = false;
+    this.style.setProperty('--ambient-x', '0px');
+    this.style.setProperty('--ambient-y', '0px');
+    this.style.setProperty('--ambient-focus-opacity', '0');
+  };
+
+  private start(): void {
+    if (this.frame || this.reducedMotion.matches || !this.visible) return;
+    this.frame = requestAnimationFrame(this.tick);
+  }
+
+  private stop(): void {
+    cancelAnimationFrame(this.frame);
+    this.frame = 0;
+    this.lastFrameTime = 0;
+  }
+
+  private tick = (time: number): void => {
+    this.frame = 0;
+    if (this.lastFrameTime) this.elapsed += Math.min(time - this.lastFrameTime, 48) * 0.001;
+    this.lastFrameTime = time;
+    this.draw(this.elapsed);
+    this.start();
+  };
+
+  private color(name: string, alpha: number): string {
+    const theme = document.documentElement.dataset.theme ?? 'system';
+    if (theme !== this.paletteTheme) {
+      const style = getComputedStyle(this);
+      this.palette.clear();
+      ['--ar-accent-blue', '--ar-accent-violet', '--ar-accent-pink'].forEach((token) => {
+        const hex = style.getPropertyValue(token).trim().replace('#', '');
+        if (hex.length !== 6) return;
+        this.palette.set(
+          token,
+          [0, 2, 4].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16)) as [number, number, number],
+        );
+      });
+      this.paletteTheme = theme;
+    }
+    const channels = this.palette.get(name) ?? [120, 110, 220];
+    return `rgba(${channels[0]}, ${channels[1]}, ${channels[2]}, ${alpha})`;
+  }
+
+  private draw(time: number): void {
+    const context = this.context;
+    if (!context || !this.width || !this.height) return;
+    context.clearRect(0, 0, this.width, this.height);
+    context.globalCompositeOperation = 'lighter';
+
+    const pointerX = (this.pointer.x - 0.5) * 7;
+    const pointerY = (this.pointer.y - 0.5) * 5;
+    const baseRadius = Math.min(this.width, this.height);
+
+    this.fog.forEach((blob) => {
+      const driftX = this.reducedMotion.matches ? 0 : Math.sin(time * blob.speed + blob.phase) * 18;
+      const driftY = this.reducedMotion.matches ? 0 : Math.cos(time * blob.speed * 0.78 + blob.phase) * 14;
+      let x = blob.x * this.width + driftX;
+      let y = blob.y * this.height + driftY;
+
+      if (this.pointer.active) {
+        const dx = x - this.pointer.x * this.width;
+        const dy = y - this.pointer.y * this.height;
+        const distance = Math.max(1, Math.hypot(dx, dy));
+        const influence = Math.max(0, 1 - distance / (baseRadius * 0.48));
+        x += (dx / distance) * influence * 20;
+        y += (dy / distance) * influence * 20;
+      }
+
+      const pulse = this.reducedMotion.matches ? 1 : 1 + Math.sin(time * 0.12 + blob.phase) * 0.08;
+      const radius = baseRadius * blob.radius * pulse;
+      const gradient = context.createRadialGradient(x, y, 0, x, y, radius);
+      gradient.addColorStop(0, this.color(blob.color, blob.opacity));
+      gradient.addColorStop(0.45, this.color(blob.color, blob.opacity * 0.52));
+      gradient.addColorStop(1, this.color(blob.color, 0));
+      context.fillStyle = gradient;
+      context.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+    });
+
+    this.shootingStars.forEach((star) => {
+      const progress = this.reducedMotion.matches ? star.phase : (time * star.speed + star.phase) % 1;
+      const edgeFade = Math.max(0, Math.sin(progress * Math.PI));
+      const twinkle = this.reducedMotion.matches ? 0.42 : 0.62 + Math.sin(time * 2.1 + star.phase * 11) * 0.38;
+      const alpha = edgeFade * twinkle;
+      const x = star.x * this.width + progress * this.width * 0.14;
+      const y = -0.13 * this.height + progress * this.height * 1.28;
+      const tailX = x - star.length * 0.46;
+      const tailY = y - star.length;
+      const streak = context.createLinearGradient(tailX, tailY, x, y);
+      streak.addColorStop(0, this.color(star.color, 0));
+      streak.addColorStop(0.68, this.color(star.color, 0.16 * alpha));
+      streak.addColorStop(1, this.color(star.color, 0.72 * alpha));
+
+      context.beginPath();
+      context.moveTo(tailX, tailY);
+      context.lineTo(x, y);
+      context.lineWidth = 0.75;
+      context.strokeStyle = streak;
+      context.stroke();
+
+      context.beginPath();
+      context.moveTo(x - 2.6, y);
+      context.lineTo(x + 2.6, y);
+      context.moveTo(x, y - 2.6);
+      context.lineTo(x, y + 2.6);
+      context.lineWidth = 0.65;
+      context.strokeStyle = this.color(star.color, 0.76 * alpha);
+      context.stroke();
+    });
+
+    this.motes.forEach((mote) => {
+      const drift = this.reducedMotion.matches ? 0 : Math.sin(time * mote.speed + mote.phase);
+      const x = mote.x * this.width + drift * 10 + pointerX * (mote.x - 0.5);
+      const y = mote.y * this.height + Math.cos(time * mote.speed * 0.8 + mote.phase) * 8 + pointerY * (mote.y - 0.5);
+      const blinkSpeed = 0.28 + ((mote.phase * 0.73) % 1) * 0.72;
+      const peak = 0.58 + ((mote.phase * 1.37) % 1) * 0.42;
+      const blink = (Math.sin(time * blinkSpeed + mote.phase) + 1) * 0.5;
+      const pulse = this.reducedMotion.matches ? 0.72 : blink ** 2.6 * peak;
+
+      context.beginPath();
+      context.arc(x, y, mote.radius * 5, 0, Math.PI * 2);
+      context.fillStyle = this.color(mote.color, 0.06 * pulse);
+      context.fill();
+      context.beginPath();
+      context.arc(x, y, mote.radius, 0, Math.PI * 2);
+      context.fillStyle = this.color(mote.color, 0.86 * pulse);
+      context.fill();
+    });
+
+    context.globalCompositeOperation = 'source-over';
+  }
+}
+
+if (!customElements.get('arcantry-ambient-canvas')) {
+  customElements.define('arcantry-ambient-canvas', ArcantryAmbientCanvas);
+}
+</script>
+
+<style>
+arcantry-ambient-canvas {
+  --ambient-x: 0px;
+  --ambient-y: 0px;
+  --ambient-focus-x: 58%;
+  --ambient-focus-y: 46%;
+  --ambient-focus-opacity: 0;
+  position: absolute;
+  z-index: 0;
+  inset: 0.6rem 0 0.4rem;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 15%, #000 82%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 15%, #000 82%, transparent 100%);
+}
+
+.ambient-bloom {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 68% 30%, color-mix(in srgb, var(--ar-accent-blue) 15%, transparent), transparent 23%),
+    radial-gradient(circle at 50% 68%, color-mix(in srgb, var(--ar-accent-violet) 13%, transparent), transparent 26%),
+    radial-gradient(circle at 84% 58%, color-mix(in srgb, var(--ar-accent-pink) 14%, transparent), transparent 22%);
+  filter: blur(18px) saturate(138%);
+  opacity: 0.88;
+}
+
+.ambient-bloom::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--ambient-focus-x) var(--ambient-focus-y),
+    color-mix(in srgb, var(--ar-accent-violet) 19%, transparent),
+    transparent 28%
+  );
+  opacity: var(--ambient-focus-opacity);
+  transition: opacity 180ms ease;
+}
+
+canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 49.99rem) {
+  arcantry-ambient-canvas {
+    inset: 0 0 14%;
+    opacity: 0.78;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-bloom::after {
+    transition: none;
+  }
+}
+</style>

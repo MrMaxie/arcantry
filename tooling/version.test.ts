@@ -32,13 +32,9 @@ describe('documentation version model', () => {
   });
 
   it('does not assign a release to an unlisted skill', () => {
-    const model = createVersionModel(
-      [{ version: '0.2.3', date: '2026-08-16', changes: [] }],
-      new Map(),
-    );
+    const model = createVersionModel([{ version: '0.2.3', date: '2026-08-16', changes: [] }], new Map());
 
     expect(model.currentRelease).toBe('0.2.3');
     expect(model.skillReleases['unreleased-skill']).toBeUndefined();
   });
 });
-

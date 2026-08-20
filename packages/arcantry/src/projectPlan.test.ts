@@ -110,4 +110,23 @@ describe('project transition plans', () => {
     expect(renderProjectPlan(plan)).not.toContain(secret.trim());
     expect(renderProjectPlan(plan)).toContain('.local/todo.txt (private)');
   });
+
+  it('rejects relative operation paths that escape the project', async () => {
+    const root = await createFixtureDirectory('arcantry-plan-boundary-');
+    expect(() => createProjectPlan({
+      toolVersion: '0.3.2',
+      root,
+      sourceId: 'todo-root',
+      transition: 'adopt',
+      adapter: 'todo-txt@1',
+      operations: [{
+        action: 'write',
+        path: 'nested/../../outside.txt',
+        expectedHash: null,
+        content: 'outside\n',
+        contentHash: '0'.repeat(64),
+        visibility: 'shared',
+      }],
+    })).toThrow('plan operation path must stay within the project');
+  });
 });

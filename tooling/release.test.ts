@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -52,11 +52,15 @@ function npmPackage(root: string, name = 'arcantry', version = '0.1.0'): void {
   mkdirSync(packageRoot, { recursive: true });
   writeFileSync(
     join(packageRoot, 'package.json'),
-    `${JSON.stringify({
-      name,
-      version,
-      repository: { type: 'git', url: 'https://github.com/MrMaxie/arcantry.git' },
-    }, null, 2)}\n`,
+    `${JSON.stringify(
+      {
+        name,
+        version,
+        repository: { type: 'git', url: 'https://github.com/MrMaxie/arcantry.git' },
+      },
+      null,
+      2,
+    )}\n`,
   );
 }
 
@@ -331,7 +335,10 @@ describe('release completion', () => {
 
     const recovered = join(root, 'openspec', 'changes', 'archive', '2026-08-17-recovered-change');
     mkdirSync(recovered, { recursive: true });
-    writeFileSync(join(recovered, 'release.md'), release('patch').replace('Better release history', 'Recovered behavior'));
+    writeFileSync(
+      join(recovered, 'release.md'),
+      release('patch').replace('Better release history', 'Recovered behavior'),
+    );
     manifest(root, '0.1.1', ['recovered-change']);
     writeFileSync(join(root, 'CHANGELOG.md'), renderChangelog(root));
     commitAll(root, 'release: cut 0.1.1');

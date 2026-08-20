@@ -15,7 +15,7 @@ import {
   type ReleaseManifest,
 } from './release.js';
 import { createProjectPlan, createWriteOperation, type PlanOperation, type ProjectPlan } from './projectPlan.js';
-import type { ResolvedProject, Visibility } from './projectConfig.js';
+import { isPrivateProjectPath, type ResolvedProject, type Visibility } from './projectConfig.js';
 
 export type ResolvedReleaseConfiguration = {
   root: string;
@@ -201,6 +201,5 @@ function pathVisibility(root: string, path: string): Visibility {
     const projectPath = relative(resolve(root), resolve(path));
     if (projectPath.startsWith('..') || isAbsolute(projectPath)) return 'private';
   }
-  const normalized = path.replaceAll('\\', '/').replace(/^\.\//, '');
-  return normalized === '.local' || normalized.startsWith('.local/') ? 'private' : 'shared';
+  return isPrivateProjectPath(path) ? 'private' : 'shared';
 }

@@ -23,12 +23,12 @@ The published documentation MUST use Arcantry's shell rather than Starlight's de
 
 ### Requirement: Brand assets are first-class
 
-The documentation shell MUST use the Arcantry compact mark, full wordmark and favicon from `src/assets/brand` as structural navigation and browser assets.
+The documentation shell MUST use only the current full wordmark and the favicon `a` as structural navigation and browser assets. The full wordmark MUST appear on desktop, the favicon mark MUST replace it on narrow layouts, and no third compact logo variant MAY appear. Narrow layouts MUST keep the released version legible and make search, GitHub, and theme icons comfortably visible without changing the one-row header.
 
 #### Scenario: The documentation shell renders brand assets
 
 - **WHEN** a page and its browser metadata are loaded
-- **THEN** structural branding resolves from the canonical assets in `src/assets/brand`
+- **THEN** structural branding resolves from the canonical full wordmark in `src/assets` and favicon in `public`
 
 ### Requirement: Documentation remains operational
 
@@ -43,14 +43,14 @@ Search, responsive navigation, accessible content navigation, and system/light/d
 
 The overview MUST explain in its first content region that Arcantry maps project knowledge sources, preserves their distinct responsibilities, and lets a developer observe, validate, or change them independently. It MUST then present a directional with-and-without comparison with at least discovery, responsibility, adoption, planning, drift, and automation outcomes. Explanatory comparison and adoption copy MUST describe behavior without relying on fragmentary CLI commands. Each directional comparison MUST use a single connected line-and-arrow graphic rather than visually separate connector pieces.
 
-Its explanatory map MUST act as navigation to getting started, adoption paths, project knowledge, todo.txt queues, and skill selection rather than as a decorative summary. It MUST explain private workspace behavior without assuming that a new reader already understands project-specific directory names. It MUST present verified npm, pnpm, Bun, and Nub package-runner tabs in one command picker, and narrow viewports MUST wrap them into visible rows. The selected runner MUST persist locally, the active command row MUST be the copy target, and recognized inline Arcantry commands across documentation MUST be selectable and copyable by pointer or keyboard. Command examples MUST explain the action they perform rather than appearing without context. Benefits MUST describe observable product behavior rather than broad feature labels, delivery-process commentary, or local checkout details.
+Its explanatory map MUST act as navigation to getting started, adoption paths, project knowledge, todo.txt queues, and skill selection rather than as a decorative summary. It MUST explain private workspace behavior without assuming that a new reader already understands project-specific directory names. It MUST present npm installation, npm/npx, pnpm, Bun and Nub package launchers, and native PowerShell and sh installers in one command picker, and narrow viewports MUST wrap them into visible rows. The selected method MUST persist locally, and the active command row MUST be the copy target. The overview picker MUST contain only the method selector, command, and copy affordance without redundant purpose labels or instructions. Recognized inline Arcantry commands across documentation MUST be selectable and copyable by pointer or keyboard. Documentation command examples outside the overview picker MUST explain the action they perform. The overview MUST offer a "Copy agent prompt" action, and the getting-started guide MUST show the exact full prompt. That prompt MUST ask an agent to detect the environment, explain material installation choices, avoid project adoption unless requested, verify the installed version, and stop instead of inventing unavailable release commands. Benefits MUST describe observable product behavior rather than broad feature labels, delivery-process commentary, or local checkout details.
 
-The overview MUST present a shared and private model as the recommended destination while preserving private project scope and selected capabilities as supported choices. Only the shared and private model MUST carry a recommendation label. The private preset MUST keep its configuration and guidance untracked, the selective preset MUST demonstrate a varied partial configuration, and changing an individual field MUST activate a custom state. A configuration questionnaire MUST expose independent choices for skill scope, agent-guidance scope, private `.local` use, todo.txt location, OpenSpec management, and changelog management. Each field MUST include an identifying icon, a plain-language explanation for a reader unfamiliar with the source, compact labeled controls, and a consequence placed directly below those controls that updates with the selected value. Selected controls MUST use the same blue, pink, violet, or combined scope colors as the graph. Preset and field selections MUST transition their colors instead of changing abruptly. The presets MUST populate those fields together without a redundant instructional heading or result strip, and the selected preset title MUST remain on one line when the available desktop width can contain it. Editing any individual field MUST stop automatic preset changes. The derived graph MUST arrange Computer, Repository, and Private per project scopes in that order, use separate non-crossing routes, replace generic source dots with source-specific icons, and reflect every questionnaire choice in its active nodes. Scope, route, and source states MUST transition visibly between active and inactive states. The Arcantry engine MUST use the same current full wordmark as the header in a compact node, with a moving blue-violet-pink highlight that stops for reduced motion. Presets MAY advance automatically, while reduced-motion preference MUST stop automatic changes. The expected-outcome card composition MUST appear earlier in the product-value story. Every with-and-without comparison cell MUST visually emphasize its key phrase. The overview MUST end with authorship, last update, license, and GitHub details without repeating the released version already shown in the header; documentation routes MAY keep equivalent authorship in their sidebar instead. The overview's next-page action MUST preserve the standard pager shape and MAY animate a blue-violet-pink gradient border, while documentation routes retain the compact standard pager.
+The overview MUST present a shared and private model as the recommended destination while preserving private project scope and selected-source presets as supported choices. Only the shared and private model MUST carry a recommendation label, and it MUST appear first and be selected by default. A concise label MUST identify these choices as common setups. Each preset control MUST include its short description without a separate header that repeats the selected preset. A lightweight blue-violet-pink synchronization wave with the approved compact Arcantry mark MUST separate the presets from their scope view. The private preset MUST keep project guidance, todo.txt, OpenSpec, and changelog in private `.local` while retaining user-scoped skills. The selective preset MUST demonstrate a varied partial configuration. One stable three-column view MUST represent Computer, Repository, and Private project scopes. The columns MUST sit directly beside one another without nested cards, surrounding panel padding, decorative folder tabs, or gaps. Each column MUST use its own blue, pink, or violet scope color and an icon that identifies the scope. Every compatible source entry MUST remain visible in every preset; selecting a preset MUST change only its active state, subtle background, and mode. Inactive entries MUST remain visibly muted without dimming or otherwise changing their separator borders. Each active source MUST identify its effective user, project, private, read, or manage mode. The overview MUST NOT expose per-source editing, a custom state, an inactive-node graph, a decorative engine, or a duplicate mobile representation. Private `.local` MUST support todo.txt, OpenSpec, and changelog sources. Presets MUST remain stable until the reader selects another preset. The expected-outcome card composition MUST appear earlier in the product-value story. Every with-and-without comparison cell MUST visually emphasize its key phrase. The overview MUST end with authorship, last update, license, and GitHub details without repeating the released version already shown in the header; documentation routes MAY keep equivalent authorship in their sidebar instead. The overview's next-page action MUST preserve the standard pager shape and MAY animate a blue-violet-pink gradient border, while documentation routes retain the compact standard pager.
 
 #### Scenario: A new developer opens the overview
 
 - **WHEN** they scan the first content region
-- **THEN** they can identify what Arcantry composes, choose a verified package runner, copy its command, and find an adoption path
+- **THEN** they can identify what Arcantry composes, choose an installation or one-command package path, copy its command, and find an adoption path
 
 #### Scenario: A developer returns to the overview
 
@@ -64,16 +64,15 @@ The overview MUST present a shared and private model as the recommended destinat
 
 #### Scenario: A developer composes an adoption strategy
 
-- **WHEN** they choose a typical preset or edit an individual questionnaire field
-- **THEN** active sources and relationships identify the chosen project footprint and management boundary
-- **AND** the selected field values explain their practical consequences
-- **AND** an individual field edit activates the custom state and stops preset rotation
-- **AND** private, selected-capability, and shared-with-private states remain clearly distinguishable
+- **WHEN** they choose a typical preset
+- **THEN** the same three scope columns identify the chosen project scope and management boundary
+- **AND** active and muted source entries distinguish private, selected-source, and shared-with-private states
+- **AND** no per-source controls or custom state imply configuration that the overview does not apply
 
 #### Scenario: A visitor prefers reduced motion
 
 - **WHEN** reduced motion is requested
-- **THEN** the questionnaire and graph remain manually operable without automatically changing preset state
+- **THEN** the preset selector remains manually operable without automatically changing preset state
 
 ### Requirement: Visual language combines clarity with selective expression
 

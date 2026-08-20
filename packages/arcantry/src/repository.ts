@@ -57,6 +57,11 @@ export type RepositoryReport = {
 
 export type RepositoryResult = { root: string; applied: RepositoryChange[] };
 
+type LocalTrackingPolicy =
+  | { kind: 'private' }
+  | { kind: 'remote-tracked'; reference: string }
+  | { kind: 'index-only' };
+
 const sharedGuidanceBody = [
   '## Arcantry',
   '',
@@ -112,6 +117,7 @@ export const planRepositoryInit = async (
   compatibility: RepositoryCompatibility | null = null,
 ): Promise<RepositoryPlan> => {
   const plan = await createPlan(cwd, 'init', scope, compatibility);
+  if (scope === 'private' && !(await planPrivateLocalPolicy(plan))) return plan;
   const path = repositoryConfigPath(scope);
   const existing = await readText(join(plan.root, path));
   if (existing === null) {
@@ -136,6 +142,7 @@ export const planRepositoryUpdate = async (
   compatibility: RepositoryCompatibility | null = null,
 ): Promise<RepositoryPlan> => {
   const plan = await createPlan(cwd, 'update', scope, compatibility);
+  if (scope === 'private' && !(await planPrivateLocalPolicy(plan))) return plan;
   if (!(await validatePlanConfig(plan))) return plan;
   await planSection(plan, repositoryGuidancePath(scope), guidanceFor(scope));
   if (compatibility === 'claude') await planClaudeCompatibility(plan);
@@ -331,6 +338,46 @@ const planGitExclude = async (plan: RepositoryPlan, requiredEntries: string[]): 
   });
 };
 
+const planPrivateLocalPolicy = async (plan: RepositoryPlan): Promise<boolean> => {
+  const policy = await localTrackingPolicy(plan.root);
+  if (policy.kind === 'private') return true;
+  plan.conflicts.push({
+    path: '.local/',
+    reason:
+      policy.kind === 'remote-tracked'
+        ? `Configured default remote branch ${policy.reference} tracks .local; preserving that repository policy instead of applying Arcantry's private-local convention.`
+        : 'The current Git index tracks .local while the configured default remote branch does not. Remove it from the index in a separate explicitly authorized operation before private adoption.',
+  });
+  return false;
+};
+
+const localTrackingPolicy = async (root: string): Promise<LocalTrackingPolicy> => {
+  const reference = await configuredDefaultRemoteReference(root);
+  if (reference !== null && (await gitRead(root, ['ls-tree', '-r', '--name-only', reference, '--', '.local'])).trim() !== '') {
+    return { kind: 'remote-tracked', reference };
+  }
+  if ((await gitRead(root, ['ls-files', '--', '.local'])).trim() !== '') return { kind: 'index-only' };
+  return { kind: 'private' };
+};
+
+const configuredDefaultRemoteReference = async (root: string): Promise<string | null> => {
+  const remotes = (await gitRead(root, ['remote']))
+    .split(/\r?\n/u)
+    .filter(Boolean)
+    .sort((left, right) => Number(right === 'origin') - Number(left === 'origin'));
+  for (const remote of remotes) {
+    const result = await execa('git', ['symbolic-ref', '--quiet', `refs/remotes/${remote}/HEAD`], {
+      cwd: root,
+      reject: false,
+    });
+    if (result.exitCode === 0 && result.stdout.trim() !== '') return result.stdout.trim();
+  }
+  return null;
+};
+
+const gitRead = async (root: string, arguments_: string[]): Promise<string> =>
+  (await execa('git', arguments_, { cwd: root, reject: true })).stdout;
+
 const validateClaudeCompatibility = async (
   root: string,
   scope: RepositoryScope,
@@ -382,6 +429,18 @@ const validateSection = async (
 };
 
 const validateGitExclude = async (root: string, diagnostics: RepositoryDiagnostic[], doctor: boolean): Promise<void> => {
+  const policy = await localTrackingPolicy(root);
+  if (policy.kind !== 'private') {
+    diagnostics.push({
+      severity: 'error',
+      path: '.local/',
+      message:
+        policy.kind === 'remote-tracked'
+          ? `Configured default remote branch ${policy.reference} tracks .local; this conflicts with Arcantry's private-local convention.`
+          : 'The current Git index tracks .local while the configured default remote branch does not. Remove it from the index only through a separate explicitly authorized operation.',
+    });
+    return;
+  }
   const path = await resolveGitPath(root, 'info/exclude');
   const lines = new Set(((await readText(path)) ?? '').split(/\r?\n/));
   const privateClaudeContent = await readText(join(root, claudeGuidancePath('private')));

@@ -1,7 +1,8 @@
 [tools]
-node = "24.19.0"
-pnpm = "10.34.5"
 just = "1.58.0"
-
-[settings]
-experimental = true
+nub = "0.7.5"
+pnpm = "11.16.0"
+rust = { version = "1.97.1", components = ["rustfmt", "clippy"] }
+"aqua:oven-sh/bun" = "1.2.15"
+"cargo:cargo-deny" = "0.20.2"
+"cargo:cargo-dist" = "0.32.0"

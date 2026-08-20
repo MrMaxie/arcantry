@@ -1,0 +1,1 @@
+{"name":"@arcantry/cli-win32-arm64","version":"1.0.0","description":"Arcantry native CLI for Windows ARM64.","license":"Apache-2.0","repository":{"type":"git","url":"https://github.com/MrMaxie/arcantry.git"},"os":["win32"],"cpu":["arm64"],"files":["bin/arcantry.exe","README.md","LICENSE"],"exports":{"./bin/arcantry.exe":"./bin/arcantry.exe"},"publishConfig":{"access":"public"}}

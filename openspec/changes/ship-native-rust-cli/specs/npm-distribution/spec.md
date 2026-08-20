@@ -47,11 +47,11 @@ Because trusted publishing configuration requires each npm package to exist, the
 
 ### Requirement: The public npm package uses the global Arcantry name
 
-The public package MUST retain the unscoped name `arcantry`, expose the `arcantry` launcher and retain its declared public JavaScript subpath exports and type declarations. The launcher MUST dispatch to an exact-version optional platform package selected from the host operating system, architecture and Linux libc. The private workspace root MUST use a distinct non-publishable name so package-manager filters resolve the public package unambiguously.
+The public package MUST retain the unscoped name `arcantry`, expose the `arcantry` launcher and retain its declared public JavaScript subpath exports and type declarations. The launcher MUST dispatch to an exact-version optional platform package selected from the host operating system and architecture. Linux platform packages MUST contain statically linked musl binaries, omit the npm `libc` field and be smoke-tested on both Ubuntu glibc and Alpine musl. The private workspace root MUST use a distinct non-publishable name so package-manager filters resolve the public package unambiguously.
 
 #### Scenario: A consumer runs the CLI without installing it
 
-- **WHEN** the consumer invokes `npx arcantry`, `pnpm dlx arcantry` or an equivalent package launcher on a supported platform
+- **WHEN** the consumer invokes the CLI through npm/npx, pnpm, Bun or Nub on a supported platform
 - **THEN** npm resolves the public package and matching optional platform package
 - **AND** the launcher executes the native `arcantry` binary
 
@@ -76,7 +76,7 @@ The public package MUST retain the unscoped name `arcantry`, expose the `arcantr
 
 ### Requirement: Platform packages are exact and complete before launcher publication
 
-The `arcantry` package MUST declare exact-version optional dependencies on `@arcantry/cli-win32-x64`, `@arcantry/cli-win32-arm64`, `@arcantry/cli-darwin-x64`, `@arcantry/cli-darwin-arm64`, `@arcantry/cli-linux-x64-musl` and `@arcantry/cli-linux-arm64-musl`. Each platform package MUST declare matching npm `os`, `cpu` and Linux `libc` constraints and contain only its native executable and allowlisted package metadata. The main package MUST NOT be published until all six exact platform versions are available and match their verified archives.
+The `arcantry` package MUST declare exact-version optional dependencies on `@arcantry/cli-win32-x64`, `@arcantry/cli-win32-arm64`, `@arcantry/cli-darwin-x64`, `@arcantry/cli-darwin-arm64`, `@arcantry/cli-linux-x64` and `@arcantry/cli-linux-arm64`. Each platform package MUST declare matching npm `os` and `cpu` constraints and contain only its native executable and allowlisted package metadata. Linux packages MUST omit npm's `libc` constraint. The main package MUST NOT be published until all six exact platform versions are available and match their verified archives.
 
 #### Scenario: A complete platform set is ready
 

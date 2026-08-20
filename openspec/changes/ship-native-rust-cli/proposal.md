@@ -6,6 +6,7 @@ The public Arcantry CLI currently executes JavaScript from the combined npm pack
 
 - Make a Rust executable the authoritative implementation behind the existing `arcantry` command surface while preserving command names, options, diagnostics, exit codes and filesystem behavior.
 - Publish verified native archives for Windows, macOS and Linux on x64 and ARM64, using musl for Linux, from the same sealed release state as the npm packages.
+- Generate checksum-verifying sh and PowerShell installers for the native GitHub Release archives.
 - Keep the unscoped `arcantry` npm package as the JavaScript library and package-runner entrypoint, with exact optional platform packages supplying the native executable.
 - Embed the public catalog, skills, schemas and templates in the executable and materialize a verified versioned catalog only when a command needs durable files for linking.
 - Require cross-implementation conformance and native target smoke tests before the Rust CLI replaces the TypeScript CLI entrypoint.
@@ -15,5 +16,5 @@ The public Arcantry CLI currently executes JavaScript from the combined npm pack
 - Rewriting or removing the public JavaScript library and its declared subpath exports.
 - Changing the public command hierarchy or repository, knowledge, todo and skill behavior.
 - Supporting glibc-specific, 32-bit or additional operating-system targets in the first native release.
-- Adding an automatic updater, operating-system package-manager formulae, binary signing or macOS notarization.
+- Adding an automatic updater, Homebrew formula, Scoop manifest, binary signing or macOS notarization.
 - Publishing packages, creating release tags or changing remote registry and repository settings while implementing this change.

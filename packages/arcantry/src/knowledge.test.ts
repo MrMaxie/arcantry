@@ -89,6 +89,24 @@ adapter = "openspec@1"
     ]);
   });
 
+  it.runIf(process.platform !== 'win32')('keeps case-distinct source paths separate', async () => {
+    const root = await createFixtureDirectory('arcantry-case-sensitive-');
+    await mkdir(join(root, 'OpenSpec'));
+    await mkdir(join(root, 'openspec'));
+    const config = parseProjectConfig(`config_version = 1
+
+[sources.intent]
+kind = "openspec"
+path = "OpenSpec"
+management = "observe"
+adapter = "openspec@1"
+`);
+
+    const inspection = await inspectKnowledge({ root, configPath: join(root, 'arcantry.toml'), config, mode: 'configured' });
+
+    expect(inspection.sources.map((source) => source.id)).toEqual(['intent', 'openspec']);
+  });
+
   it('reports unsupported adapter families without changing the source', async () => {
     const root = await createFixtureDirectory('arcantry-adapter-');
     await writeFile(join(root, 'todo.txt'), 'Keep me\n');

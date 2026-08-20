@@ -72,7 +72,9 @@ export function readSkillAgent(root: string, name: string): SkillAgent {
   const shortDescription = source.interface?.short_description;
   const defaultPrompt = source.interface?.default_prompt;
   if (typeof displayName !== 'string' || typeof shortDescription !== 'string' || typeof defaultPrompt !== 'string') {
-    throw new Error(`skills/${name} agents/openai.yaml must declare interface display_name, short_description, and default_prompt`);
+    throw new Error(
+      `skills/${name} agents/openai.yaml must declare interface display_name, short_description, and default_prompt`,
+    );
   }
   return { displayName, shortDescription, defaultPrompt };
 }
@@ -127,11 +129,13 @@ export function validateCatalog(root = process.cwd()): string[] {
 
     try {
       const frontmatter = readSkillFrontmatter(root, entry.name);
-      if (frontmatter.name !== entry.name) errors.push(`skills/${entry.name} frontmatter name must match its directory`);
+      if (frontmatter.name !== entry.name)
+        errors.push(`skills/${entry.name} frontmatter name must match its directory`);
       if (frontmatter.description.trim().length < 30) errors.push(`skills/${entry.name} description is too short`);
       const normalizedDescription = normalizeText(frontmatter.description);
       const existingDescription = descriptions.get(normalizedDescription);
-      if (existingDescription !== undefined) errors.push(`skills/${entry.name} description duplicates skills/${existingDescription}`);
+      if (existingDescription !== undefined)
+        errors.push(`skills/${entry.name} description duplicates skills/${existingDescription}`);
       else descriptions.set(normalizedDescription, entry.name);
     } catch (error) {
       errors.push(error instanceof Error ? error.message : String(error));
@@ -141,7 +145,11 @@ export function validateCatalog(root = process.cwd()): string[] {
     if (metadata.$schema !== skillMetadataSchemaPath) {
       errors.push(`skills/${entry.name} metadata $schema must be ${skillMetadataSchemaPath}`);
     }
-    if (Object.keys(metadata).some((key) => !['$schema', 'summary', 'scenarios', 'compatibility', 'learning'].includes(key))) {
+    if (
+      Object.keys(metadata).some(
+        (key) => !['$schema', 'summary', 'scenarios', 'compatibility', 'learning'].includes(key),
+      )
+    ) {
       errors.push(`skills/${entry.name} metadata must not contain unsupported fields`);
     }
     if (typeof metadata.summary !== 'string' || metadata.summary.length < 30 || metadata.summary.length > 180) {
@@ -149,7 +157,8 @@ export function validateCatalog(root = process.cwd()): string[] {
     } else {
       const normalizedSummary = normalizeText(metadata.summary);
       const existingSummary = summaries.get(normalizedSummary);
-      if (existingSummary !== undefined) errors.push(`skills/${entry.name} summary duplicates skills/${existingSummary}`);
+      if (existingSummary !== undefined)
+        errors.push(`skills/${entry.name} summary duplicates skills/${existingSummary}`);
       else summaries.set(normalizedSummary, entry.name);
     }
     if (!Array.isArray(metadata.scenarios) || metadata.scenarios.length !== 2) {
@@ -185,22 +194,26 @@ export function validateCatalog(root = process.cwd()): string[] {
       ) {
         errors.push(`skills/${entry.name} compatibility sourceKinds are invalid`);
       }
-      if (metadata.compatibility.adapters !== undefined && (
-        !Array.isArray(metadata.compatibility.adapters) ||
-        !metadata.compatibility.adapters.every((adapter) =>
-          Object.keys(adapter).every((key) => key === 'name' || key === 'versions') &&
-          skillNamePattern.test(adapter.name) &&
-          typeof adapter.versions === 'string' &&
-          /\d/.test(adapter.versions)
-        )
-      )) {
+      if (
+        metadata.compatibility.adapters !== undefined &&
+        (!Array.isArray(metadata.compatibility.adapters) ||
+          !metadata.compatibility.adapters.every(
+            (adapter) =>
+              Object.keys(adapter).every((key) => key === 'name' || key === 'versions') &&
+              skillNamePattern.test(adapter.name) &&
+              typeof adapter.versions === 'string' &&
+              /\d/.test(adapter.versions),
+          ))
+      ) {
         errors.push(`skills/${entry.name} compatibility adapters are invalid`);
       }
     }
     if (metadata.learning !== undefined) {
       const validStatements = (values: unknown, required: boolean): boolean =>
         (!required && values === undefined) ||
-        (Array.isArray(values) && values.length > 0 && values.every((value) => typeof value === 'string' && value.trim().length >= 5 && value.trim().length <= 160));
+        (Array.isArray(values) &&
+          values.length > 0 &&
+          values.every((value) => typeof value === 'string' && value.trim().length >= 5 && value.trim().length <= 160));
       if (
         Object.keys(metadata.learning).some((key) => key !== 'prerequisites' && key !== 'outcomes') ||
         !validStatements(metadata.learning.prerequisites, false) ||

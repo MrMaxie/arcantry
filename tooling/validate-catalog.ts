@@ -7,4 +7,3 @@ if (errors.length > 0) {
 } else {
   process.stdout.write('Catalog and skill packages are valid.\n');
 }
-

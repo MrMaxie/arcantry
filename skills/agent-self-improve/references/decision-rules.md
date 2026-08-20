@@ -79,6 +79,8 @@ Do not place a rule in a broader layer for convenience. Do not make `.local` sha
 
 For a `guidance_effectiveness_gap`, prefer the layer that owns the failing decision point. Workstation login and private tool setup belong in `.local`; repository-specific task selection, acceptance scope, and action ownership belong in project guidance or a repository skill; cross-project workflow defects may belong in a global skill only after the transfer test.
 
+Before naming a target, verify that it is an active control surface: authoritative for the audience, actually loaded or routed before the failing decision, and expected to remain in use. A transcript, brief, draft, or descriptive resource is evidence, not guidance, unless a current workflow consumes it at that decision point.
+
 ## Global skill transfer test
 
 Before proposing a global edit, answer all of these:

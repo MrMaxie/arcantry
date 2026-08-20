@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createFixtureDirectory, removeFixtures } from './testHelpers.js';
 import {
   findNearestProjectConfig,
+  isPrivateProjectPath,
   parseProjectConfig,
   projectConfigSchemaLocation,
   renderProjectConfig,
@@ -47,6 +48,29 @@ adapter = "todo-txt@1"
     expect(config.sources.history?.from).toEqual(['intent']);
     expect(config.sources.todo_private?.management).toBe('observe');
     expect(config.sources.todo_private?.visibility).toBe('private');
+  });
+
+  it.runIf(process.platform === 'win32')('treats .local paths case-insensitively on Windows', () => {
+    expect(() => parseProjectConfig(`config_version = 1
+
+[sources.tasks]
+kind = "todo-txt"
+path = ".LOCAL/todo.txt"
+visibility = "shared"
+adapter = "todo-txt@1"
+`)).toThrow('inside .local');
+  });
+
+  it('classifies normalized .local paths as private', () => {
+    expect(isPrivateProjectPath('public/../.local/todo.txt')).toBe(true);
+    expect(() => parseProjectConfig(`config_version = 1
+
+[sources.tasks]
+kind = "todo-txt"
+path = "public/../.local/todo.txt"
+visibility = "shared"
+adapter = "todo-txt@1"
+`)).toThrow('inside .local');
   });
 
   it('rejects cycles, missing semantic authorities and unsupported tools', () => {
@@ -235,6 +259,68 @@ adapter = "todo-txt@1"
 `);
 
     await expect(resolveProject({ cwd: project, configPath })).rejects.toThrow('Absolute source path requires');
+  });
+
+  it('rejects project-local paths that escape the project root', () => {
+    expect(() => parseProjectConfig(`config_version = 1
+
+[sources.tasks]
+kind = "todo-txt"
+path = "queue/../../todo.txt"
+adapter = "todo-txt@1"
+`)).toThrow('Source tasks path must stay within the project');
+
+    expect(() => parseProjectConfig(`config_version = 1
+
+[sources.intent]
+kind = "openspec"
+path = "openspec"
+management = "manage"
+adapter = "openspec@1"
+
+[sources.history]
+kind = "changelog"
+path = "CHANGELOG.md"
+management = "manage"
+adapter = "keep-a-changelog@2"
+from = ["intent"]
+
+[release]
+adapter = "openspec-release@1"
+manifests_path = "../releases"
+changelog_source = "history"
+tag_prefix = "v"
+
+[[release.version_sources]]
+path = "package.json"
+adapter = "json-package@1"
+`)).toThrow('Release manifests path must stay within the project');
+
+    expect(() => parseProjectConfig(`config_version = 1
+
+[sources.intent]
+kind = "openspec"
+path = "openspec"
+management = "manage"
+adapter = "openspec@1"
+
+[sources.history]
+kind = "changelog"
+path = "CHANGELOG.md"
+management = "manage"
+adapter = "keep-a-changelog@2"
+from = ["intent"]
+
+[release]
+adapter = "openspec-release@1"
+manifests_path = "releases"
+changelog_source = "history"
+tag_prefix = "v"
+
+[[release.version_sources]]
+path = "../package.json"
+adapter = "json-package@1"
+`)).toThrow('Release version source path must stay within the project');
   });
 
   it('treats a project without configuration as a valid wild project', async () => {

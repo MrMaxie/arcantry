@@ -1,17 +1,18 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execa } from 'execa';
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url));
+const nubCommand = process.platform === 'win32' ? 'nub.cmd' : 'nub';
 const outputFlag = process.argv.indexOf('--output');
 if (outputFlag !== -1 && !process.argv[outputFlag + 1]) throw new Error('usage: check-package.mjs [--output <directory>]');
 const retainedOutput = outputFlag === -1 ? undefined : resolve(process.argv[outputFlag + 1]);
 let smokeRoot;
 
 try {
-  const dryRun = await execa('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], { cwd: packageRoot });
+  const dryRun = await execa(nubCommand, ['pack', '--dry-run', '--json', '--ignore-scripts'], { cwd: packageRoot });
   const output = JSON.parse(dryRun.stdout);
   const files = output[0]?.files?.map((entry) => entry.path) ?? [];
   const allowedFiles = new Set(['package.json', 'catalog.json', 'README.md', 'LICENSE']);
@@ -40,16 +41,32 @@ try {
   await Promise.all([mkdir(installRoot), mkdir(repositoryRoot), mkdir(wildRoot), mkdir(linkRoot)]);
   if (retainedOutput) await mkdir(retainedOutput, { recursive: true });
 
-  const packDestination = retainedOutput ?? smokeRoot;
-  const packed = await execa('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', packDestination], { cwd: packageRoot });
+  const packDestination = smokeRoot;
+  const packed = await execa(nubCommand, ['pack', '--json', '--ignore-scripts', '--pack-destination', packDestination], { cwd: packageRoot });
   const packedOutput = JSON.parse(packed.stdout);
   const filename = packedOutput[0]?.filename;
   if (typeof filename !== 'string') throw new Error('Package smoke could not resolve the packed archive.');
+  const archiveName = basename(filename);
 
   const packageManifest = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'));
   const packagePath = packageManifest.name.split('/');
-  const archivePath = join(packDestination, filename);
-  await execa('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--prefix', installRoot, archivePath]);
+  const archivePath = isAbsolute(filename) ? filename : join(packDestination, filename);
+  await writeFile(
+    join(installRoot, 'package.json'),
+    `${JSON.stringify(
+      {
+        name: 'arcantry-package-smoke',
+        private: true,
+        dependencies: {
+          [packageManifest.name]: `file:../${archiveName}`,
+        },
+      },
+      undefined,
+      2,
+    )}\n`,
+    'utf8',
+  );
+  await execa(nubCommand, ['install', '--ignore-scripts'], { cwd: installRoot });
   const installedPackageRoot = join(installRoot, 'node_modules', ...packagePath);
   const agentManifests = await Promise.all([
     readFile(join(installedPackageRoot, '.codex-plugin', 'plugin.json'), 'utf8').then(JSON.parse),
@@ -101,7 +118,9 @@ try {
   await runCli(['--cwd', repositoryRoot, 'skills', 'doctor', '--scope', 'repo', '--compat', 'claude']);
   await runCli(['--cwd', repositoryRoot, 'skills', 'unlink', 'adopt-arcantry', '--scope', 'repo', '--compat', 'claude']);
 
-  process.stdout.write(`Package allowlist and packed CLI smoke passed (${files.length} files): ${archivePath}\n`);
+  const verifiedArchivePath = retainedOutput === undefined ? archivePath : join(retainedOutput, archiveName);
+  if (retainedOutput !== undefined) await copyFile(archivePath, verifiedArchivePath);
+  process.stdout.write(`Package allowlist and packed CLI smoke passed (${files.length} files): ${verifiedArchivePath}\n`);
 } catch (error) {
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
   process.exitCode = 1;
