@@ -13,18 +13,15 @@ const workspaceManifest = JSON.parse(readFileSync(join(root, 'package.json'), 'u
 };
 
 const publicIdentitySurfaces = [
-  'src/content/docs/getting-started.mdx',
-  'src/content/docs/lifecycle/releases.mdx',
-  'src/components/ArcantryCommandPicker.astro',
-  'src/components/ArcantryHero.astro',
-  'src/components/ArcantryCopyCommands.astro',
+  'apps/docs/src/content/docs/getting-started.mdx',
+  'apps/docs/src/content/docs/lifecycle/releases.mdx',
+  'apps/docs/src/components/ArcantryCommandPicker.astro',
+  'apps/docs/src/components/ArcantryHero.astro',
+  'apps/docs/src/components/ArcantryCopyCommands.astro',
   'packages/arcantry/scripts/check-package.mjs',
 ];
 
-const agentManifestPaths = [
-  '.codex-plugin/plugin.json',
-  '.claude-plugin/plugin.json',
-];
+const agentManifestPaths = ['.codex-plugin/plugin.json', '.claude-plugin/plugin.json'];
 
 describe('npm package identity', () => {
   it('uses the concise public package name', () => {
@@ -45,7 +42,10 @@ describe('npm package identity', () => {
   });
 
   it('keeps authored launcher examples aligned with the manifest', () => {
-    const commandPicker = readFileSync(join(root, 'src', 'components', 'ArcantryCommandPicker.astro'), 'utf8');
+    const commandPicker = readFileSync(
+      join(root, 'apps', 'docs', 'src', 'components', 'ArcantryCommandPicker.astro'),
+      'utf8',
+    );
     expect(commandPicker).toContain('const packageName = packageManifest.name');
     expect(commandPicker).toContain('value: `npx ${packageName} repo inspect`');
     expect(commandPicker).toContain('value: `pnpm dlx ${packageName} repo inspect`');

@@ -1,7 +1,3 @@
 [tools]
-node = "24.19.0"
-pnpm = "10.34.5"
 just = "1.58.0"
-
-[settings]
-experimental = true
+nub = "0.7.5"

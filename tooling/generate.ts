@@ -1,25 +1,38 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { readCatalog, readSkillAgent, readSkillFrontmatter, readSkillMetadata, validateCatalog } from './catalog.js';
 import { buildVersionModel } from './version.js';
 
 const root = process.cwd();
 const check = process.argv.includes('--check');
+const docsOnly = process.argv.includes('--docs-only');
 let stale = false;
 
-function project(path: string, content: string): void {
+function project(path: string, content: string, tracked = true): void {
   const current = existsSync(path) ? readFileSync(path, 'utf8') : undefined;
   if (current === content) return;
-  stale = true;
+  if (tracked) stale = true;
   if (!check) {
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, content, 'utf8');
   }
 }
 
+const generatedDocsRoot = join(root, 'apps', 'docs', 'src', 'content', 'docs', '_generated');
+const detailsRoot = join(generatedDocsRoot, 'skills');
+const generatedSourceRoot = join(root, 'apps', 'docs', 'src', 'generated');
+const generatedPublicRoot = join(root, 'apps', 'docs', 'public', 'schemas');
+
+if (!check) {
+  rmSync(generatedDocsRoot, { force: true, recursive: true });
+  rmSync(generatedSourceRoot, { force: true, recursive: true });
+  rmSync(generatedPublicRoot, { force: true, recursive: true });
+}
+
 project(
-  join(root, 'public', 'schemas', 'arcantry-config-v1.tosd'),
+  join(generatedPublicRoot, 'arcantry-config-v1.tosd'),
   readFileSync(join(root, 'schemas', 'arcantry-config-v1.tosd'), 'utf8'),
+  false,
 );
 
 function escapeHtml(value: string): string {
@@ -50,7 +63,8 @@ const plugin = {
   interface: {
     displayName: 'Arcantry',
     shortDescription: 'Intent-led repositories and focused agent skills',
-    longDescription: 'Coordinate project knowledge and install focused skills for self-improvement, repository safety, and content safety.',
+    longDescription:
+      'Coordinate project knowledge and install focused skills for self-improvement, repository safety, and content safety.',
     developerName: 'Maxie',
     category: 'Developer Tools',
     capabilities: ['Skills', 'Read', 'Write'],
@@ -59,23 +73,27 @@ const plugin = {
     defaultPrompt: ['Use Arcantry to adopt this repository or choose the smallest focused skill for the task.'],
   },
 };
-project(join(root, '.codex-plugin', 'plugin.json'), `${JSON.stringify(plugin, null, 2)}\n`);
-project(
-  join(root, '.claude-plugin', 'plugin.json'),
-  `${JSON.stringify({
-    name: plugin.name,
-    version: plugin.version,
-    description: plugin.description,
-    author: plugin.author,
-    homepage: plugin.homepage,
-    repository: plugin.repository,
-    license: plugin.license,
-    keywords: ['agent-skills', 'claude-code', 'repository-lifecycle'],
-  }, null, 2)}\n`,
-);
-const detailsRoot = join(root, 'src', 'content', 'docs', 'skills');
+if (!docsOnly) {
+  project(join(root, '.codex-plugin', 'plugin.json'), `${JSON.stringify(plugin, null, 2)}\n`);
+  project(
+    join(root, '.claude-plugin', 'plugin.json'),
+    `${JSON.stringify(
+      {
+        name: plugin.name,
+        version: plugin.version,
+        description: plugin.description,
+        author: plugin.author,
+        homepage: plugin.homepage,
+        repository: plugin.repository,
+        license: plugin.license,
+        keywords: ['agent-skills', 'claude-code', 'repository-lifecycle'],
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
 if (!check) mkdirSync(detailsRoot, { recursive: true });
-const expected = new Set<string>();
 const catalogCards = new Map<string, string>();
 const skillDisplayNames = new Map<string, string>();
 const catalogSections = [
@@ -93,7 +111,6 @@ for (const entry of catalog.skills) {
   const agent = readSkillAgent(root, entry.name);
   skillDisplayNames.set(entry.name, agent.displayName);
   const filename = `${entry.name}.md`;
-  expected.add(filename);
   catalogCards.set(
     entry.name,
     [
@@ -111,24 +128,24 @@ for (const entry of catalog.skills) {
         `### ${scenario.title}\n\n**Prompt**\n\n> ${scenario.prompt}\n\n**Expected outcome**\n\n${scenario.outcome}`,
     )
     .join('\n\n');
-  const compatibility = metadata.compatibility === undefined
-    ? ''
-    : `## Compatibility\n\nSource kinds: ${metadata.compatibility.sourceKinds.map((kind) => `\`${kind}\``).join(', ')}.${
-        metadata.compatibility.adapters === undefined
-          ? ''
-          : `\n\nAdapters:\n\n${metadata.compatibility.adapters.map((adapter) => `- \`${adapter.name}\`: \`${adapter.versions}\``).join('\n')}`
-      }\n\n`;
-  const learning = metadata.learning === undefined
-    ? ''
-    : `## Learning outcomes\n\n${metadata.learning.outcomes.map((outcome) => `- ${outcome}`).join('\n')}\n\n`;
+  const compatibility =
+    metadata.compatibility === undefined
+      ? ''
+      : `## Compatibility\n\nSource kinds: ${metadata.compatibility.sourceKinds.map((kind) => `\`${kind}\``).join(', ')}.${
+          metadata.compatibility.adapters === undefined
+            ? ''
+            : `\n\nAdapters:\n\n${metadata.compatibility.adapters.map((adapter) => `- \`${adapter.name}\`: \`${adapter.versions}\``).join('\n')}`
+        }\n\n`;
+  const learning =
+    metadata.learning === undefined
+      ? ''
+      : `## Learning outcomes\n\n${metadata.learning.outcomes.map((outcome) => `- ${outcome}`).join('\n')}\n\n`;
   const content = `---\ntitle: ${agent.displayName}\ndescription: ${JSON.stringify(metadata.summary)}\n---\n\n<!-- Generated by tooling/generate.ts. Do not edit directly. -->\n\n<p class="skill-reference-meta"><span>Arcantry ${version}</span><code>${entry.name}</code></p>\n\n${metadata.summary}\n\n## When to use\n\n${frontmatter.description}\n\n## Link this skill\n\n\`\`\`text\narcantry skills link ${entry.name} --scope user\n\`\`\`\n\nThe standard destination is \`~/.agents/skills\`. Codex reads this universal Agent Skills location directly.\n\n### Claude compatibility\n\n\`\`\`text\narcantry skills link ${entry.name} --scope user --compat claude\n\`\`\`\n\nThis keeps the universal link and adds a Claude alias to the same canonical package.\n\n${compatibility}${learning}## Examples\n\n${scenarios}\n`;
-  project(join(detailsRoot, filename), content);
+  project(join(detailsRoot, filename), content, false);
 }
 
 const catalogSectionNames = catalogSections.flatMap((section) => [...section.skills]);
-const duplicateSectionNames = catalogSectionNames.filter(
-  (name, index) => catalogSectionNames.indexOf(name) !== index,
-);
+const duplicateSectionNames = catalogSectionNames.filter((name, index) => catalogSectionNames.indexOf(name) !== index);
 const missingSectionNames = catalog.skills
   .map((entry) => entry.name)
   .filter((name) => !catalogSectionNames.includes(name as (typeof catalogSectionNames)[number]));
@@ -154,7 +171,7 @@ const catalogSectionsContent = catalogSections
   .join('\n\n');
 
 project(
-  join(root, 'src', 'generated', 'skill-sidebar.mjs'),
+  join(generatedSourceRoot, 'skill-sidebar.ts'),
   `// Generated by tooling/generate.ts. Do not edit directly.\nexport default ${JSON.stringify(
     catalogSections.map((section) => ({
       label: section.title,
@@ -164,24 +181,17 @@ project(
     null,
     2,
   )};\n`,
+  false,
 );
 
-expected.add('catalog.md');
 project(
   join(detailsRoot, 'catalog.md'),
   `---\ntitle: Skill catalog\ndescription: Choose a focused Arcantry skill for the work at hand.\n---\n\n<!-- Generated by tooling/generate.ts. Do not edit directly. -->\n\n<p class="skill-catalog-lead">Choose the job. Each page explains the outcome, compatibility, and link command.</p>\n\n${catalogSectionsContent}\n`,
+  false,
 );
 
-if (existsSync(detailsRoot)) {
-  for (const file of readdirSync(detailsRoot)) {
-    if (file === 'index.md' || expected.has(file) || !file.endsWith('.md')) continue;
-    stale = true;
-    if (!check) rmSync(join(detailsRoot, file));
-  }
-}
-
 if (stale && check) {
-  process.stderr.write('Generated projections are stale. Run `pnpm run generate`.\n');
+  process.stderr.write('Generated tracked projections are stale. Run `just generate`.\n');
   process.exitCode = 1;
 } else if (!check) {
   process.stdout.write('Generated Arcantry projections.\n');

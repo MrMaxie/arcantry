@@ -1,6 +1,12 @@
 import { writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { checkChangelog, checkRelease, cutRelease, planRelease, renderChangelog } from '../packages/arcantry/src/release.js';
+import {
+  checkChangelog,
+  checkRelease,
+  cutRelease,
+  planRelease,
+  renderChangelog,
+} from '../packages/arcantry/src/release.js';
 
 export * from '../packages/arcantry/src/release.js';
 

@@ -1,0 +1,206 @@
+---
+import type {} from '@astrojs/starlight';
+import ArcantryAmbientCanvas from './ArcantryAmbientCanvas.astro';
+import ArcantryCommandPicker from './ArcantryCommandPicker.astro';
+
+const hero = Astro.locals.starlightRoute.entry.data.hero;
+const isNotFound = Astro.locals.starlightRoute.entry.id === '404';
+if (!hero && !isNotFound) throw new Error('ArcantryHero requires hero frontmatter');
+const pageHero = hero ?? { title: '', actions: [] };
+const heroTitle = String(pageHero.title);
+const titleBreak = heroTitle.lastIndexOf(' ');
+const titleLead = titleBreak > -1 ? heroTitle.slice(0, titleBreak + 1) : '';
+const titleAccent = titleBreak > -1 ? heroTitle.slice(titleBreak + 1) : heroTitle;
+const homeHref = Astro.locals.starlightRoute.siteTitleHref;
+---
+
+{isNotFound ? (
+  <section class="not-found-shell" aria-labelledby="not-found-title">
+    <div class="not-found-copy">
+      <p class="not-found-code">404</p>
+      <h1 id="not-found-title">Page not found</h1>
+      <p>The address may be incorrect or the page may have moved.</p>
+      <a class="not-found-action" href={homeHref}>Go to homepage</a>
+    </div>
+  </section>
+) : (
+  <section class="hero-shell">
+    <ArcantryAmbientCanvas />
+    <div class="hero-copy">
+      <h1>{titleLead}<span>{titleAccent}</span></h1>
+      {pageHero.tagline && <p class="hero-tagline">{pageHero.tagline}</p>}
+      <ArcantryCommandPicker idPrefix="hero-command" variant="hero" />
+      {pageHero.actions?.length && (
+        <div class="hero-actions">
+          {pageHero.actions.map((action) => (
+            <a class:list={['hero-action', action.variant === 'primary' ? 'primary' : 'secondary']} href={action.link}>
+              {action.text}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  </section>
+)}
+
+<style>
+@layer starlight.core {
+  .hero-shell {
+    position: relative;
+    isolation: isolate;
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    min-height: 24rem;
+    display: flex;
+    align-items: center;
+    padding: 4.8rem max(1rem, calc((100vw - 72rem) / 2)) 4.2rem;
+    overflow: clip;
+  }
+  .hero-copy {
+    position: relative;
+    z-index: 1;
+    width: min(52rem, 100%);
+  }
+  h1 {
+    margin: 0;
+    max-width: 12ch;
+    font-family: var(--ar-font-display);
+    font-size: clamp(3.5rem, 6.2vw, 6.5rem);
+    font-weight: 400;
+    line-height: 0.92;
+    letter-spacing: -0.045em;
+    color: var(--ar-text);
+  }
+  h1 span {
+    position: relative;
+    display: inline-block;
+    margin: -0.02em -0.03em -0.18em;
+    padding: 0.02em 0.03em 0.18em;
+    line-height: 1.08;
+    color: transparent;
+    background: linear-gradient(98deg, var(--ar-accent-blue), var(--ar-accent-violet) 48%, var(--ar-accent-pink));
+    background-clip: text;
+    -webkit-background-clip: text;
+    text-shadow: 0 0.18em 1.2em color-mix(in srgb, var(--ar-accent-violet) 12%, transparent);
+  }
+  h1 span::after {
+    content: '';
+    position: absolute;
+    inset: auto 0.07em 0.1em 0.05em;
+    height: 0.055em;
+    border-radius: 100%;
+    background: linear-gradient(90deg, var(--ar-accent-blue), var(--ar-accent-violet) 48%, var(--ar-accent-pink));
+    transform: scaleX(0.86) rotate(-1deg);
+    transform-origin: left;
+    opacity: 0.78;
+  }
+  .hero-tagline {
+    max-width: 39rem;
+    margin: 1.7rem 0 0;
+    color: var(--ar-text-muted);
+    font-size: 1.02rem;
+    line-height: 1.65;
+    letter-spacing: -0.015em;
+  }
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+    margin-top: 2rem;
+  }
+  .hero-action {
+    padding: 0.72rem 1rem;
+    border: 1px solid var(--ar-border);
+    border-radius: 0.2rem;
+    font-size: 0.8rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition:
+      color 150ms ease,
+      background-color 150ms ease,
+      border-color 150ms ease,
+      transform 150ms ease;
+  }
+  .hero-action.primary {
+    color: var(--ar-invert);
+    background: var(--ar-text);
+    border-color: color-mix(in srgb, var(--ar-accent-violet) 42%, var(--ar-text));
+    box-shadow: 0 0.55rem 1.6rem color-mix(in srgb, var(--ar-accent-violet) 12%, transparent);
+  }
+  .hero-action.secondary {
+    color: var(--ar-text);
+    background: transparent;
+  }
+  .hero-action:hover {
+    transform: translateY(-1px);
+  }
+  .hero-action.secondary:hover {
+    border-color: var(--ar-text-soft);
+    background: var(--ar-bg-subtle);
+  }
+  .not-found-shell {
+    display: grid;
+    min-height: min(34rem, calc(100vh - var(--sl-nav-height) - 12rem));
+    place-items: center start;
+    padding: clamp(4rem, 10vw, 8rem) max(1rem, calc((100vw - 72rem) / 2));
+  }
+  .not-found-copy {
+    max-width: 33rem;
+  }
+  .not-found-code {
+    margin: 0 0 0.8rem;
+    color: var(--ar-accent-blue);
+    font-size: 0.75rem;
+    font-weight: 750;
+    letter-spacing: 0.11em;
+  }
+  .not-found-shell h1 {
+    max-width: none;
+    font-size: clamp(2.8rem, 6vw, 5.5rem);
+    line-height: 0.96;
+  }
+  .not-found-shell p:not(.not-found-code) {
+    margin: 1.35rem 0 0;
+    color: var(--ar-text-muted);
+    font-size: 1.05rem;
+    line-height: 1.6;
+  }
+  .not-found-action {
+    display: inline-flex;
+    margin-top: 2rem;
+    padding: 0.72rem 1rem;
+    border: 1px solid var(--ar-border);
+    border-radius: 0.2rem;
+    color: var(--ar-invert);
+    background: var(--ar-text);
+    font-size: 0.8rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition:
+      border-color 150ms ease,
+      transform 150ms ease;
+  }
+  .not-found-action:hover {
+    border-color: color-mix(in srgb, var(--ar-accent-violet) 42%, var(--ar-text));
+    transform: translateY(-1px);
+  }
+  @media (max-width: 49.99rem) {
+    .hero-shell {
+      min-height: auto;
+      padding: 3.5rem 1rem 3rem;
+    }
+    h1 {
+      font-size: clamp(3.2rem, 17vw, 5rem);
+    }
+    .not-found-shell {
+      min-height: min(32rem, calc(100vh - var(--sl-nav-height) - 8rem));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    h1 span::after {
+      transform: scaleX(0.86) rotate(-1deg);
+    }
+  }
+}
+</style>

@@ -15,6 +15,9 @@ packages/arcantry/LICENSE
 packages/arcantry/README.md
 packages/arcantry/schemas/
 packages/arcantry/skills/
+apps/docs/src/content/docs/_generated/
+apps/docs/src/generated/
+apps/docs/public/schemas/
 .env
 .env.*
 !.env.example

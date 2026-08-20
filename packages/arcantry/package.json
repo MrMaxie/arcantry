@@ -42,8 +42,8 @@
   ],
   "scripts": {
     "build": "tsup",
-    "package:check": "pnpm run prepack && node scripts/check-package.mjs",
-    "prepack": "pnpm run build && pnpm --dir ../.. exec tsx tooling/prepare-package.ts",
+    "package:check": "nub run prepack && nub scripts/check-package.mjs",
+    "prepack": "nub run build && nub --cwd ../.. tooling/prepare-package.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

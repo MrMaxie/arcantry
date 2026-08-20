@@ -31,7 +31,7 @@ The normative product and engineering contract lives in [`openspec/`](openspec/)
 
 ## Development
 
-The repository uses [mise](https://mise.jdx.dev/) for tool versions, [pnpm](https://pnpm.io/) for dependencies and [just](https://just.systems/) as its command surface.
+[mise](https://mise.jdx.dev/) pins and installs `just` and [Nub](https://nubjs.com/). The root `justfile` is the task runner; Nub provisions the Node version declared in `.node-version`, installs dependencies and invokes repository tools.
 
 ```sh
 mise install
