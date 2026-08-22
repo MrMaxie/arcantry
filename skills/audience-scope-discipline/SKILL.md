@@ -17,7 +17,7 @@ Identify:
 
 1. The requested outcome and explicit acceptance criteria.
 2. The person authorizing the work.
-3. The audience who will see or use each affected text, element, file, or behavior.
+3. The current and eventual audiences who will see or use each affected text, element, file, or behavior; do not infer a private audience from a private draft or test state when the content persists into a later shared or public surface.
 4. What that audience must understand, decide, or do.
 5. The smallest change that delivers the outcome.
 
