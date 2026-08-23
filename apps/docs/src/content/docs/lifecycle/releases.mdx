@@ -39,6 +39,10 @@ Completed changes record `patch`, `minor`, or `major` impact. When a release is 
 
 `components` lists one or more stable affected Arcantry surfaces, such as `cli`, `catalog`, `docs`, `repository-adoption`, or `skill:<name>`.
 
+Projects using `openspec-release@2` may add `unit_impacts` when the same outcome has a different SemVer effect in each matching unit. The scalar `impact` remains the fallback. A composed parent outcome may add `dependency_updates` to acknowledge newer direct dependencies. The title, body, category and visibility remain shared: materially different consumer stories belong in separate OpenSpec changes.
+
+Arcantry resolves each change's schema from `.openspec.yaml`, with fallback to its OpenSpec source `config.yaml`. A schema whose `release` artifact generates `release.md` is release-bearing. A schema without that artifact is intentionally non-release and must not add `release.md`; it is skipped without using `impact: none`.
+
 ## Manifest
 
 An Arcantry release manifest contains only identity and grouping data:
@@ -52,6 +56,29 @@ changes:
 ```
 
 Change ids must resolve to `openspec/changes/archive/` and may belong to only one release.
+
+That uniqueness rule belongs to the v1 single-release adapter. A v2 manifest identifies its unit and may pin direct dependencies:
+
+```yaml
+format: 2
+unit: app
+version: 2.1.0
+date: 2026-08-23
+changes:
+  - update-app-runtime
+dependencies:
+  core: 1.4.0
+```
+
+V2 assignment is unique per `(unit, change)`, so one shared outcome can reach several matching units at different versions or times.
+
+## Project release topologies
+
+- `single` keeps one version, manifest stream and changelog. It is the default for v2 and the only v1 topology.
+- `independent` gives every unit its own version, manifests and changelog. There is no generated root release or central changelog.
+- `composed` adds an acyclic unit dependency graph. Parent manifests pin exact direct dependencies, but a child release does not create a parent release.
+
+A composed parent plan reports newer child releases as pending. The parent adopts them only when a selected parent change lists the direct dependency in `dependency_updates`. The parent's SemVer still comes only from its own effective release impacts. A parent changelog can be the product summary, but it contains only parent-selected outcomes and never copies child entries automatically.
 
 ## Flow
 

@@ -1,6 +1,6 @@
 ---
 name: maintain-release-story
-description: Align accepted OpenSpec outcomes, SemVer, distributable versions, and consumer-facing changelog prose when planning, preparing, or auditing a release without publishing it.
+description: Align accepted OpenSpec outcomes, unit-aware SemVer, distributable versions, and consumer-facing changelog prose when planning, preparing, or auditing a release without publishing it.
 ---
 
 # Maintain Release Story
@@ -9,13 +9,13 @@ Describe what consumers gain, lose, or must account for. Git commits are impleme
 
 ## Workflow
 
-1. Read the active OpenSpec changes, their release artifacts, the latest release manifest, native package manifests, and the configured shared or private changelog.
-2. Confirm that every releasable change has visibility, affected components, a consumer-facing title, and justified SemVer impact.
-3. Determine the next version from the highest included impact and the current release manifest.
-4. Preview one release set: included change IDs, version, native version updates, and changelog categories derived from the release artifacts.
+1. Read the configured adapter, topology, selected unit, schema-classified changes, latest unit manifest, version sources, and changelog.
+2. Confirm each matching release-bearing change has visibility, components, consumer prose, and justified global or unit impact. Skip only schemas without release artifacts.
+3. Compute the unit version from effective impacts. For composed units, report pins and require a parent outcome to acknowledge adopted direct dependencies; never auto-bump parents.
+4. Preview one unit set: change IDs, version, dependency pins, version updates, and changelog categories.
 5. Apply only the requested preparation step. Tagging, publishing, pushing, and external announcements require separate explicit authority.
-6. Validate exact version alignment, complete change coverage, changelog formatting, package contents, and repository status.
+6. Validate ownership, versions, assignments, pins, changelog, packages, and repository status. Unscoped checks cover every unit.
 
-Keep internal refactors and commit narration out of public release text unless they materially change a consumer outcome. Do not invent historical entries when the source release artifacts do not establish them.
+Exclude internal refactors and commit narration unless consumers are affected. Do not invent history. Keep shared prose per outcome; split materially different consumer stories.
 
-Never derive a shared changelog entry from private OpenSpec. A private changelog may compose private and shared release intent when its configuration records those dependencies.
+Never derive shared changelogs from private OpenSpec. Private changelogs may use configured shared and private sources. Independent units have no root release; parents do not copy child entries.

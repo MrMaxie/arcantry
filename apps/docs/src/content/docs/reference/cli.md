@@ -79,13 +79,17 @@ Release commands require a configured `[release]` block. They manage local files
 
 | Command | Contract |
 | --- | --- |
-| `release baseline <version> --date <YYYY-MM-DD> [--apply] [--json]` | Preview or record an existing project version as the release baseline. |
-| `release plan [--json]` | Report the current version, next version, highest impact, and unassigned archived changes. |
-| `release cut [--date <YYYY-MM-DD>] [--apply] [--json]` | Preview or write the next manifest, configured versions, and managed changelog. |
-| `release render [--apply] [--json]` | Preview or write the deterministic managed changelog. |
-| `release check [--sealed]` | Check release consistency. `--sealed` also requires complete assignment and the existing Git seal. |
+| `release baseline <version> --date <YYYY-MM-DD> [--unit <id>] [--apply] [--json]` | Preview or record an existing project or unit version as the release baseline. |
+| `release plan [--unit <id>] [--json]` | Report the current and next version, effective impact, selected changes and dependency readiness. |
+| `release cut [--date <YYYY-MM-DD>] [--unit <id>] [--apply] [--json]` | Preview or write the next unit manifest, configured versions, and managed changelog. |
+| `release render [--unit <id>] [--apply] [--json]` | Preview or write the deterministic managed changelog. |
+| `release check [--unit <id>] [--sealed]` | Check release consistency. `--sealed` also requires complete scoped assignment and the existing Git seal. |
 
 `baseline`, `cut`, and `render` only print their drift-checked plan unless `--apply` is present. A normal check allows active and unassigned work; a sealed check is the final release gate.
+
+`independent` and `composed` projects require `--unit` for baseline, plan, cut and render. An unscoped normal check validates every unit. A sealed multi-unit check requires `--unit` and ignores unrelated work owned by other units.
+
+Composed plan JSON includes `dependencies`, newer `pendingDependencies`, and `ready`. A parent can adopt a newer direct dependency only when one of its selected OpenSpec outcomes acknowledges that dependency.
 
 ## Skill commands
 
