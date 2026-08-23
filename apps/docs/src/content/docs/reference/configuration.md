@@ -115,15 +115,56 @@ A shared changelog cannot depend on private OpenSpec because collaborators could
 
 | Field | Required | Default | Contract |
 | --- | --- | --- | --- |
-| `adapter` | Yes | - | `openspec-release@1`. |
-| `manifests_path` | Yes | - | Directory containing `<version>.yaml` release manifests. |
-| `changelog_source` | Yes | - | Id of a managed changelog source whose `from` entries identify OpenSpec authorities. |
-| `tag_prefix` | No | `v` | Prefix used only for generated changelog links. |
+| `adapter` | Yes | - | `openspec-release@1` or the opt-in `openspec-release@2`. |
+| `topology` | v2 only | `single` | `single`, `independent`, or `composed`. |
+| `manifests_path` | Single only | - | Directory containing `<version>.yaml` release manifests. |
+| `changelog_source` | Single only | - | Id of the managed changelog source for the release. |
+| `tag_prefix` | Single only | `v` | Prefix used only for generated changelog links. |
 | `repository_url` | No | - | Repository URL used for comparison links. Links are omitted when absent. |
-| `version_sources` | Yes | - | One or more explicit `path` and `adapter` tables. |
+| `version_sources` | Single only | - | One or more explicit `path` and `adapter` tables. |
+| `units` | Multi-unit only | - | Named release-unit tables for `independent` and `composed`. |
+
+`openspec-release@1` keeps the original single-release contract unchanged. `openspec-release@2` with no topology also uses the flat single-release shape. Multi-unit configurations move manifest, changelog, tag, version-source, selector and dependency ownership into each unit:
+
+```toml
+[release]
+adapter = "openspec-release@2"
+topology = "composed"
+
+[release.units.core]
+manifests_path = "releases/core"
+changelog_source = "core_history"
+tag_prefix = "core/v"
+
+[[release.units.core.version_sources]]
+path = "packages/core/package.json"
+adapter = "json-package@1"
+
+[[release.units.core.selectors]]
+source = "shared_openspec"
+components = ["product:core"]
+
+[release.units.app]
+manifests_path = "releases/app"
+changelog_source = "app_history"
+tag_prefix = "app/v"
+dependencies = ["core"]
+
+[[release.units.app.version_sources]]
+path = "apps/app/package.json"
+adapter = "json-package@1"
+
+[[release.units.app.selectors]]
+source = "shared_openspec"
+components = ["product:app"]
+```
+
+An `independent` topology forbids dependencies. A `composed` topology requires an acyclic dependency graph with at least one edge. Paths, changelog sources, version-source paths and tag prefixes are owned by exactly one unit.
+
+Every selector names an OpenSpec source used by the unit's changelog. Omitting `components` claims the whole source exclusively. Component selectors may split a shared OpenSpec source between units, but ownership cannot overlap. A release-bearing archived change that matches no unit is an error.
 
 Version source adapters are `json-package@1` for a top-level JSON `version` and `cargo-workspace@1` for `[workspace.package] version` in Cargo TOML. Release commands do not inspect or update an unconfigured version file.
 
-A baseline manifest anchors an existing version without reconstructing unknown history. Later versions are computed from archived OpenSpec release artifacts. Internal artifacts stay in manifests and SemVer planning but are omitted from the public changelog.
+A baseline manifest anchors an existing version without reconstructing unknown history. Later versions are computed from archived OpenSpec release artifacts. Internal artifacts stay in manifests and SemVer planning but are omitted from the public changelog. In composed projects, each parent manifest pins exact direct-dependency versions. A child release never bumps its parent automatically.
 
 The editor contract is [arcantry-config-v1.tosd](/arcantry/schemas/arcantry-config-v1.tosd). Runtime validation also enforces SemVer compatibility, graph cycles, authority overlap, path privacy, and changelog dependencies.

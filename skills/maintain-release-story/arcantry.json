@@ -1,25 +1,25 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
-  "summary": "Align accepted OpenSpec outcomes, SemVer, distributable versions, and consumer-facing changelog prose without publishing.",
+  "summary": "Align accepted OpenSpec outcomes, unit-aware SemVer, distributable versions, dependency pins, and consumer-facing changelog prose without publishing.",
   "compatibility": {
     "sourceKinds": ["openspec", "changelog"]
   },
   "learning": {
     "outcomes": [
-      "Derive release impact and consumer-facing notes from accepted OpenSpec release artifacts.",
-      "Verify one version across release manifests and native package metadata."
+      "Derive unit release impact and consumer-facing notes from schema-classified OpenSpec release artifacts.",
+      "Verify release manifests, dependency pins, and native version sources across single, independent, or composed topologies."
     ]
   },
   "scenarios": [
     {
       "title": "Prepare a product release",
-      "prompt": "Use the maintain-release-story skill to prepare the next release from completed OpenSpec changes without publishing it.",
-      "outcome": "A verified release set aligns SemVer, manifests, components, and consumer-facing changelog entries."
+      "prompt": "Use the maintain-release-story skill to prepare the next release unit from completed OpenSpec changes without publishing it.",
+      "outcome": "A verified release set aligns effective SemVer, manifests, dependency pins, components, and consumer-facing changelog entries."
     },
     {
       "title": "Audit release consistency",
-      "prompt": "Use the maintain-release-story skill to check whether package versions and release notes match the accepted product changes.",
-      "outcome": "Version or release-story drift is reported with its authoritative source and exact repair boundary."
+      "prompt": "Use the maintain-release-story skill to check whether unit versions, dependency pins, and release notes match the accepted product changes.",
+      "outcome": "Version, dependency, ownership, or release-story drift is reported with its authoritative source and exact repair boundary."
     }
   ]
 }

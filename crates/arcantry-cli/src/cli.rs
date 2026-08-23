@@ -231,6 +231,12 @@ pub enum ReleaseCommand {
       help = "Existing release date in YYYY-MM-DD."
     )]
     date: String,
+    #[arg(
+      long,
+      value_name = "id",
+      help = "Release unit for a multi-unit project."
+    )]
+    unit: Option<String>,
     #[arg(long, help = "Apply the previewed release plan.")]
     apply: bool,
     #[arg(long, help = "Write the plan or applied operations as JSON.")]
@@ -238,6 +244,12 @@ pub enum ReleaseCommand {
   },
   #[command(about = "Inspect the next local release without changing files.")]
   Plan {
+    #[arg(
+      long,
+      value_name = "id",
+      help = "Release unit for a multi-unit project."
+    )]
+    unit: Option<String>,
     #[arg(long, help = "Write the release plan as JSON.")]
     json: bool,
   },
@@ -250,6 +262,12 @@ pub enum ReleaseCommand {
       help = "Release date in YYYY-MM-DD."
     )]
     date: String,
+    #[arg(
+      long,
+      value_name = "id",
+      help = "Release unit for a multi-unit project."
+    )]
+    unit: Option<String>,
     #[arg(long, help = "Apply the previewed release plan.")]
     apply: bool,
     #[arg(long, help = "Write the plan or applied operations as JSON.")]
@@ -257,6 +275,12 @@ pub enum ReleaseCommand {
   },
   #[command(about = "Preview or apply the deterministic managed changelog.")]
   Render {
+    #[arg(
+      long,
+      value_name = "id",
+      help = "Release unit for a multi-unit project."
+    )]
+    unit: Option<String>,
     #[arg(long, help = "Apply the previewed changelog plan.")]
     apply: bool,
     #[arg(long, help = "Write the plan or applied operations as JSON.")]
@@ -264,6 +288,12 @@ pub enum ReleaseCommand {
   },
   #[command(about = "Check local release consistency without changing files.")]
   Check {
+    #[arg(
+      long,
+      value_name = "id",
+      help = "Release unit, required for sealed multi-unit checking."
+    )]
+    unit: Option<String>,
     #[arg(
       long,
       help = "Also require final assignment, clean Git state and a release seal."

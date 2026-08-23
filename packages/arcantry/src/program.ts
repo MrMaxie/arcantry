@@ -298,11 +298,12 @@ export const buildProgram = (context: CliContext): Command => {
     .command('baseline <version>')
     .description('Preview or apply a baseline for an existing project release.')
     .requiredOption('--date <date>', 'Existing release date in YYYY-MM-DD.')
+    .option('--unit <id>', 'Release unit for a multi-unit project.')
     .option('--apply', 'Apply the previewed release plan.')
     .option('--json', 'Write the plan or applied operations as JSON.')
-    .action(async (version: string, options: { date: string; apply?: boolean; json?: boolean }) => {
+    .action(async (version: string, options: { date: string; unit?: string; apply?: boolean; json?: boolean }) => {
       await execute(program, context, async () => {
-        const plan = await planReleaseBaseline(await commandProject(program, context), version, options.date, arcantryVersion);
+        const plan = await planReleaseBaseline(await commandProject(program, context), version, options.date, arcantryVersion, options.unit);
         await handleMutationPlan(program, context, plan, options.apply === true, options.json === true);
       });
     });
@@ -310,14 +311,20 @@ export const buildProgram = (context: CliContext): Command => {
   release
     .command('plan')
     .description('Inspect the next local release without changing files.')
+    .option('--unit <id>', 'Release unit for a multi-unit project.')
     .option('--json', 'Write the release plan as JSON.')
-    .action(async (options: { json?: boolean }) => {
+    .action(async (options: { unit?: string; json?: boolean }) => {
       await execute(program, context, async () => {
-        const plan = inspectReleasePlan(await commandProject(program, context));
+        const plan = inspectReleasePlan(await commandProject(program, context), options.unit);
         if (options.json === true) context.stdout(`${JSON.stringify(plan, null, 2)}\n`);
         else {
           context.stdout(`Current: ${plan.current}\nNext: ${plan.next}\nImpact: ${plan.impact}\n`);
+          if (plan.unit !== undefined) context.stdout(`Unit: ${plan.unit}\nTopology: ${plan.topology}\nReady: ${plan.ready === true ? 'yes' : 'no'}\n`);
           context.stdout(plan.changes.length === 0 ? 'Changes: none\n' : `Changes: ${plan.changes.join(', ')}\n`);
+          if (plan.pendingDependencies !== undefined) {
+            const pending = Object.entries(plan.pendingDependencies).map(([id, version]) => `${id}@${version}`);
+            context.stdout(pending.length === 0 ? 'Pending dependencies: none\n' : `Pending dependencies: ${pending.join(', ')}\n`);
+          }
         }
       });
     });
@@ -326,11 +333,12 @@ export const buildProgram = (context: CliContext): Command => {
     .command('cut')
     .description('Preview or apply the next local release manifest, versions and changelog.')
     .option('--date <date>', 'Release date in YYYY-MM-DD.', localDate())
+    .option('--unit <id>', 'Release unit for a multi-unit project.')
     .option('--apply', 'Apply the previewed release plan.')
     .option('--json', 'Write the plan or applied operations as JSON.')
-    .action(async (options: { date: string; apply?: boolean; json?: boolean }) => {
+    .action(async (options: { date: string; unit?: string; apply?: boolean; json?: boolean }) => {
       await execute(program, context, async () => {
-        const plan = await planReleaseCut(await commandProject(program, context), options.date, arcantryVersion);
+        const plan = await planReleaseCut(await commandProject(program, context), options.date, arcantryVersion, options.unit);
         await handleMutationPlan(program, context, plan, options.apply === true, options.json === true);
       });
     });
@@ -338,11 +346,12 @@ export const buildProgram = (context: CliContext): Command => {
   release
     .command('render')
     .description('Preview or apply the deterministic managed changelog.')
+    .option('--unit <id>', 'Release unit for a multi-unit project.')
     .option('--apply', 'Apply the previewed changelog plan.')
     .option('--json', 'Write the plan or applied operations as JSON.')
-    .action(async (options: { apply?: boolean; json?: boolean }) => {
+    .action(async (options: { unit?: string; apply?: boolean; json?: boolean }) => {
       await execute(program, context, async () => {
-        const plan = await planReleaseRender(await commandProject(program, context), arcantryVersion);
+        const plan = await planReleaseRender(await commandProject(program, context), arcantryVersion, options.unit);
         await handleMutationPlan(program, context, plan, options.apply === true, options.json === true);
       });
     });
@@ -350,10 +359,11 @@ export const buildProgram = (context: CliContext): Command => {
   release
     .command('check')
     .description('Check local release consistency without changing files.')
+    .option('--unit <id>', 'Release unit, required for sealed multi-unit checking.')
     .option('--sealed', 'Also require final assignment, clean Git state and a release seal.')
-    .action(async (options: { sealed?: boolean }) => {
+    .action(async (options: { unit?: string; sealed?: boolean }) => {
       await execute(program, context, async () => {
-        checkProjectRelease(await commandProject(program, context), options.sealed === true);
+        checkProjectRelease(await commandProject(program, context), options.sealed === true, options.unit);
         context.stdout(options.sealed === true ? 'Release state is sealed.\n' : 'Release state is consistent.\n');
       });
     });

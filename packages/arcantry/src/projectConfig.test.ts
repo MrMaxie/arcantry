@@ -192,6 +192,113 @@ adapter = "cargo-workspace@1"
     });
   });
 
+  it('defaults openspec-release@2 to the flat single topology', () => {
+    const config = parseProjectConfig(`${configured()}
+[release]
+adapter = "openspec-release@2"
+manifests_path = "releases"
+changelog_source = "history"
+
+[[release.version_sources]]
+path = "package.json"
+adapter = "json-package@1"
+`);
+
+    expect(config.release).toMatchObject({ adapter: 'openspec-release@2', topology: 'single' });
+    expect(parseProjectConfig(renderProjectConfig(config)).release).toEqual(config.release);
+  });
+
+  it('parses a composed release-unit graph and round-trips it', () => {
+    const config = parseProjectConfig(`${configured()}
+[sources.core_history]
+kind = "changelog"
+path = "packages/core/CHANGELOG.md"
+management = "manage"
+adapter = "keep-a-changelog@2"
+from = ["intent"]
+
+[release]
+adapter = "openspec-release@2"
+topology = "composed"
+
+[release.units.core]
+manifests_path = "releases/core"
+changelog_source = "core_history"
+tag_prefix = "core/v"
+
+[[release.units.core.version_sources]]
+path = "packages/core/package.json"
+adapter = "json-package@1"
+
+[[release.units.core.selectors]]
+source = "intent"
+components = ["product:core"]
+
+[release.units.app]
+manifests_path = "releases/app"
+changelog_source = "history"
+tag_prefix = "app/v"
+dependencies = ["core"]
+
+[[release.units.app.version_sources]]
+path = "apps/app/package.json"
+adapter = "json-package@1"
+
+[[release.units.app.selectors]]
+source = "intent"
+components = ["product:app"]
+`);
+
+    expect(config.release).toMatchObject({
+      adapter: 'openspec-release@2',
+      topology: 'composed',
+      units: {
+        core: { dependencies: [], selectors: [{ source: 'intent', components: ['product:core'] }] },
+        app: { dependencies: ['core'], selectors: [{ source: 'intent', components: ['product:app'] }] },
+      },
+    });
+    expect(parseProjectConfig(renderProjectConfig(config)).release).toEqual(config.release);
+  });
+
+  it('rejects invalid multi-unit release ownership and dependency graphs', () => {
+    const multi = `${configured()}
+[release]
+adapter = "openspec-release@2"
+topology = "TOPOLOGY"
+
+[release.units.core]
+manifests_path = "releases/shared"
+changelog_source = "history"
+tag_prefix = "shared/v"
+dependencies = DEPENDENCIES
+
+[[release.units.core.version_sources]]
+path = "package.json"
+adapter = "json-package@1"
+
+[[release.units.core.selectors]]
+source = "intent"
+components = ["product:core"]
+
+[release.units.app]
+manifests_path = "releases/shared"
+changelog_source = "history"
+tag_prefix = "shared/v"
+dependencies = ["core"]
+
+[[release.units.app.version_sources]]
+path = "apps/app/package.json"
+adapter = "json-package@1"
+
+[[release.units.app.selectors]]
+source = "intent"
+components = ["product:core"]
+`;
+    expect(() => parseProjectConfig(multi.replace('TOPOLOGY', 'independent').replace('DEPENDENCIES', '["app"]'))).toThrow('cannot declare dependencies');
+    expect(() => parseProjectConfig(multi.replace('TOPOLOGY', 'composed').replace('DEPENDENCIES', '["app"]'))).toThrow(/unique across release units|ownership overlaps|dependency cycle/);
+    expect(() => parseProjectConfig(multi.replace('TOPOLOGY', 'composed').replace('DEPENDENCIES', '[]').replace('dependencies = ["core"]', 'dependencies = []'))).toThrow('requires at least one dependency edge');
+  });
+
   it('rejects a release block without a managed changelog authority', () => {
     expect(() => parseProjectConfig(`config_version = 1
 
