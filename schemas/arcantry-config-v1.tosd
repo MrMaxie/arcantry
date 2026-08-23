@@ -89,19 +89,26 @@ allowedvalues = ["json-package@1", "cargo-workspace@1"]
 
 [types.release]
 type = "table"
-description = "Optional OpenSpec-backed local release story."
+description = "Optional versioned OpenSpec release system. Runtime validation enforces the selected adapter and topology shape."
 
 [types.release.adapter]
 type = "string"
-allowedvalues = ["openspec-release@1"]
+allowedvalues = ["openspec-release@1", "openspec-release@2"]
+
+[types.release.topology]
+type = "string"
+allowedvalues = ["single", "independent", "composed"]
+optional = true
 
 [types.release.manifests_path]
 type = "string"
 minlength = 1
+optional = true
 
 [types.release.changelog_source]
 type = "string"
 minlength = 1
+optional = true
 
 [types.release.tag_prefix]
 type = "string"
@@ -116,6 +123,55 @@ optional = true
 [types.release.version_sources]
 type = "array"
 arraytype = "types.release_version_source"
+optional = true
+
+[types.release.units]
+type = "collection"
+itemtype = "types.release_unit"
+keypattern = "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+optional = true
+
+[types.release_unit]
+type = "table"
+description = "One independently versioned release unit in a multi-unit v2 release system."
+
+[types.release_unit.manifests_path]
+type = "string"
+minlength = 1
+
+[types.release_unit.changelog_source]
+type = "string"
+minlength = 1
+
+[types.release_unit.tag_prefix]
+type = "string"
+minlength = 1
+
+[types.release_unit.dependencies]
+type = "array"
+arraytype = "string"
+optional = true
+
+[types.release_unit.version_sources]
+type = "array"
+arraytype = "types.release_version_source"
+
+[types.release_unit.selectors]
+type = "array"
+arraytype = "types.release_unit_selector"
+
+[types.release_unit_selector]
+type = "table"
+description = "An OpenSpec source claim, optionally narrowed to stable component ids."
+
+[types.release_unit_selector.source]
+type = "string"
+minlength = 1
+
+[types.release_unit_selector.components]
+type = "array"
+arraytype = "string"
+optional = true
 
 [elements.config_version]
 type = "integer"

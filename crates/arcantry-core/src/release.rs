@@ -1,4 +1,7 @@
-use crate::config::{ResolvedProject, Visibility, effective_visibility, is_private_project_path};
+use crate::config::{
+  ProjectConfig, ReleaseConfig, ReleaseTopology, ReleaseUnitConfig, ReleaseUnitSelector,
+  ResolvedProject, Visibility, effective_visibility, is_private_project_path,
+};
 use crate::project_plan::{ProjectPlan, create_write_operation};
 use anyhow::{Context, Result, bail};
 use chrono::NaiveDate;
@@ -10,24 +13,57 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReleaseManifest {
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub format: Option<u8>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub unit: Option<String>,
   pub version: String,
   pub date: String,
   pub changes: Vec<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub baseline: Option<bool>,
+  #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+  pub dependencies: BTreeMap<String, String>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReleaseManifestV2 {
+  pub format: u8,
+  pub unit: String,
+  pub version: String,
+  pub date: String,
+  pub changes: Vec<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub baseline: Option<bool>,
+  #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+  pub dependencies: BTreeMap<String, String>,
 }
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ReleasePlan {
   pub current: String,
   pub next: String,
   pub impact: String,
   pub changes: Vec<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub unit: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub topology: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub dependencies: Option<BTreeMap<String, String>>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub pending_dependencies: Option<BTreeMap<String, String>>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub ready: Option<bool>,
 }
 #[derive(Debug, Clone)]
 struct Artifact {
   category: String,
   impact: String,
   visibility: String,
+  components: Vec<String>,
+  unit_impacts: BTreeMap<String, String>,
+  dependency_updates: BTreeMap<String, Vec<String>>,
+  source_id: Option<String>,
   title: String,
   body: String,
 }
@@ -37,9 +73,19 @@ struct Configuration {
   releases: String,
   changelog: String,
   changelog_visibility: Visibility,
-  openspec: Vec<String>,
+  adapter: String,
+  topology: ReleaseTopology,
+  unit: Option<String>,
+  openspec: Vec<(String, String)>,
+  selectors: Vec<ReleaseUnitSelector>,
+  dependencies: BTreeMap<String, DependencyConfiguration>,
   repository_url: Option<String>,
   tag_prefix: String,
+  version_sources: Vec<(String, String)>,
+}
+#[derive(Debug)]
+struct DependencyConfiguration {
+  releases: String,
   version_sources: Vec<(String, String)>,
 }
 #[derive(Debug)]
@@ -49,27 +95,35 @@ struct State {
   assigned: BTreeSet<String>,
 }
 
-pub fn baseline(project: &ResolvedProject, version: &str, date: &str) -> Result<ProjectPlan> {
+pub fn baseline(
+  project: &ResolvedProject,
+  version: &str,
+  date: &str,
+  unit: Option<&str>,
+) -> Result<ProjectPlan> {
   plan_result(project, || {
     parse_stable_version(version)?;
     validate_date(date)?;
-    let configuration = configuration(project)?;
+    let configuration = configuration(project, unit)?;
     if !read_manifests(&configuration)?.is_empty() {
       bail!("Release baseline requires a project without release manifests.");
     }
     validate_versions(&configuration, version)?;
     let state = state(&configuration)?;
     let manifest = ReleaseManifest {
+      format: (configuration.adapter == "openspec-release@2").then_some(2),
+      unit: configuration.unit.clone(),
       version: version.to_owned(),
       date: date.to_owned(),
       changes: Vec::new(),
       baseline: Some(true),
+      dependencies: dependency_pins(&configuration)?,
     };
     let mut plan = ProjectPlan::new(
       configuration.root.clone(),
       "release",
       "adopt",
-      "openspec-release@1",
+      &configuration.adapter,
     );
     plan.operations.push(create_write_operation(
       &configuration.root,
@@ -98,31 +152,45 @@ pub fn baseline(project: &ResolvedProject, version: &str, date: &str) -> Result<
   })
 }
 
-pub fn inspect(project: &ResolvedProject) -> Result<ReleasePlan> {
-  inspect_configuration(&configuration(project)?)
+pub fn inspect(project: &ResolvedProject, unit: Option<&str>) -> Result<ReleasePlan> {
+  inspect_configuration(&configuration(project, unit)?)
 }
 
-pub fn cut(project: &ResolvedProject, date: &str) -> Result<ProjectPlan> {
+pub fn cut(project: &ResolvedProject, date: &str, unit: Option<&str>) -> Result<ProjectPlan> {
   plan_result(project, || {
     validate_date(date)?;
-    let configuration = configuration(project)?;
+    let configuration = configuration(project, unit)?;
     let state = state(&configuration)?;
     let release = inspect_configuration(&configuration)?;
     if release.changes.is_empty() {
       bail!("No unassigned archived changes to release.");
     }
+    if release.ready == Some(false) {
+      bail!(
+        "Release unit {} has unacknowledged pending dependencies: {}.",
+        configuration.unit.as_deref().unwrap_or("root"),
+        release
+          .pending_dependencies
+          .as_ref()
+          .map(|values| values.keys().cloned().collect::<Vec<_>>().join(", "))
+          .unwrap_or_default()
+      );
+    }
     validate_versions(&configuration, &release.current)?;
     let manifest = ReleaseManifest {
+      format: (configuration.adapter == "openspec-release@2").then_some(2),
+      unit: configuration.unit.clone(),
       version: release.next,
       date: date.to_owned(),
       changes: release.changes,
       baseline: None,
+      dependencies: dependency_pins(&configuration)?,
     };
     let mut plan = ProjectPlan::new(
       configuration.root.clone(),
       "release",
       "adopt",
-      "openspec-release@1",
+      &configuration.adapter,
     );
     plan.operations.push(create_write_operation(
       &configuration.root,
@@ -162,15 +230,15 @@ pub fn cut(project: &ResolvedProject, date: &str) -> Result<ProjectPlan> {
   })
 }
 
-pub fn render(project: &ResolvedProject) -> Result<ProjectPlan> {
+pub fn render(project: &ResolvedProject, unit: Option<&str>) -> Result<ProjectPlan> {
   plan_result(project, || {
-    let configuration = configuration(project)?;
+    let configuration = configuration(project, unit)?;
     let desired = render_changelog(&configuration, &state(&configuration)?);
     let mut plan = ProjectPlan::new(
       configuration.root.clone(),
       "release",
       "adopt",
-      "openspec-release@1",
+      &configuration.adapter,
     );
     let operation = create_write_operation(
       &configuration.root,
@@ -185,11 +253,35 @@ pub fn render(project: &ResolvedProject) -> Result<ProjectPlan> {
   })
 }
 
-pub fn check(project: &ResolvedProject, sealed: bool) -> Result<()> {
-  let configuration = configuration(project)?;
-  let state = state(&configuration)?;
+pub fn check(project: &ResolvedProject, sealed: bool, unit: Option<&str>) -> Result<()> {
+  let release = project
+    .config
+    .as_ref()
+    .and_then(|config| config.release.as_ref())
+    .context("Project has no [release] configuration.")?;
+  if !release.units.is_empty() {
+    validate_multi_coverage(project, release)?;
+    if sealed && unit.is_none() {
+      bail!(
+        "Release topology {:?} requires --unit for sealed checking.",
+        release.topology
+      );
+    }
+    if let Some(unit) = unit {
+      return check_configuration(&configuration(project, Some(unit))?, sealed);
+    }
+    for unit in release.units.keys() {
+      check_configuration(&configuration(project, Some(unit))?, false)?;
+    }
+    return Ok(());
+  }
+  check_configuration(&configuration(project, unit)?, sealed)
+}
+
+fn check_configuration(configuration: &Configuration, sealed: bool) -> Result<()> {
+  let state = state(configuration)?;
   validate_versions(
-    &configuration,
+    configuration,
     state
       .manifests
       .last()
@@ -197,14 +289,30 @@ pub fn check(project: &ResolvedProject, sealed: bool) -> Result<()> {
   )?;
   let changelog = fs::read_to_string(configuration.root.join(&configuration.changelog))
     .context("CHANGELOG.md is missing")?;
-  if changelog != render_changelog(&configuration, &state) {
+  if changelog != render_changelog(configuration, &state) {
     bail!("CHANGELOG.md is stale; run the configured release render command");
   }
   if sealed {
+    if configuration.adapter == "openspec-release@2"
+      && configuration.topology == ReleaseTopology::Composed
+    {
+      let pinned = state
+        .manifests
+        .last()
+        .map(|manifest| &manifest.dependencies)
+        .context("release sealing requires at least one release manifest")?;
+      let pending = pending_dependencies(configuration, pinned)?;
+      if !pending.is_empty() {
+        bail!(
+          "sealed release unit has pending dependencies: {}",
+          pending.keys().cloned().collect::<Vec<_>>().join(", ")
+        );
+      }
+    }
     let active = configuration
       .openspec
       .iter()
-      .flat_map(|path| {
+      .flat_map(|(_, path)| {
         fs::read_dir(configuration.root.join(path).join("changes"))
           .into_iter()
           .flatten()
@@ -213,6 +321,7 @@ pub fn check(project: &ResolvedProject, sealed: bool) -> Result<()> {
       .filter(|entry| {
         entry.file_type().is_ok_and(|kind| kind.is_dir()) && entry.file_name() != "archive"
       })
+      .filter(|entry| active_matches(configuration, &entry.path()).unwrap_or(true))
       .count();
     if active > 0 {
       bail!("active OpenSpec changes are not release-complete");
@@ -224,7 +333,7 @@ pub fn check(project: &ResolvedProject, sealed: bool) -> Result<()> {
         unassigned.join(", ")
       );
     }
-    validate_git_seal(&configuration, &state)?;
+    validate_git_seal(configuration, &state)?;
   }
   Ok(())
 }
@@ -289,19 +398,19 @@ fn plan_result(
   match build() {
     Ok(plan) => Ok(plan),
     Err(error) => {
-      let mut plan = ProjectPlan::new(
-        project.root.clone(),
-        "release",
-        "adopt",
-        "openspec-release@1",
-      );
+      let adapter = project
+        .config
+        .as_ref()
+        .and_then(|config| config.release.as_ref())
+        .map_or("openspec-release@1", |release| release.adapter.as_str());
+      let mut plan = ProjectPlan::new(project.root.clone(), "release", "adopt", adapter);
       plan.conflicts.push(error.to_string());
       Ok(plan)
     }
   }
 }
 
-fn configuration(project: &ResolvedProject) -> Result<Configuration> {
+fn configuration(project: &ResolvedProject, unit: Option<&str>) -> Result<Configuration> {
   let config = project
     .config
     .as_ref()
@@ -310,21 +419,32 @@ fn configuration(project: &ResolvedProject) -> Result<Configuration> {
     .release
     .as_ref()
     .context("Project has no [release] configuration.")?;
-  let changelog = config
-    .sources
-    .get(&release.changelog_source)
-    .with_context(|| {
-      format!(
-        "Release changelog source is not managed: {}.",
-        release.changelog_source
-      )
-    })?;
+  if !release.units.is_empty() {
+    let unit_id =
+      unit.with_context(|| format!("Release topology {:?} requires --unit.", release.topology))?;
+    let selected = release
+      .units
+      .get(unit_id)
+      .with_context(|| format!("Unknown release unit: {unit_id}."))?;
+    validate_multi_coverage(project, release)?;
+    return unit_configuration(project, config, release, unit_id, selected);
+  }
+  let changelog_source = release
+    .changelog_source
+    .as_deref()
+    .context("Project release changelog source is missing.")?;
+  let changelog = config.sources.get(changelog_source).with_context(|| {
+    format!(
+      "Release changelog source is not managed: {}.",
+      changelog_source
+    )
+  })?;
   if changelog.kind != crate::config::SourceKind::Changelog
     || changelog.management != crate::config::Management::Manage
   {
     bail!(
       "Release changelog source is not managed: {}.",
-      release.changelog_source
+      changelog_source
     );
   }
   let openspec = changelog
@@ -335,23 +455,278 @@ fn configuration(project: &ResolvedProject) -> Result<Configuration> {
         .sources
         .get(id)
         .filter(|source| source.kind == crate::config::SourceKind::Openspec)
-        .map(|source| source.path.clone())
+        .map(|source| (id.clone(), source.path.clone()))
         .with_context(|| format!("Release changelog dependency is not OpenSpec: {id}."))
     })
     .collect::<Result<Vec<_>>>()?;
+  if release.adapter == "openspec-release@2" {
+    validate_single_coverage(project, &openspec)?;
+  }
   Ok(Configuration {
     root: project.root.clone(),
-    releases: release.manifests_path.clone(),
+    releases: release
+      .manifests_path
+      .clone()
+      .context("Project release manifests path is missing.")?,
     changelog: changelog.path.clone(),
     changelog_visibility: effective_visibility(changelog),
+    adapter: release.adapter.clone(),
+    topology: ReleaseTopology::Single,
+    unit: (release.adapter == "openspec-release@2").then(|| "root".to_owned()),
+    selectors: if release.adapter == "openspec-release@2" {
+      changelog
+        .from
+        .iter()
+        .map(|source| ReleaseUnitSelector {
+          source: source.clone(),
+          components: None,
+        })
+        .collect()
+    } else {
+      Vec::new()
+    },
+    dependencies: BTreeMap::new(),
     openspec,
     repository_url: release.repository_url.clone(),
-    tag_prefix: release.tag_prefix.clone(),
+    tag_prefix: release.tag_prefix.clone().unwrap_or_else(|| "v".to_owned()),
     version_sources: release
       .version_sources
       .iter()
       .map(|source| (source.path.clone(), source.adapter.clone()))
       .collect(),
+  })
+}
+
+fn unit_configuration(
+  project: &ResolvedProject,
+  config: &ProjectConfig,
+  release: &ReleaseConfig,
+  unit_id: &str,
+  unit: &ReleaseUnitConfig,
+) -> Result<Configuration> {
+  let changelog = config
+    .sources
+    .get(&unit.changelog_source)
+    .with_context(|| {
+      format!(
+        "Release changelog source is not managed: {}.",
+        unit.changelog_source
+      )
+    })?;
+  let openspec = unit
+    .selectors
+    .iter()
+    .map(|selector| {
+      config
+        .sources
+        .get(&selector.source)
+        .map(|source| (selector.source.clone(), source.path.clone()))
+        .with_context(|| {
+          format!(
+            "Release selector source is not OpenSpec: {}.",
+            selector.source
+          )
+        })
+    })
+    .collect::<Result<BTreeMap<_, _>>>()?
+    .into_iter()
+    .collect();
+  let dependencies = unit
+    .dependencies
+    .iter()
+    .map(|dependency| {
+      let dependency_unit = &release.units[dependency];
+      (
+        dependency.clone(),
+        DependencyConfiguration {
+          releases: dependency_unit.manifests_path.clone(),
+          version_sources: dependency_unit
+            .version_sources
+            .iter()
+            .map(|source| (source.path.clone(), source.adapter.clone()))
+            .collect(),
+        },
+      )
+    })
+    .collect();
+  Ok(Configuration {
+    root: project.root.clone(),
+    releases: unit.manifests_path.clone(),
+    changelog: changelog.path.clone(),
+    changelog_visibility: effective_visibility(changelog),
+    adapter: "openspec-release@2".to_owned(),
+    topology: release.topology,
+    unit: Some(unit_id.to_owned()),
+    openspec,
+    selectors: unit.selectors.clone(),
+    dependencies,
+    repository_url: release.repository_url.clone(),
+    tag_prefix: unit.tag_prefix.clone(),
+    version_sources: unit
+      .version_sources
+      .iter()
+      .map(|source| (source.path.clone(), source.adapter.clone()))
+      .collect(),
+  })
+}
+
+fn validate_multi_coverage(project: &ResolvedProject, release: &ReleaseConfig) -> Result<()> {
+  let config = project
+    .config
+    .as_ref()
+    .context("Project has no [release] configuration.")?;
+  let mut sources = BTreeMap::new();
+  for unit in release.units.values() {
+    for selector in &unit.selectors {
+      sources.insert(
+        selector.source.clone(),
+        config.sources[&selector.source].path.clone(),
+      );
+    }
+  }
+  let mut archived = BTreeMap::new();
+  for (source_id, path) in &sources {
+    let openspec = project.root.join(path);
+    let archive = openspec.join("changes/archive");
+    if archive.exists() {
+      for entry in fs::read_dir(&archive)? {
+        let entry = entry?;
+        if !entry.file_type()?.is_dir() {
+          continue;
+        }
+        let directory = entry.file_name().to_string_lossy().into_owned();
+        let id = directory
+          .get(11..)
+          .context(format!("invalid OpenSpec archive directory: {directory}"))?
+          .to_owned();
+        if archived.contains_key(&id) {
+          bail!("duplicate archived change id: {id}");
+        }
+        if let Some(artifact) = classify_change(&openspec, source_id, &entry.path(), &id)? {
+          archived.insert(id, artifact);
+        }
+      }
+    }
+    let active = openspec.join("changes");
+    if active.exists() {
+      for entry in fs::read_dir(active)? {
+        let entry = entry?;
+        if !entry.file_type()?.is_dir() || entry.file_name() == "archive" {
+          continue;
+        }
+        let id = entry.file_name().to_string_lossy().into_owned();
+        if let Some(artifact) = classify_change(&openspec, source_id, &entry.path(), &id)? {
+          validate_artifact_units(&id, &artifact, release)?;
+        }
+      }
+    }
+  }
+  let unmatched = archived
+    .iter()
+    .filter(|(_, artifact)| {
+      !release
+        .units
+        .values()
+        .any(|unit| artifact_matches_unit(unit, artifact))
+    })
+    .map(|(id, _)| id.clone())
+    .collect::<Vec<_>>();
+  if !unmatched.is_empty() {
+    bail!(
+      "Archived release-bearing OpenSpec changes match no release unit: {}.",
+      unmatched.join(", ")
+    );
+  }
+  for (change, artifact) in &archived {
+    validate_artifact_units(change, artifact, release)?;
+  }
+  Ok(())
+}
+
+fn validate_artifact_units(
+  change: &str,
+  artifact: &Artifact,
+  release: &ReleaseConfig,
+) -> Result<()> {
+  for unit in artifact.unit_impacts.keys() {
+    if !release.units.contains_key(unit) {
+      bail!("OpenSpec change {change} declares unit_impacts for unknown unit: {unit}.");
+    }
+    if !artifact_matches_unit(&release.units[unit], artifact) {
+      bail!("OpenSpec change {change} declares unit_impacts for unmatched unit: {unit}.");
+    }
+  }
+  for (unit, dependencies) in &artifact.dependency_updates {
+    let configured = release.units.get(unit).with_context(|| {
+      format!("OpenSpec change {change} declares dependency_updates for unknown unit: {unit}.")
+    })?;
+    if !artifact_matches_unit(configured, artifact) {
+      bail!("OpenSpec change {change} declares dependency_updates for unmatched unit: {unit}.");
+    }
+    for dependency in dependencies {
+      if !configured.dependencies.contains(dependency) {
+        bail!("OpenSpec change {change} acknowledges non-direct dependency {unit}: {dependency}.");
+      }
+    }
+  }
+  Ok(())
+}
+
+fn validate_single_coverage(project: &ResolvedProject, sources: &[(String, String)]) -> Result<()> {
+  for (source_id, path) in sources {
+    let openspec = project.root.join(path);
+    let archive = openspec.join("changes/archive");
+    if archive.exists() {
+      for entry in fs::read_dir(&archive)? {
+        let entry = entry?;
+        if !entry.file_type()?.is_dir() {
+          continue;
+        }
+        let directory = entry.file_name().to_string_lossy().into_owned();
+        let id = directory
+          .get(11..)
+          .context(format!("invalid OpenSpec archive directory: {directory}"))?;
+        if let Some(artifact) = classify_change(&openspec, source_id, &entry.path(), id)? {
+          validate_single_artifact(id, &artifact)?;
+        }
+      }
+    }
+    let active = openspec.join("changes");
+    if active.exists() {
+      for entry in fs::read_dir(active)? {
+        let entry = entry?;
+        if entry.file_type()?.is_dir() && entry.file_name() != "archive" {
+          let id = entry.file_name().to_string_lossy().into_owned();
+          if let Some(artifact) = classify_change(&openspec, source_id, &entry.path(), &id)? {
+            validate_single_artifact(&id, &artifact)?;
+          }
+        }
+      }
+    }
+  }
+  Ok(())
+}
+
+fn validate_single_artifact(change: &str, artifact: &Artifact) -> Result<()> {
+  for unit in artifact.unit_impacts.keys() {
+    if unit != "root" {
+      bail!("OpenSpec change {change} declares unit_impacts for unknown unit: {unit}.");
+    }
+  }
+  if !artifact.dependency_updates.is_empty() {
+    bail!("OpenSpec change {change} declares dependency_updates in a single release topology.");
+  }
+  Ok(())
+}
+
+fn artifact_matches_unit(unit: &ReleaseUnitConfig, artifact: &Artifact) -> bool {
+  unit.selectors.iter().any(|selector| {
+    artifact.source_id.as_deref() == Some(&selector.source)
+      && selector.components.as_ref().is_none_or(|components| {
+        components
+          .iter()
+          .any(|component| artifact.components.contains(component))
+      })
   })
 }
 
@@ -365,7 +740,7 @@ fn inspect_configuration(configuration: &Configuration) -> Result<ReleasePlan> {
     .collect();
   let impacts: Vec<_> = changes
     .iter()
-    .map(|id| state.archived[id].impact.as_str())
+    .map(|id| effective_impact(&state.archived[id], configuration.unit.as_deref()))
     .collect();
   let impact = highest_impact(&impacts).to_owned();
   if impact == "none" && !changes.is_empty() {
@@ -379,12 +754,66 @@ fn inspect_configuration(configuration: &Configuration) -> Result<ReleasePlan> {
     .last()
     .map_or_else(|| "0.0.0".to_owned(), |manifest| manifest.version.clone());
   let next = bump(&current, &impact)?;
+  if configuration.adapter == "openspec-release@1" {
+    return Ok(ReleasePlan {
+      current,
+      next,
+      impact,
+      changes,
+      unit: None,
+      topology: None,
+      dependencies: None,
+      pending_dependencies: None,
+      ready: None,
+    });
+  }
+  let dependencies = state
+    .manifests
+    .last()
+    .map(|manifest| manifest.dependencies.clone())
+    .unwrap_or_default();
+  let pending_dependencies = pending_dependencies(configuration, &dependencies)?;
+  let unit = configuration.unit.as_deref().unwrap_or("root");
+  let acknowledged = changes
+    .iter()
+    .flat_map(|id| {
+      state.archived[id]
+        .dependency_updates
+        .get(unit)
+        .into_iter()
+        .flatten()
+        .cloned()
+    })
+    .collect::<BTreeSet<_>>();
+  let ready = !changes.is_empty()
+    && pending_dependencies
+      .keys()
+      .all(|dependency| acknowledged.contains(dependency));
   Ok(ReleasePlan {
     current,
     next,
     impact,
     changes,
+    unit: configuration.unit.clone(),
+    topology: Some(topology_name(configuration.topology).to_owned()),
+    dependencies: Some(dependencies),
+    pending_dependencies: Some(pending_dependencies),
+    ready: Some(ready),
   })
+}
+
+fn effective_impact<'a>(artifact: &'a Artifact, unit: Option<&str>) -> &'a str {
+  unit
+    .and_then(|unit| artifact.unit_impacts.get(unit))
+    .map_or(artifact.impact.as_str(), String::as_str)
+}
+
+fn topology_name(topology: ReleaseTopology) -> &'static str {
+  match topology {
+    ReleaseTopology::Single => "single",
+    ReleaseTopology::Independent => "independent",
+    ReleaseTopology::Composed => "composed",
+  }
 }
 
 fn state(configuration: &Configuration) -> Result<State> {
@@ -413,7 +842,7 @@ fn state(configuration: &Configuration) -> Result<State> {
 
 fn read_archived(configuration: &Configuration) -> Result<BTreeMap<String, Artifact>> {
   let mut artifacts = BTreeMap::new();
-  for path in &configuration.openspec {
+  for (source_id, path) in &configuration.openspec {
     let archive = configuration.root.join(path).join("changes/archive");
     if !archive.exists() {
       continue;
@@ -431,13 +860,26 @@ fn read_archived(configuration: &Configuration) -> Result<BTreeMap<String, Artif
       if artifacts.contains_key(&id) {
         bail!("duplicate archived change id: {id}");
       }
-      artifacts.insert(
-        id.clone(),
-        parse_artifact(
+      let artifact = if configuration.adapter == "openspec-release@2" {
+        classify_change(
+          &configuration.root.join(path),
+          source_id,
+          &entry.path(),
+          &id,
+        )?
+      } else {
+        Some(parse_artifact(
           &fs::read_to_string(entry.path().join("release.md"))
             .with_context(|| format!("archived change {id} has no release.md"))?,
-        )?,
-      );
+          false,
+        )?)
+      };
+      if let Some(artifact) = artifact
+        && (configuration.adapter == "openspec-release@1"
+          || artifact_matches(configuration, &artifact))
+      {
+        artifacts.insert(id, artifact);
+      }
     }
   }
   Ok(artifacts)
@@ -449,8 +891,12 @@ struct ArtifactMetadata {
   impact: String,
   visibility: String,
   components: Vec<String>,
+  #[serde(default)]
+  unit_impacts: BTreeMap<String, String>,
+  #[serde(default)]
+  dependency_updates: BTreeMap<String, Vec<String>>,
 }
-fn parse_artifact(source: &str) -> Result<Artifact> {
+fn parse_artifact(source: &str, v2: bool) -> Result<Artifact> {
   let body = source
     .strip_prefix("---\n")
     .or_else(|| source.strip_prefix("---\r\n"))
@@ -465,6 +911,9 @@ fn parse_artifact(source: &str) -> Result<Artifact> {
   ) {
     bail!("invalid release category: {}", metadata.category);
   }
+  if v2 && metadata.impact == "none" {
+    bail!("openspec-release@2 does not support impact: none; use a non-release schema");
+  }
   if !matches!(
     metadata.impact.as_str(),
     "none" | "patch" | "minor" | "major"
@@ -473,8 +922,30 @@ fn parse_artifact(source: &str) -> Result<Artifact> {
   }
   if !matches!(metadata.visibility.as_str(), "public" | "internal")
     || metadata.components.is_empty()
+    || metadata
+      .components
+      .iter()
+      .any(|component| !valid_component(component))
+    || metadata.components.iter().collect::<BTreeSet<_>>().len() != metadata.components.len()
   {
     bail!("invalid release visibility or components");
+  }
+  if metadata.unit_impacts.iter().any(|(unit, impact)| {
+    !valid_id(unit) || !matches!(impact.as_str(), "patch" | "minor" | "major")
+  }) {
+    bail!("unit_impacts must map unit ids to patch, minor or major");
+  }
+  if metadata
+    .dependency_updates
+    .iter()
+    .any(|(unit, dependencies)| {
+      !valid_id(unit)
+        || dependencies.is_empty()
+        || dependencies.iter().any(|dependency| !valid_id(dependency))
+        || dependencies.iter().collect::<BTreeSet<_>>().len() != dependencies.len()
+    })
+  {
+    bail!("dependency_updates must map unit ids to dependency id arrays");
   }
   let content = body[end + 4..].trim();
   let mut lines = content.lines();
@@ -492,9 +963,134 @@ fn parse_artifact(source: &str) -> Result<Artifact> {
     category: metadata.category,
     impact: metadata.impact,
     visibility: metadata.visibility,
+    components: metadata.components,
+    unit_impacts: metadata.unit_impacts,
+    dependency_updates: metadata.dependency_updates,
+    source_id: None,
     title,
     body,
   })
+}
+
+#[derive(Deserialize)]
+struct OpenSpecMetadata {
+  schema: Option<String>,
+}
+#[derive(Deserialize)]
+struct OpenSpecSchema {
+  #[serde(default)]
+  artifacts: Vec<OpenSpecSchemaArtifact>,
+}
+#[derive(Deserialize)]
+struct OpenSpecSchemaArtifact {
+  id: Option<String>,
+  generates: Option<String>,
+}
+
+fn classify_change(
+  openspec_root: &Path,
+  source_id: &str,
+  change: &Path,
+  id: &str,
+) -> Result<Option<Artifact>> {
+  let schema = read_yaml_schema(&change.join(".openspec.yaml"))?
+    .or(read_yaml_schema(&openspec_root.join("config.yaml"))?)
+    .with_context(|| format!("OpenSpec change {id} has no resolvable schema"))?;
+  let schema_path = openspec_root
+    .join("schemas")
+    .join(&schema)
+    .join("schema.yaml");
+  let definition: OpenSpecSchema = serde_saphyr::from_str(
+    &fs::read_to_string(&schema_path)
+      .with_context(|| format!("OpenSpec change {id} references unknown schema: {schema}"))?,
+  )?;
+  let releases = definition
+    .artifacts
+    .iter()
+    .filter(|artifact| artifact.id.as_deref() == Some("release"))
+    .collect::<Vec<_>>();
+  if releases
+    .iter()
+    .any(|artifact| artifact.generates.as_deref() != Some("release.md"))
+  {
+    bail!("OpenSpec schema {schema} uses an unsupported release artifact path");
+  }
+  let release_path = change.join("release.md");
+  if releases.is_empty() {
+    if release_path.exists() {
+      bail!("non-release OpenSpec change {id} must not contain release.md");
+    }
+    return Ok(None);
+  }
+  if releases.len() != 1 || !release_path.exists() {
+    bail!("release-bearing OpenSpec change {id} requires release.md");
+  }
+  let mut artifact = parse_artifact(&fs::read_to_string(release_path)?, true)?;
+  artifact.source_id = Some(source_id.to_owned());
+  Ok(Some(artifact))
+}
+
+fn read_yaml_schema(path: &Path) -> Result<Option<String>> {
+  if !path.exists() {
+    return Ok(None);
+  }
+  let metadata: OpenSpecMetadata = serde_saphyr::from_str(&fs::read_to_string(path)?)?;
+  Ok(metadata.schema.filter(|schema| !schema.trim().is_empty()))
+}
+
+fn artifact_matches(configuration: &Configuration, artifact: &Artifact) -> bool {
+  configuration.selectors.iter().any(|selector| {
+    artifact.source_id.as_deref() == Some(&selector.source)
+      && selector.components.as_ref().is_none_or(|components| {
+        components
+          .iter()
+          .any(|component| artifact.components.contains(component))
+      })
+  })
+}
+
+fn active_matches(configuration: &Configuration, change: &Path) -> Result<bool> {
+  let Some((source_id, source_path)) = configuration
+    .openspec
+    .iter()
+    .find(|(_, path)| change.starts_with(configuration.root.join(path)))
+  else {
+    return Ok(false);
+  };
+  let id = change
+    .file_name()
+    .and_then(|value| value.to_str())
+    .context("active OpenSpec change has invalid id")?;
+  Ok(
+    classify_change(&configuration.root.join(source_path), source_id, change, id)?
+      .is_some_and(|artifact| artifact_matches(configuration, &artifact)),
+  )
+}
+
+fn valid_id(id: &str) -> bool {
+  !id.is_empty()
+    && id
+      .chars()
+      .next()
+      .is_some_and(|value| value.is_ascii_alphanumeric())
+    && id
+      .chars()
+      .all(|value| value.is_ascii_alphanumeric() || matches!(value, '.' | '_' | '-'))
+}
+
+fn valid_component(id: &str) -> bool {
+  let pieces = id.split(':').collect::<Vec<_>>();
+  !pieces.is_empty()
+    && pieces.len() <= 2
+    && pieces.iter().all(|piece| {
+      !piece.is_empty()
+        && piece.split('-').all(|segment| {
+          !segment.is_empty()
+            && segment
+              .chars()
+              .all(|value| value.is_ascii_lowercase() || value.is_ascii_digit())
+        })
+    })
 }
 
 fn read_manifests(configuration: &Configuration) -> Result<Vec<ReleaseManifest>> {
@@ -519,6 +1115,57 @@ fn read_manifests(configuration: &Configuration) -> Result<Vec<ReleaseManifest>>
     }
     if manifest.baseline != Some(true) && manifest.changes.is_empty() {
       bail!("non-baseline release must assign changes");
+    }
+    if configuration.adapter == "openspec-release@2" {
+      if manifest.format != Some(2) {
+        bail!("release manifest must use format 2");
+      }
+      if manifest.unit.as_deref() != configuration.unit.as_deref() {
+        bail!(
+          "release manifest unit must be {}",
+          configuration.unit.as_deref().unwrap_or("root")
+        );
+      }
+      let expected = configuration.dependencies.keys().collect::<BTreeSet<_>>();
+      let actual = manifest.dependencies.keys().collect::<BTreeSet<_>>();
+      if actual != expected {
+        bail!(
+          "release {} dependency pins do not match unit {}",
+          manifest.version,
+          configuration.unit.as_deref().unwrap_or("root")
+        );
+      }
+      for (dependency, version) in &manifest.dependencies {
+        let dependency_state = configuration
+          .dependencies
+          .get(dependency)
+          .context("unknown release dependency")?;
+        let path = configuration
+          .root
+          .join(&dependency_state.releases)
+          .join(format!("{version}.yaml"));
+        let candidate: ReleaseManifest =
+          serde_saphyr::from_str(&fs::read_to_string(path).with_context(|| {
+            format!(
+              "release {} pins unknown {dependency} version {version}",
+              manifest.version
+            )
+          })?)?;
+        if candidate.format != Some(2)
+          || candidate.unit.as_deref() != Some(dependency)
+          || candidate.version != *version
+        {
+          bail!(
+            "release {} pins unknown {dependency} version {version}",
+            manifest.version
+          );
+        }
+      }
+    } else if manifest.format.is_some()
+      || manifest.unit.is_some()
+      || !manifest.dependencies.is_empty()
+    {
+      bail!("openspec-release@1 manifest contains v2 fields");
     }
     manifests.push((version, manifest));
   }
@@ -710,6 +1357,66 @@ fn validate_versions(configuration: &Configuration, expected: &str) -> Result<()
   Ok(())
 }
 
+fn dependency_pins(configuration: &Configuration) -> Result<BTreeMap<String, String>> {
+  configuration
+    .dependencies
+    .keys()
+    .map(|dependency| {
+      Ok((
+        dependency.clone(),
+        latest_dependency_version(configuration, dependency)?,
+      ))
+    })
+    .collect()
+}
+
+fn pending_dependencies(
+  configuration: &Configuration,
+  pinned: &BTreeMap<String, String>,
+) -> Result<BTreeMap<String, String>> {
+  let mut pending = BTreeMap::new();
+  for dependency in configuration.dependencies.keys() {
+    let latest = latest_dependency_version(configuration, dependency)?;
+    if pinned.get(dependency) != Some(&latest) {
+      pending.insert(dependency.clone(), latest);
+    }
+  }
+  Ok(pending)
+}
+
+fn latest_dependency_version(configuration: &Configuration, dependency: &str) -> Result<String> {
+  let state = configuration
+    .dependencies
+    .get(dependency)
+    .context("unknown release dependency")?;
+  let directory = configuration.root.join(&state.releases);
+  let mut versions = Vec::new();
+  if directory.exists() {
+    for entry in fs::read_dir(directory)? {
+      let entry = entry?;
+      if entry.path().extension().and_then(|value| value.to_str()) != Some("yaml") {
+        continue;
+      }
+      let manifest: ReleaseManifest = serde_saphyr::from_str(&fs::read_to_string(entry.path())?)?;
+      if manifest.format == Some(2) && manifest.unit.as_deref() == Some(dependency) {
+        versions.push((parse_stable_version(&manifest.version)?, manifest.version));
+      }
+    }
+  }
+  versions.sort_by(|(left, _), (right, _)| left.cmp(right));
+  let latest = versions
+    .last()
+    .map(|(_, version)| version.clone())
+    .with_context(|| format!("Release unit dependency has no manifest: {dependency}."))?;
+  for (path, adapter) in &state.version_sources {
+    let actual = read_version(&configuration.root, path, adapter)?;
+    if actual != latest {
+      bail!("Dependency version source must match {latest}: {path} contains {actual}.");
+    }
+  }
+  Ok(latest)
+}
+
 fn parse_stable_version(value: &str) -> Result<Version> {
   let version = Version::parse(value)
     .with_context(|| format!("Release version must be full stable SemVer: {value}."))?;
@@ -789,7 +1496,12 @@ mod tests {
       releases: "releases".to_owned(),
       changelog: "CHANGELOG.md".to_owned(),
       changelog_visibility: Visibility::Shared,
+      adapter: "openspec-release@1".to_owned(),
+      topology: ReleaseTopology::Single,
+      unit: None,
       openspec: Vec::new(),
+      selectors: Vec::new(),
+      dependencies: BTreeMap::new(),
       repository_url: None,
       tag_prefix: "v".to_owned(),
       version_sources: Vec::new(),
@@ -805,6 +1517,10 @@ mod tests {
           category: "fixed".to_owned(),
           impact: "patch".to_owned(),
           visibility: "public".to_owned(),
+          components: vec!["cli".to_owned()],
+          unit_impacts: BTreeMap::new(),
+          dependency_updates: BTreeMap::new(),
+          source_id: None,
           title: "Pending".to_owned(),
           body: "Pending change.".to_owned(),
         },
@@ -875,22 +1591,32 @@ mod tests {
           category: "added".to_owned(),
           impact: "minor".to_owned(),
           visibility: "public".to_owned(),
+          components: vec!["cli".to_owned()],
+          unit_impacts: BTreeMap::new(),
+          dependency_updates: BTreeMap::new(),
+          source_id: None,
           title: "Native CLI".to_owned(),
           body: "Run the native CLI.".to_owned(),
         },
       )]),
       manifests: vec![
         ReleaseManifest {
+          format: None,
+          unit: None,
           version: "1.0.0".to_owned(),
           date: "2026-08-20".to_owned(),
           changes: Vec::new(),
           baseline: Some(true),
+          dependencies: BTreeMap::new(),
         },
         ReleaseManifest {
+          format: None,
+          unit: None,
           version: "1.1.0".to_owned(),
           date: "2026-08-21".to_owned(),
           changes: vec!["new-cli".to_owned()],
           baseline: None,
+          dependencies: BTreeMap::new(),
         },
       ],
       assigned: BTreeSet::from(["new-cli".to_owned()]),
@@ -934,10 +1660,13 @@ mod tests {
     let state = State {
       archived: BTreeMap::new(),
       manifests: vec![ReleaseManifest {
+        format: None,
+        unit: None,
         version: "1.0.0".to_owned(),
         date: "2026-08-20".to_owned(),
         changes: Vec::new(),
         baseline: Some(true),
+        dependencies: BTreeMap::new(),
       }],
       assigned: BTreeSet::new(),
     };

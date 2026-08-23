@@ -35,17 +35,52 @@ const sourceConfigSchema = z.object({
   scope: z.string().trim().min(1).default('.'),
 }).strict();
 
-const releaseConfigSchema = z.object({
+const releaseVersionSourceSchema = z.object({
+  path: z.string().trim().min(1),
+  adapter: releaseVersionAdapterSchema,
+}).strict();
+
+const releaseV1ConfigSchema = z.object({
   adapter: z.literal('openspec-release@1'),
   manifests_path: z.string().trim().min(1),
   changelog_source: z.string().trim().min(1),
   tag_prefix: z.string().min(1).default('v'),
   repository_url: z.string().url().optional(),
-  version_sources: z.array(z.object({
-    path: z.string().trim().min(1),
-    adapter: releaseVersionAdapterSchema,
-  }).strict()).min(1),
+  version_sources: z.array(releaseVersionSourceSchema).min(1),
 }).strict();
+
+const releaseUnitSelectorSchema = z.object({
+  source: z.string().trim().min(1),
+  components: z.array(z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*(?::[a-z0-9]+(?:-[a-z0-9]+)*)?$/)).min(1).refine((components) => new Set(components).size === components.length, 'release selector components must be unique.').optional(),
+}).strict();
+
+const releaseUnitConfigSchema = z.object({
+  manifests_path: z.string().trim().min(1),
+  changelog_source: z.string().trim().min(1),
+  tag_prefix: z.string().min(1),
+  dependencies: z.array(z.string().trim().min(1)).refine((dependencies) => new Set(dependencies).size === dependencies.length, 'release unit dependencies must be unique.').default([]),
+  version_sources: z.array(releaseVersionSourceSchema).min(1),
+  selectors: z.array(releaseUnitSelectorSchema).min(1),
+}).strict();
+
+const releaseV2SingleConfigSchema = z.object({
+  adapter: z.literal('openspec-release@2'),
+  topology: z.literal('single').default('single'),
+  manifests_path: z.string().trim().min(1),
+  changelog_source: z.string().trim().min(1),
+  tag_prefix: z.string().min(1).default('v'),
+  repository_url: z.string().url().optional(),
+  version_sources: z.array(releaseVersionSourceSchema).min(1),
+}).strict();
+
+const releaseV2MultiConfigSchema = z.object({
+  adapter: z.literal('openspec-release@2'),
+  topology: z.enum(['independent', 'composed']),
+  repository_url: z.string().url().optional(),
+  units: z.record(z.string(), releaseUnitConfigSchema).refine((units) => Object.keys(units).length > 0, 'multi-unit release configuration requires at least one unit.'),
+}).strict();
+
+const releaseConfigSchema = z.union([releaseV1ConfigSchema, releaseV2SingleConfigSchema, releaseV2MultiConfigSchema]);
 
 const rawProjectConfigSchema = z
   .object({
@@ -110,22 +145,7 @@ const rawProjectConfigSchema = z
     };
     for (const id of Object.keys(config.sources)) visit(id);
 
-    if (config.release !== undefined) {
-      const changelog = config.sources[config.release.changelog_source];
-      if (changelog === undefined) {
-        context.addIssue({
-          code: 'custom',
-          message: `unknown release changelog source: ${config.release.changelog_source}`,
-          path: ['release', 'changelog_source'],
-        });
-      } else if (changelog.kind !== 'changelog' || changelog.management !== 'manage') {
-        context.addIssue({
-          code: 'custom',
-          message: 'release changelog source must be a managed changelog source.',
-          path: ['release', 'changelog_source'],
-        });
-      }
-    }
+    if (config.release !== undefined) validateRawReleaseConfig(config, context);
 
     const managedOpenSpec = Object.entries(config.sources).filter(
       ([, source]) => source.kind === 'openspec' && source.management === 'manage',
@@ -170,7 +190,17 @@ export type ProjectConfig = {
   release?: ProjectReleaseConfig;
 };
 
-export type ProjectReleaseConfig = {
+export type ReleaseTopology = 'single' | 'independent' | 'composed';
+export type ReleaseUnitSelector = { source: string; components?: string[] };
+export type ReleaseUnitConfig = {
+  manifestsPath: string;
+  changelogSource: string;
+  tagPrefix: string;
+  dependencies: string[];
+  versionSources: Array<{ path: string; adapter: ReleaseVersionAdapter }>;
+  selectors: ReleaseUnitSelector[];
+};
+export type ProjectReleaseConfigV1 = {
   adapter: 'openspec-release@1';
   manifestsPath: string;
   changelogSource: string;
@@ -178,6 +208,18 @@ export type ProjectReleaseConfig = {
   repositoryUrl?: string;
   versionSources: Array<{ path: string; adapter: ReleaseVersionAdapter }>;
 };
+export type ProjectReleaseConfigV2Single = Omit<ProjectReleaseConfigV1, 'adapter'> & {
+  adapter: 'openspec-release@2';
+  topology: 'single';
+};
+export type ProjectReleaseConfigV2Multi = {
+  adapter: 'openspec-release@2';
+  topology: 'independent' | 'composed';
+  repositoryUrl?: string;
+  units: Record<string, ReleaseUnitConfig>;
+};
+export type ProjectReleaseConfig = ProjectReleaseConfigV1 | ProjectReleaseConfigV2Single | ProjectReleaseConfigV2Multi;
+export type ReleaseSystem = ProjectReleaseConfig;
 
 export type ResolvedProject = {
   root: string;
@@ -231,10 +273,16 @@ export const parseProjectConfig = (
   );
 
   if (parsed.release !== undefined) {
-    for (const [label, path] of [
-      ['release manifests', parsed.release.manifests_path],
-      ...parsed.release.version_sources.map((source) => ['release version source', source.path] as const),
-    ] as const) {
+    const releasePaths = 'units' in parsed.release
+      ? Object.values(parsed.release.units).flatMap((unit) => [
+          ['release manifests', unit.manifests_path] as const,
+          ...unit.version_sources.map((source) => ['release version source', source.path] as const),
+        ])
+      : [
+          ['release manifests', parsed.release.manifests_path] as const,
+          ...parsed.release.version_sources.map((source) => ['release version source', source.path] as const),
+        ];
+    for (const [label, path] of releasePaths) {
       if (isAbsolute(path) && options.allowAbsolutePaths !== true) {
         throw new Error(`Absolute ${label} path requires an explicit external configuration.`);
       }
@@ -248,16 +296,7 @@ export const parseProjectConfig = (
     ...(parsed.tool === undefined ? {} : { tool: parsed.tool }),
     ...(parsed.project === undefined ? {} : { project: parsed.project }),
     sources,
-    ...(parsed.release === undefined ? {} : {
-      release: {
-        adapter: parsed.release.adapter,
-        manifestsPath: parsed.release.manifests_path,
-        changelogSource: parsed.release.changelog_source,
-        tagPrefix: parsed.release.tag_prefix,
-        ...(parsed.release.repository_url === undefined ? {} : { repositoryUrl: parsed.release.repository_url }),
-        versionSources: parsed.release.version_sources,
-      },
-    }),
+    ...(parsed.release === undefined ? {} : { release: normalizeReleaseConfig(parsed.release) }),
   };
 };
 
@@ -282,17 +321,137 @@ export const renderProjectConfig = (config: ProjectConfig): string =>
         },
       ]),
     ),
-    ...(config.release === undefined ? {} : {
-      release: {
-        adapter: config.release.adapter,
-        manifests_path: config.release.manifestsPath,
-        changelog_source: config.release.changelogSource,
-        tag_prefix: config.release.tagPrefix,
-        ...(config.release.repositoryUrl === undefined ? {} : { repository_url: config.release.repositoryUrl }),
-        version_sources: config.release.versionSources,
-      },
-    }),
+    ...(config.release === undefined ? {} : { release: denormalizeReleaseConfig(config.release) }),
   });
+
+type RawProjectConfig = z.infer<typeof rawProjectConfigSchema>;
+type RawReleaseConfig = NonNullable<RawProjectConfig['release']>;
+
+function validateRawReleaseConfig(config: RawProjectConfig, context: z.RefinementCtx): void {
+  const release = config.release!;
+  const validateChangelog = (sourceId: string, path: PropertyKey[]): void => {
+    const changelog = config.sources[sourceId];
+    if (changelog === undefined) {
+      context.addIssue({ code: 'custom', message: `unknown release changelog source: ${sourceId}`, path });
+    } else if (changelog.kind !== 'changelog' || changelog.management !== 'manage') {
+      context.addIssue({ code: 'custom', message: 'release changelog source must be a managed changelog source.', path });
+    }
+  };
+  if (!('units' in release)) {
+    validateChangelog(release.changelog_source, ['release', 'changelog_source']);
+    return;
+  }
+
+  const unitIds = Object.keys(release.units);
+  const ownedPaths = new Map<string, string>();
+  const ownedChangelogs = new Map<string, string>();
+  const ownedPrefixes = new Map<string, string>();
+  const wholeSources = new Map<string, string>();
+  const componentOwners = new Map<string, string>();
+  let edgeCount = 0;
+  for (const [unitId, unit] of Object.entries(release.units)) {
+    if (!sourceIdPattern.test(unitId)) context.addIssue({ code: 'custom', message: 'release unit ids may contain letters, numbers, dot, underscore and hyphen.', path: ['release', 'units', unitId] });
+    validateChangelog(unit.changelog_source, ['release', 'units', unitId, 'changelog_source']);
+    claimUnique(ownedPaths, unit.manifests_path, unitId, 'release manifests path', context, ['release', 'units', unitId, 'manifests_path']);
+    claimUnique(ownedChangelogs, unit.changelog_source, unitId, 'release changelog source', context, ['release', 'units', unitId, 'changelog_source']);
+    claimUnique(ownedPrefixes, unit.tag_prefix, unitId, 'release tag prefix', context, ['release', 'units', unitId, 'tag_prefix']);
+    for (const source of unit.version_sources) claimUnique(ownedPaths, source.path, unitId, 'release-owned path', context, ['release', 'units', unitId, 'version_sources']);
+    if (release.topology === 'independent' && unit.dependencies.length > 0) context.addIssue({ code: 'custom', message: 'independent release units cannot declare dependencies.', path: ['release', 'units', unitId, 'dependencies'] });
+    edgeCount += unit.dependencies.length;
+    for (const dependency of unit.dependencies) if (!unitIds.includes(dependency)) context.addIssue({ code: 'custom', message: `unknown release unit dependency: ${dependency}`, path: ['release', 'units', unitId, 'dependencies'] });
+    for (const selector of unit.selectors) {
+      const source = config.sources[selector.source];
+      if (source === undefined || source.kind !== 'openspec') context.addIssue({ code: 'custom', message: `release selector source must be configured OpenSpec: ${selector.source}`, path: ['release', 'units', unitId, 'selectors'] });
+      const changelog = config.sources[unit.changelog_source];
+      if (changelog !== undefined && !changelog.from.includes(selector.source)) context.addIssue({ code: 'custom', message: `release selector source must be an authority of ${unit.changelog_source}: ${selector.source}`, path: ['release', 'units', unitId, 'selectors'] });
+      if (selector.components === undefined) {
+        const owner = wholeSources.get(selector.source) ?? [...componentOwners.keys()].find((key) => key.startsWith(`${selector.source}\0`));
+        if (owner !== undefined) context.addIssue({ code: 'custom', message: `release selector ownership overlaps for source ${selector.source}.`, path: ['release', 'units', unitId, 'selectors'] });
+        wholeSources.set(selector.source, unitId);
+      } else {
+        if (wholeSources.has(selector.source)) context.addIssue({ code: 'custom', message: `release selector ownership overlaps for source ${selector.source}.`, path: ['release', 'units', unitId, 'selectors'] });
+        for (const component of selector.components) claimUnique(componentOwners, `${selector.source}\0${component}`, unitId, 'release selector component', context, ['release', 'units', unitId, 'selectors']);
+      }
+    }
+  }
+  if (release.topology === 'composed') {
+    if (edgeCount === 0) context.addIssue({ code: 'custom', message: 'composed release topology requires at least one dependency edge.', path: ['release', 'topology'] });
+    validateUnitCycles(release.units, context);
+  }
+}
+
+function claimUnique(owners: Map<string, string>, value: string, unitId: string, label: string, context: z.RefinementCtx, path: PropertyKey[]): void {
+  const owner = owners.get(value);
+  if (owner !== undefined) context.addIssue({ code: 'custom', message: `${label} must be unique across release units: ${value}`, path });
+  owners.set(value, unitId);
+}
+
+function validateUnitCycles(units: Record<string, z.infer<typeof releaseUnitConfigSchema>>, context: z.RefinementCtx): void {
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const visit = (id: string): void => {
+    if (visiting.has(id)) {
+      context.addIssue({ code: 'custom', message: `release unit dependency cycle includes ${id}.`, path: ['release', 'units', id, 'dependencies'] });
+      return;
+    }
+    if (visited.has(id)) return;
+    visiting.add(id);
+    for (const dependency of units[id]?.dependencies ?? []) if (dependency in units) visit(dependency);
+    visiting.delete(id);
+    visited.add(id);
+  };
+  for (const id of Object.keys(units)) visit(id);
+}
+
+function normalizeReleaseConfig(release: RawReleaseConfig): ProjectReleaseConfig {
+  if ('units' in release) return {
+    adapter: release.adapter,
+    topology: release.topology,
+    ...(release.repository_url === undefined ? {} : { repositoryUrl: release.repository_url }),
+    units: Object.fromEntries(Object.entries(release.units).map(([id, unit]) => [id, {
+      manifestsPath: unit.manifests_path,
+      changelogSource: unit.changelog_source,
+      tagPrefix: unit.tag_prefix,
+      dependencies: unit.dependencies,
+      versionSources: unit.version_sources,
+      selectors: unit.selectors,
+    }])),
+  };
+  return {
+    adapter: release.adapter,
+    ...('topology' in release ? { topology: release.topology } : {}),
+    manifestsPath: release.manifests_path,
+    changelogSource: release.changelog_source,
+    tagPrefix: release.tag_prefix,
+    ...(release.repository_url === undefined ? {} : { repositoryUrl: release.repository_url }),
+    versionSources: release.version_sources,
+  } as ProjectReleaseConfig;
+}
+
+function denormalizeReleaseConfig(release: ProjectReleaseConfig): Record<string, unknown> {
+  if ('units' in release) return {
+    adapter: release.adapter,
+    topology: release.topology,
+    ...(release.repositoryUrl === undefined ? {} : { repository_url: release.repositoryUrl }),
+    units: Object.fromEntries(Object.entries(release.units).map(([id, unit]) => [id, {
+      manifests_path: unit.manifestsPath,
+      changelog_source: unit.changelogSource,
+      tag_prefix: unit.tagPrefix,
+      ...(unit.dependencies.length === 0 ? {} : { dependencies: unit.dependencies }),
+      version_sources: unit.versionSources,
+      selectors: unit.selectors,
+    }])),
+  };
+  return {
+    adapter: release.adapter,
+    ...('topology' in release ? { topology: release.topology } : {}),
+    manifests_path: release.manifestsPath,
+    changelog_source: release.changelogSource,
+    tag_prefix: release.tagPrefix,
+    ...(release.repositoryUrl === undefined ? {} : { repository_url: release.repositoryUrl }),
+    version_sources: release.versionSources,
+  };
+}
 
 type DiscoveredProjectConfig = { active: string | null; shadowed: string[] };
 

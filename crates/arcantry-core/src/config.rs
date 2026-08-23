@@ -80,18 +80,56 @@ pub struct ReleaseVersionSource {
   pub adapter: String,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ReleaseTopology {
+  #[default]
+  Single,
+  Independent,
+  Composed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReleaseUnitSelector {
+  pub source: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub components: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReleaseUnitConfig {
+  pub manifests_path: String,
+  pub changelog_source: String,
+  pub tag_prefix: String,
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub dependencies: Vec<String>,
+  pub version_sources: Vec<ReleaseVersionSource>,
+  pub selectors: Vec<ReleaseUnitSelector>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ReleaseConfig {
   pub adapter: String,
-  pub manifests_path: String,
-  pub changelog_source: String,
-  #[serde(default = "default_tag_prefix")]
-  pub tag_prefix: String,
+  #[serde(default, skip_serializing_if = "is_single_topology")]
+  pub topology: ReleaseTopology,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub manifests_path: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub changelog_source: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub tag_prefix: Option<String>,
   #[serde(default)]
   pub repository_url: Option<String>,
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub version_sources: Vec<ReleaseVersionSource>,
+  #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+  pub units: BTreeMap<String, ReleaseUnitConfig>,
 }
+
+pub type ReleaseSystem = ReleaseConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -162,7 +200,10 @@ pub fn parse_project_config(
   tool_version: Option<&str>,
   allow_absolute_paths: bool,
 ) -> Result<ProjectConfig> {
-  let config: ProjectConfig =
+  let document = content
+    .parse::<DocumentMut>()
+    .context("Invalid Arcantry TOML configuration.")?;
+  let mut config: ProjectConfig =
     toml_edit::de::from_str(content).context("Invalid Arcantry TOML configuration.")?;
   if config.config_version != PROJECT_CONFIG_VERSION {
     bail!("config_version must be 1.");
@@ -282,17 +323,19 @@ pub fn parse_project_config(
     }
   }
   if let Some(release) = &config.release {
-    if release.adapter != "openspec-release@1" {
-      bail!("release.adapter must be openspec-release@1.");
+    if !matches!(
+      release.adapter.as_str(),
+      "openspec-release@1" | "openspec-release@2"
+    ) {
+      bail!("release.adapter must be openspec-release@1 or openspec-release@2.");
     }
-    if release.manifests_path.trim().is_empty() {
-      bail!("release.manifests_path must not be empty.");
-    }
-    if release.tag_prefix.is_empty() {
-      bail!("release.tag_prefix must not be empty.");
-    }
-    if release.version_sources.is_empty() {
-      bail!("release.version_sources must not be empty.");
+    if release.adapter == "openspec-release@1"
+      && document
+        .get("release")
+        .and_then(toml_edit::Item::as_table_like)
+        .is_some_and(|table| table.contains_key("topology") || table.contains_key("units"))
+    {
+      bail!("openspec-release@1 does not accept topology or units.");
     }
     if release
       .repository_url
@@ -301,43 +344,295 @@ pub fn parse_project_config(
     {
       bail!("release.repository_url must be a valid URL.");
     }
-    let Some(changelog) = config.sources.get(&release.changelog_source) else {
-      bail!(
-        "unknown release changelog source: {}",
-        release.changelog_source
-      );
-    };
-    if changelog.kind != SourceKind::Changelog || changelog.management != Management::Manage {
-      bail!("release changelog source must be a managed changelog source.");
-    }
-    if Path::new(&release.manifests_path).is_absolute() && !allow_absolute_paths {
-      bail!("Absolute release manifests path requires an explicit external configuration.");
-    }
-    if path_escapes_project(&release.manifests_path) {
-      bail!("Release manifests path must stay within the project.");
-    }
-    for source in &release.version_sources {
-      if source.path.trim().is_empty() {
-        bail!("release version source path must not be empty.");
+    if release.adapter == "openspec-release@1" || release.topology == ReleaseTopology::Single {
+      if release.adapter == "openspec-release@1" && release.topology != ReleaseTopology::Single {
+        bail!("openspec-release@1 supports only the single topology.");
       }
-      if !matches!(
-        source.adapter.as_str(),
-        "json-package@1" | "cargo-workspace@1"
-      ) {
+      if !release.units.is_empty() {
+        bail!("single release topology cannot define release.units.");
+      }
+      validate_release_paths(
+        &config.sources,
+        release.manifests_path.as_deref(),
+        release.changelog_source.as_deref(),
+        release.tag_prefix.as_deref().unwrap_or("v"),
+        &release.version_sources,
+        allow_absolute_paths,
+      )?;
+    } else {
+      validate_release_units(&config, release, allow_absolute_paths)?;
+    }
+  }
+  if let Some(release) = config.release.as_mut()
+    && release.units.is_empty()
+    && release.tag_prefix.is_none()
+  {
+    release.tag_prefix = Some("v".to_owned());
+  }
+  Ok(config)
+}
+
+fn validate_release_paths(
+  sources: &BTreeMap<String, RawSourceConfig>,
+  manifests_path: Option<&str>,
+  changelog_source: Option<&str>,
+  tag_prefix: &str,
+  version_sources: &[ReleaseVersionSource],
+  allow_absolute_paths: bool,
+) -> Result<()> {
+  let manifests_path = manifests_path.context("release.manifests_path must not be empty.")?;
+  if manifests_path.trim().is_empty() {
+    bail!("release.manifests_path must not be empty.");
+  }
+  let changelog_source = changelog_source.context("release.changelog_source must not be empty.")?;
+  let Some(changelog) = sources.get(changelog_source) else {
+    bail!("unknown release changelog source: {changelog_source}");
+  };
+  if changelog.kind != SourceKind::Changelog || changelog.management != Management::Manage {
+    bail!("release changelog source must be a managed changelog source.");
+  }
+  if tag_prefix.is_empty() {
+    bail!("release.tag_prefix must not be empty.");
+  }
+  if version_sources.is_empty() {
+    bail!("release.version_sources must not be empty.");
+  }
+  validate_release_path(manifests_path, "manifests", allow_absolute_paths)?;
+  for source in version_sources {
+    if source.path.trim().is_empty() {
+      bail!("release version source path must not be empty.");
+    }
+    if !matches!(
+      source.adapter.as_str(),
+      "json-package@1" | "cargo-workspace@1"
+    ) {
+      bail!(
+        "release version source adapter is not supported: {}",
+        source.adapter
+      );
+    }
+    validate_release_path(&source.path, "version source", allow_absolute_paths)?;
+  }
+  Ok(())
+}
+
+fn validate_release_path(path: &str, label: &str, allow_absolute_paths: bool) -> Result<()> {
+  if Path::new(path).is_absolute() && !allow_absolute_paths {
+    bail!("Absolute release {label} path requires an explicit external configuration.");
+  }
+  if path_escapes_project(path) {
+    let label = if label == "manifests" {
+      "manifests"
+    } else {
+      "version source"
+    };
+    bail!("Release {label} path must stay within the project.");
+  }
+  Ok(())
+}
+
+fn validate_release_units(
+  config: &ProjectConfig,
+  release: &ReleaseConfig,
+  allow_absolute_paths: bool,
+) -> Result<()> {
+  if release.units.is_empty() {
+    bail!("multi-unit release configuration requires at least one unit.");
+  }
+  if release.manifests_path.is_some()
+    || release.changelog_source.is_some()
+    || !release.version_sources.is_empty()
+  {
+    bail!(
+      "multi-unit release configuration must use release.units instead of flat release fields."
+    );
+  }
+  let ids: BTreeSet<_> = release.units.keys().cloned().collect();
+  let mut paths = BTreeMap::<String, String>::new();
+  let mut changelogs = BTreeMap::<String, String>::new();
+  let mut prefixes = BTreeMap::<String, String>::new();
+  let mut whole_sources = BTreeMap::<String, String>::new();
+  let mut component_owners = BTreeMap::<String, String>::new();
+  let mut edges = 0usize;
+  for (id, unit) in &release.units {
+    if !valid_source_id(id) {
+      bail!("release unit ids may contain letters, numbers, dot, underscore and hyphen.");
+    }
+    validate_release_paths(
+      &config.sources,
+      Some(&unit.manifests_path),
+      Some(&unit.changelog_source),
+      &unit.tag_prefix,
+      &unit.version_sources,
+      allow_absolute_paths,
+    )?;
+    claim_unique(
+      &mut paths,
+      &unit.manifests_path,
+      id,
+      "release manifests path",
+    )?;
+    claim_unique(
+      &mut changelogs,
+      &unit.changelog_source,
+      id,
+      "release changelog source",
+    )?;
+    claim_unique(&mut prefixes, &unit.tag_prefix, id, "release tag prefix")?;
+    for source in &unit.version_sources {
+      claim_unique(&mut paths, &source.path, id, "release-owned path")?;
+    }
+    if release.topology == ReleaseTopology::Independent && !unit.dependencies.is_empty() {
+      bail!("independent release units cannot declare dependencies.");
+    }
+    if unit.dependencies.iter().collect::<BTreeSet<_>>().len() != unit.dependencies.len() {
+      bail!("release unit dependencies must be unique: {id}");
+    }
+    edges += unit.dependencies.len();
+    for dependency in &unit.dependencies {
+      if !ids.contains(dependency) {
+        bail!("unknown release unit dependency: {dependency}");
+      }
+    }
+    if unit.selectors.is_empty() {
+      bail!("release unit selectors must not be empty: {id}");
+    }
+    let changelog = &config.sources[&unit.changelog_source];
+    for selector in &unit.selectors {
+      let Some(source) = config.sources.get(&selector.source) else {
         bail!(
-          "release version source adapter is not supported: {}",
-          source.adapter
+          "release selector source must be configured OpenSpec: {}",
+          selector.source
+        );
+      };
+      if source.kind != SourceKind::Openspec {
+        bail!(
+          "release selector source must be configured OpenSpec: {}",
+          selector.source
         );
       }
-      if Path::new(&source.path).is_absolute() && !allow_absolute_paths {
-        bail!("Absolute release version source path requires an explicit external configuration.");
+      if !changelog.from.contains(&selector.source) {
+        bail!(
+          "release selector source must be an authority of {}: {}",
+          unit.changelog_source,
+          selector.source
+        );
       }
-      if path_escapes_project(&source.path) {
-        bail!("Release version source path must stay within the project.");
+      match &selector.components {
+        None => {
+          if whole_sources.contains_key(&selector.source)
+            || component_owners
+              .keys()
+              .any(|key| key.starts_with(&format!("{}\0", selector.source)))
+          {
+            bail!(
+              "release selector ownership overlaps for source {}.",
+              selector.source
+            );
+          }
+          whole_sources.insert(selector.source.clone(), id.clone());
+        }
+        Some(components) => {
+          if components.is_empty()
+            || components
+              .iter()
+              .any(|component| !valid_component_id(component))
+          {
+            bail!("release selector components must be non-empty stable component ids.");
+          }
+          if whole_sources.contains_key(&selector.source) {
+            bail!(
+              "release selector ownership overlaps for source {}.",
+              selector.source
+            );
+          }
+          for component in components {
+            claim_unique(
+              &mut component_owners,
+              &format!("{}\0{component}", selector.source),
+              id,
+              "release selector component",
+            )?;
+          }
+        }
       }
     }
   }
-  Ok(config)
+  if release.topology == ReleaseTopology::Composed {
+    if edges == 0 {
+      bail!("composed release topology requires at least one dependency edge.");
+    }
+    validate_release_unit_cycles(&release.units)?;
+  }
+  Ok(())
+}
+
+fn claim_unique(
+  owners: &mut BTreeMap<String, String>,
+  value: &str,
+  unit: &str,
+  label: &str,
+) -> Result<()> {
+  if owners.contains_key(value) {
+    bail!("{label} must be unique across release units: {value}");
+  }
+  owners.insert(value.to_owned(), unit.to_owned());
+  Ok(())
+}
+
+fn validate_release_unit_cycles(units: &BTreeMap<String, ReleaseUnitConfig>) -> Result<()> {
+  fn visit<'a>(
+    id: &'a str,
+    units: &'a BTreeMap<String, ReleaseUnitConfig>,
+    visiting: &mut BTreeSet<&'a str>,
+    visited: &mut BTreeSet<&'a str>,
+  ) -> Result<()> {
+    if visiting.contains(id) {
+      bail!("release unit dependency cycle includes {id}.");
+    }
+    if visited.contains(id) {
+      return Ok(());
+    }
+    visiting.insert(id);
+    for dependency in &units[id].dependencies {
+      visit(dependency, units, visiting, visited)?;
+    }
+    visiting.remove(id);
+    visited.insert(id);
+    Ok(())
+  }
+  let mut visiting = BTreeSet::new();
+  let mut visited = BTreeSet::new();
+  for id in units.keys() {
+    visit(id, units, &mut visiting, &mut visited)?;
+  }
+  Ok(())
+}
+
+fn valid_source_id(id: &str) -> bool {
+  !id.is_empty()
+    && id
+      .chars()
+      .next()
+      .is_some_and(|value| value.is_ascii_alphanumeric())
+    && id
+      .chars()
+      .all(|value| value.is_ascii_alphanumeric() || matches!(value, '.' | '_' | '-'))
+}
+
+fn valid_component_id(id: &str) -> bool {
+  let mut parts = id.split(':');
+  let valid_part = |part: &str| {
+    !part.is_empty()
+      && part.split('-').all(|segment| {
+        !segment.is_empty()
+          && segment
+            .chars()
+            .all(|value| value.is_ascii_lowercase() || value.is_ascii_digit())
+      })
+  };
+  let first = parts.next().is_some_and(valid_part);
+  first && parts.next().is_none_or(valid_part) && parts.next().is_none()
 }
 
 fn validate_dependency_cycles(sources: &BTreeMap<String, RawSourceConfig>) -> Result<()> {
@@ -568,8 +863,8 @@ fn default_scope() -> String {
 fn is_default_scope(value: &str) -> bool {
   value == "."
 }
-fn default_tag_prefix() -> String {
-  "v".to_owned()
+fn is_single_topology(value: &ReleaseTopology) -> bool {
+  *value == ReleaseTopology::Single
 }
 fn valid_adapter(adapter: &str) -> bool {
   adapter.split_once('@').is_some_and(|(name, version)| {
@@ -830,5 +1125,75 @@ scope = "packages/app"
     assert!(updated.contains("management = \"observe\""));
     assert!(updated.contains("managed_from = \"1.0.0\""));
     assert!(!updated.contains("from = [\"intent\"]"));
+  }
+
+  #[test]
+  fn validates_composed_release_units() {
+    let content = format!(
+      r#"{CONFIGURED}
+[sources.core_history]
+kind = "changelog"
+path = "packages/core/CHANGELOG.md"
+management = "manage"
+adapter = "keep-a-changelog@2"
+from = ["intent"]
+
+[release]
+adapter = "openspec-release@2"
+topology = "composed"
+
+[release.units.core]
+manifests_path = "releases/core"
+changelog_source = "core_history"
+tag_prefix = "core/v"
+
+[[release.units.core.version_sources]]
+path = "packages/core/package.json"
+adapter = "json-package@1"
+
+[[release.units.core.selectors]]
+source = "intent"
+components = ["product:core"]
+
+[release.units.app]
+manifests_path = "releases/app"
+changelog_source = "history"
+tag_prefix = "app/v"
+dependencies = ["core"]
+
+[[release.units.app.version_sources]]
+path = "apps/app/package.json"
+adapter = "json-package@1"
+
+[[release.units.app.selectors]]
+source = "intent"
+components = ["product:app"]
+"#
+    );
+    let parsed = parse_project_config(&content, Some("1.0.0"), false).unwrap();
+    let release = parsed.release.unwrap();
+    assert_eq!(release.topology, ReleaseTopology::Composed);
+    assert_eq!(release.units["app"].dependencies, ["core"]);
+
+    let overlapping = content.replace(
+      "components = [\"product:app\"]",
+      "components = [\"product:core\"]",
+    );
+    let overlap_error = parse_project_config(&overlapping, None, false)
+      .unwrap_err()
+      .to_string();
+    assert!(
+      overlap_error.contains("ownership overlaps") || overlap_error.contains("must be unique")
+    );
+    let cycle = content.replace(
+      "tag_prefix = \"core/v\"",
+      "tag_prefix = \"core/v\"\ndependencies = [\"app\"]",
+    );
+    assert!(
+      parse_project_config(&cycle, None, false)
+        .unwrap_err()
+        .to_string()
+        .contains("dependency cycle")
+    );
   }
 }

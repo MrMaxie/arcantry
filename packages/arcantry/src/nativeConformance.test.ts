@@ -111,6 +111,80 @@ adapter = "json-package@1"
   return { left: await create(), right: await create() };
 };
 
+const multiReleasePair = async () => {
+  const create = async () => {
+    const root = await mkdtemp(join(tmpdir(), 'arcantry-native-release-units-'));
+    roots.push(root);
+    await mkdir(join(root, 'openspec/changes/archive'), { recursive: true });
+    await mkdir(join(root, 'openspec/schemas/arcantry'), { recursive: true });
+    await mkdir(join(root, 'openspec/schemas/notes'), { recursive: true });
+    await mkdir(join(root, 'openspec/changes/archive/2026-08-01-notes-only'), { recursive: true });
+    await mkdir(join(root, 'packages/core'), { recursive: true });
+    await mkdir(join(root, 'apps/app'), { recursive: true });
+    await writeFile(join(root, 'openspec/config.yaml'), 'schema: arcantry\n');
+    await writeFile(join(root, 'openspec/schemas/arcantry/schema.yaml'), 'name: arcantry\nversion: 1\nartifacts:\n  - id: release\n    generates: release.md\n');
+    await writeFile(join(root, 'openspec/schemas/notes/schema.yaml'), 'name: notes\nversion: 1\nartifacts: []\n');
+    await writeFile(join(root, 'openspec/changes/archive/2026-08-01-notes-only/.openspec.yaml'), 'schema: notes\n');
+    await writeFile(join(root, 'packages/core/package.json'), '{\n  "version": "1.0.0"\n}\n');
+    await writeFile(join(root, 'apps/app/package.json'), '{\n  "version": "2.0.0"\n}\n');
+    await writeFile(join(root, 'arcantry.toml'), `config_version = 1
+
+[sources.intent]
+kind = "openspec"
+path = "openspec"
+management = "manage"
+adapter = "openspec@1"
+
+[sources.core_history]
+kind = "changelog"
+path = "packages/core/CHANGELOG.md"
+management = "manage"
+adapter = "keep-a-changelog@2"
+from = ["intent"]
+
+[sources.app_history]
+kind = "changelog"
+path = "apps/app/CHANGELOG.md"
+management = "manage"
+adapter = "keep-a-changelog@2"
+from = ["intent"]
+
+[release]
+adapter = "openspec-release@2"
+topology = "composed"
+
+[release.units.core]
+manifests_path = "releases/core"
+changelog_source = "core_history"
+tag_prefix = "core/v"
+
+[[release.units.core.version_sources]]
+path = "packages/core/package.json"
+adapter = "json-package@1"
+
+[[release.units.core.selectors]]
+source = "intent"
+components = ["product:core"]
+
+[release.units.app]
+manifests_path = "releases/app"
+changelog_source = "app_history"
+tag_prefix = "app/v"
+dependencies = ["core"]
+
+[[release.units.app.version_sources]]
+path = "apps/app/package.json"
+adapter = "json-package@1"
+
+[[release.units.app.selectors]]
+source = "intent"
+components = ["product:app"]
+`);
+    return root;
+  };
+  return { left: await create(), right: await create() };
+};
+
 describe.runIf(nativeBinary !== undefined)('native CLI conformance', () => {
   it('matches missing and invalid arguments', async () => {
     const commands = [
@@ -425,6 +499,78 @@ Arcantry now runs through the native executable.
     for (const version of ['0.8.0-alpha', '0.8.0+build']) {
       const args = ['release', 'baseline', version, '--date', '2026-06-11'];
       expect(await runRust(right, args)).toEqual(await runTypeScript(left, args));
+    }
+  });
+
+  it('matches composed release-unit planning and dependency adoption', async () => {
+    const { left, right } = await multiReleasePair();
+    for (const args of [
+      ['release', 'baseline', '1.0.0', '--date', '2026-08-01', '--unit', 'core', '--apply'],
+      ['release', 'baseline', '2.0.0', '--date', '2026-08-01', '--unit', 'app', '--apply'],
+    ]) {
+      expect(await runRust(right, args)).toEqual(await runTypeScript(left, args));
+      expect(await files(right)).toEqual(await files(left));
+    }
+    for (const root of [left, right]) {
+      const core = join(root, 'openspec/changes/archive/2026-08-20-core-update');
+      await mkdir(core, { recursive: true });
+      await writeFile(join(core, '.openspec.yaml'), 'schema: arcantry\n');
+      await writeFile(join(core, 'release.md'), `---
+category: changed
+impact: patch
+visibility: public
+components:
+  - product:core
+---
+
+# Patch core runtime
+
+The core runtime now handles the composed scenario.
+`);
+    }
+    for (const args of [
+      ['release', 'plan', '--unit', 'core', '--json'],
+      ['release', 'cut', '--date', '2026-08-22', '--unit', 'core', '--apply'],
+    ]) {
+      const expected = await runTypeScript(left, args);
+      const actual = await runRust(right, args);
+      if (args.includes('--json')) expect(JSON.parse(actual.stdout)).toEqual(JSON.parse(expected.stdout));
+      else expect(actual).toEqual(expected);
+      expect(await files(right)).toEqual(await files(left));
+    }
+    expect(await runRust(right, ['release', 'check', '--sealed', '--unit', 'app'])).toEqual(
+      await runTypeScript(left, ['release', 'check', '--sealed', '--unit', 'app']),
+    );
+    for (const root of [left, right]) {
+      const app = join(root, 'openspec/changes/archive/2026-08-21-app-update');
+      await mkdir(app, { recursive: true });
+      await writeFile(join(app, '.openspec.yaml'), 'schema: arcantry\n');
+      await writeFile(join(app, 'release.md'), `---
+category: changed
+impact: patch
+dependency_updates:
+  app:
+    - core
+visibility: public
+components:
+  - product:app
+---
+
+# Update app integration
+
+The app adopts the newer core release explicitly.
+`);
+    }
+    for (const args of [
+      ['release', 'plan', '--unit', 'app', '--json'],
+      ['release', 'cut', '--date', '2026-08-23', '--unit', 'app', '--apply'],
+      ['release', 'check'],
+    ]) {
+      const expected = await runTypeScript(left, args);
+      const actual = await runRust(right, args);
+      if (args.includes('--json')) expect(JSON.parse(actual.stdout)).toEqual(JSON.parse(expected.stdout));
+      else expect(actual).toEqual(expected);
+      expect(await files(right)).toEqual(await files(left));
     }
   });
 

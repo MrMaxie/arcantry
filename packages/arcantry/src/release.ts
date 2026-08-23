@@ -3,8 +3,11 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { basename, join, resolve } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { changelogCategories, keepAChangelogPreamble, type ChangelogCategory } from './changelog.js';
+import type { ReleaseTopology, ReleaseUnitSelector } from './projectConfig.js';
 
 export const releaseAdapter = 'openspec-release@1' as const;
+export const releaseAdapterV2 = 'openspec-release@2' as const;
+export type ReleaseAdapter = typeof releaseAdapter | typeof releaseAdapterV2;
 export type Impact = 'none' | 'patch' | 'minor' | 'major';
 export type Category = 'added' | 'changed' | 'fixed' | 'deprecated' | 'removed' | 'security';
 export type ReleaseVisibility = 'public' | 'internal';
@@ -14,6 +17,9 @@ export interface ReleaseArtifact {
   impact: Impact;
   visibility: ReleaseVisibility;
   components: string[];
+  unitImpacts?: Record<string, Exclude<Impact, 'none'>>;
+  dependencyUpdates?: Record<string, string[]>;
+  sourceId?: string;
   title: string;
   body: string;
 }
@@ -25,6 +31,12 @@ export interface ReleaseManifest {
   baseline?: true;
 }
 
+export interface ReleaseManifestV2 extends ReleaseManifest {
+  format: 2;
+  unit: string;
+  dependencies?: Record<string, string>;
+}
+
 export interface ReleaseState {
   archived: Map<string, ReleaseArtifact>;
   manifests: ReleaseManifest[];
@@ -32,13 +44,37 @@ export interface ReleaseState {
 }
 
 export interface ReleaseAdapterOptions {
+  adapter?: ReleaseAdapter;
+  topology?: ReleaseTopology;
+  unit?: string;
   openSpecPaths?: string[];
+  openSpecSources?: OpenSpecReleaseSource[];
+  selectors?: ReleaseUnitSelector[];
+  dependencies?: Record<string, ReleaseDependencyState>;
   releasesPath?: string;
   changelogPath?: string;
   distributionManifestPaths?: string[];
   repositoryUrl?: string;
   tagPrefix?: string;
   versionSources?: ReleaseVersionSource[];
+}
+
+export interface OpenSpecReleaseSource { id: string; path: string }
+export interface ReleaseDependencyState {
+  releasesPath: string;
+  versionSources: ReleaseVersionSource[];
+}
+
+export interface ReleasePlan {
+  current: string;
+  next: string;
+  impact: Impact;
+  changes: string[];
+  unit?: string;
+  topology?: ReleaseTopology;
+  dependencies?: Record<string, string>;
+  pendingDependencies?: Record<string, string>;
+  ready?: boolean;
 }
 
 export interface ReleaseVersionSource {
@@ -70,6 +106,7 @@ const categoryHeadings: Record<Category, ChangelogCategory> = {
 const impacts: Impact[] = ['none', 'patch', 'minor', 'major'];
 const visibilities: ReleaseVisibility[] = ['public', 'internal'];
 const componentPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*(?::[a-z0-9]+(?:-[a-z0-9]+)*)?$/;
+const sourceIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const semVerPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -79,7 +116,7 @@ export function isReleaseDate(value: string): boolean {
   return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
 }
 
-export function parseReleaseArtifact(source: string): ReleaseArtifact {
+export function parseReleaseArtifact(source: string, adapter: ReleaseAdapter = releaseAdapter): ReleaseArtifact {
   const match = source.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
   if (!match) throw new Error('release.md must start with YAML frontmatter');
 
@@ -88,14 +125,19 @@ export function parseReleaseArtifact(source: string): ReleaseArtifact {
   const impact = metadata.impact as Impact;
   const visibility = metadata.visibility as ReleaseVisibility;
   const components = metadata.components;
+  const unitImpacts = metadata.unit_impacts ?? {};
+  const dependencyUpdates = metadata.dependency_updates ?? {};
 
   if (!categories.includes(category)) throw new Error(`invalid release category: ${String(category)}`);
   if (!impacts.includes(impact)) throw new Error(`invalid release impact: ${String(impact)}`);
+  if (adapter === releaseAdapterV2 && impact === 'none') throw new Error('openspec-release@2 does not support impact: none; use a non-release schema');
   if (!visibilities.includes(visibility)) throw new Error(`invalid release visibility: ${String(visibility)}`);
   if (!Array.isArray(components) || components.length === 0 || !components.every((component) => typeof component === 'string' && componentPattern.test(component))) {
     throw new Error('release components must be a non-empty array of component identifiers');
   }
   if (new Set(components).size !== components.length) throw new Error('release components must be unique');
+  if (!isImpactMap(unitImpacts)) throw new Error('unit_impacts must map unit ids to patch, minor or major');
+  if (!isDependencyUpdates(dependencyUpdates)) throw new Error('dependency_updates must map unit ids to unique dependency id arrays');
 
   const content = match[2].trim();
   const firstLineEnd = content.indexOf('\n');
@@ -106,7 +148,31 @@ export function parseReleaseArtifact(source: string): ReleaseArtifact {
   if (!title) throw new Error('release.md must contain a level-one title');
   const body = firstLineEnd === -1 ? '' : content.slice(firstLineEnd + 1).trim();
   if (!body) throw new Error('release.md must describe the delivered outcome');
-  return { category, impact, visibility, components, title, body };
+  return {
+    category,
+    impact,
+    visibility,
+    components,
+    ...(Object.keys(unitImpacts).length === 0 ? {} : { unitImpacts }),
+    ...(Object.keys(dependencyUpdates).length === 0 ? {} : { dependencyUpdates }),
+    title,
+    body,
+  };
+}
+
+function isImpactMap(value: unknown): value is Record<string, Exclude<Impact, 'none'>> {
+  return isRecord(value) && Object.entries(value).every(([unit, impact]) => sourceIdPattern.test(unit) && ['patch', 'minor', 'major'].includes(String(impact)));
+}
+
+function isDependencyUpdates(value: unknown): value is Record<string, string[]> {
+  return isRecord(value) && Object.entries(value).every(([unit, dependencies]) =>
+    sourceIdPattern.test(unit) && Array.isArray(dependencies) && dependencies.length > 0
+    && dependencies.every((dependency) => typeof dependency === 'string' && sourceIdPattern.test(dependency))
+    && new Set(dependencies).size === dependencies.length);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export function highestImpact(values: Impact[]): Impact {
@@ -148,11 +214,60 @@ export function readArchivedChanges(root = process.cwd(), openSpecPaths = ['open
   return result;
 }
 
-export function readManifests(root = process.cwd(), releasesPath = 'releases'): ReleaseManifest[] {
+export function readSchemaAwareChanges(
+  root: string,
+  sources: OpenSpecReleaseSource[],
+  location: 'archive' | 'active',
+): Map<string, ReleaseArtifact> {
+  const result = new Map<string, ReleaseArtifact>();
+  for (const source of sources) {
+    const openSpecRoot = resolve(root, source.path);
+    const changesRoot = join(openSpecRoot, 'changes', ...(location === 'archive' ? ['archive'] : []));
+    if (!existsSync(changesRoot)) continue;
+    const fallbackSchema = readSourceSchema(openSpecRoot);
+    for (const directory of readdirSync(changesRoot, { withFileTypes: true })) {
+      if (!directory.isDirectory() || (location === 'active' && directory.name === 'archive')) continue;
+      const changeId = location === 'archive' ? changeIdFromArchiveDirectory(directory.name) : directory.name;
+      if (result.has(changeId)) throw new Error(`duplicate ${location === 'archive' ? 'archived ' : ''}change id: ${changeId}`);
+      const changeRoot = join(changesRoot, directory.name);
+      const schema = readChangeSchema(changeRoot) ?? fallbackSchema;
+      if (schema === undefined) throw new Error(`OpenSpec change ${changeId} has no resolvable schema`);
+      const schemaPath = join(openSpecRoot, 'schemas', schema, 'schema.yaml');
+      if (!existsSync(schemaPath)) throw new Error(`OpenSpec change ${changeId} references unknown schema: ${schema}`);
+      const schemaDefinition = parseYaml(readFileSync(schemaPath, 'utf8')) as { artifacts?: Array<{ id?: unknown; generates?: unknown }> };
+      const releaseArtifacts = (schemaDefinition.artifacts ?? []).filter((artifact) => artifact.id === 'release');
+      if (releaseArtifacts.some((artifact) => artifact.generates !== 'release.md')) throw new Error(`OpenSpec schema ${schema} uses an unsupported release artifact path`);
+      const releasePath = join(changeRoot, 'release.md');
+      if (releaseArtifacts.length === 0) {
+        if (existsSync(releasePath)) throw new Error(`non-release OpenSpec change ${changeId} must not contain release.md`);
+        continue;
+      }
+      if (releaseArtifacts.length !== 1 || !existsSync(releasePath)) throw new Error(`release-bearing OpenSpec change ${changeId} requires release.md`);
+      result.set(changeId, { ...parseReleaseArtifact(readFileSync(releasePath, 'utf8'), releaseAdapterV2), sourceId: source.id });
+    }
+  }
+  return result;
+}
+
+function readSourceSchema(openSpecRoot: string): string | undefined {
+  const path = join(openSpecRoot, 'config.yaml');
+  if (!existsSync(path)) return undefined;
+  const parsed = parseYaml(readFileSync(path, 'utf8')) as { schema?: unknown };
+  return typeof parsed.schema === 'string' && parsed.schema.trim() !== '' ? parsed.schema : undefined;
+}
+
+function readChangeSchema(changeRoot: string): string | undefined {
+  const path = join(changeRoot, '.openspec.yaml');
+  if (!existsSync(path)) return undefined;
+  const parsed = parseYaml(readFileSync(path, 'utf8')) as { schema?: unknown };
+  return typeof parsed.schema === 'string' && parsed.schema.trim() !== '' ? parsed.schema : undefined;
+}
+
+export function readManifests(root = process.cwd(), releasesPath = 'releases', expectedUnit?: string): ReleaseManifest[] {
   const directory = resolve(root, releasesPath);
   if (!existsSync(directory)) return [];
   const manifests = readdirSync(directory).filter((file) => file.endsWith('.yaml')).map((file) => {
-    const data = parseYaml(readFileSync(join(directory, file), 'utf8')) as Partial<ReleaseManifest>;
+    const data = parseYaml(readFileSync(join(directory, file), 'utf8')) as Partial<ReleaseManifestV2>;
     if (!data || typeof data.version !== 'string' || !semVerPattern.test(data.version)) throw new Error(`invalid release version: ${file}`);
     if (basename(file, '.yaml') !== data.version) throw new Error(`release manifest filename must match version: ${file}`);
     if (typeof data.date !== 'string' || !isReleaseDate(data.date)) throw new Error(`invalid release date: ${file}`);
@@ -161,6 +276,15 @@ export function readManifests(root = process.cwd(), releasesPath = 'releases'): 
     if (data.baseline !== undefined && data.baseline !== true) throw new Error(`invalid release baseline marker: ${file}`);
     if (data.baseline === true && data.changes.length > 0) throw new Error(`baseline release cannot assign changes: ${file}`);
     if (data.baseline !== true && data.changes.length === 0) throw new Error(`non-baseline release must assign changes: ${file}`);
+    if (expectedUnit !== undefined) {
+      if (data.format !== 2) throw new Error(`release manifest must use format 2: ${file}`);
+      if (data.unit !== expectedUnit) throw new Error(`release manifest unit must be ${expectedUnit}: ${file}`);
+      if (data.dependencies !== undefined && (!isRecord(data.dependencies) || !Object.values(data.dependencies).every((version) => typeof version === 'string' && semVerPattern.test(version)))) {
+        throw new Error(`invalid release dependencies: ${file}`);
+      }
+    } else if (data.format !== undefined || data.unit !== undefined || data.dependencies !== undefined) {
+      throw new Error(`openspec-release@1 manifest contains v2 fields: ${file}`);
+    }
     return data as ReleaseManifest;
   }).sort((left, right) => compareSemVer(left.version, right.version));
   const baselines = manifests.filter((manifest) => manifest.baseline === true);
@@ -179,25 +303,80 @@ function compareSemVer(left: string, right: string): number {
 }
 
 export function validateReleaseState(root = process.cwd(), options: ReleaseAdapterOptions = {}): ReleaseState {
-  const archived = readArchivedChanges(root, options.openSpecPaths);
-  const manifests = readManifests(root, options.releasesPath);
+  const allArchived = options.adapter === releaseAdapterV2
+    ? readSchemaAwareChanges(root, options.openSpecSources ?? [], 'archive')
+    : readArchivedChanges(root, options.openSpecPaths);
+  const archived = options.adapter === releaseAdapterV2
+    ? new Map([...allArchived].filter(([, artifact]) => matchesSelectors(artifact, options.selectors ?? [])))
+    : allArchived;
+  const manifests = readManifests(root, options.releasesPath, options.adapter === releaseAdapterV2 ? options.unit : undefined);
   const assigned = new Set<string>();
   for (const manifest of manifests) for (const changeId of manifest.changes) {
     if (!archived.has(changeId)) throw new Error(`release ${manifest.version} references unknown archived change: ${changeId}`);
     if (assigned.has(changeId)) throw new Error(`archived change assigned more than once: ${changeId}`);
     assigned.add(changeId);
   }
+  if (options.adapter === releaseAdapterV2) validateManifestDependencies(root, manifests as ReleaseManifestV2[], options);
   return { archived, manifests, assigned };
 }
 
-export function planRelease(root = process.cwd(), options: ReleaseAdapterOptions = {}): { current: string; next: string; impact: Impact; changes: string[] } {
+function matchesSelectors(artifact: ReleaseArtifact, selectors: ReleaseUnitSelector[]): boolean {
+  return selectors.some((selector) => selector.source === artifact.sourceId
+    && (selector.components === undefined || selector.components.some((component) => artifact.components.includes(component))));
+}
+
+function validateManifestDependencies(root: string, manifests: ReleaseManifestV2[], options: ReleaseAdapterOptions): void {
+  const expectedIds = Object.keys(options.dependencies ?? {}).sort();
+  for (const manifest of manifests) {
+    const actualIds = Object.keys(manifest.dependencies ?? {}).sort();
+    if (actualIds.join('\0') !== expectedIds.join('\0')) throw new Error(`release ${manifest.version} dependency pins do not match unit ${options.unit}`);
+    for (const [dependency, version] of Object.entries(manifest.dependencies ?? {})) {
+      const state = options.dependencies?.[dependency];
+      if (state === undefined || !readManifests(root, state.releasesPath, dependency).some((candidate) => candidate.version === version)) {
+        throw new Error(`release ${manifest.version} pins unknown ${dependency} version ${version}`);
+      }
+    }
+  }
+}
+
+export function planRelease(root = process.cwd(), options: ReleaseAdapterOptions = {}): ReleasePlan {
   const { archived, manifests, assigned } = validateReleaseState(root, options);
   const changes = [...archived.keys()].filter((id) => !assigned.has(id)).sort();
   const unversioned = changes.filter((id) => archived.get(id)!.impact === 'none');
   if (unversioned.length > 0) throw new Error(`completed changes must declare a SemVer impact: ${unversioned.join(', ')}`);
-  const impact = highestImpact(changes.map((id) => archived.get(id)!.impact));
+  const impact = highestImpact(changes.map((id) => effectiveImpact(archived.get(id)!, options.unit)));
   const current = manifests.at(-1)?.version ?? '0.0.0';
-  return { current, next: bumpVersion(current, impact), impact, changes };
+  if (options.adapter !== releaseAdapterV2) return { current, next: bumpVersion(current, impact), impact, changes };
+  const dependencies = (manifests.at(-1) as ReleaseManifestV2 | undefined)?.dependencies ?? {};
+  const pendingDependencies = latestDependencyVersions(root, options, dependencies);
+  const acknowledged = new Set(changes.flatMap((id) => archived.get(id)!.dependencyUpdates?.[options.unit ?? ''] ?? []));
+  const ready = changes.length > 0 && Object.keys(pendingDependencies).every((dependency) => acknowledged.has(dependency));
+  return {
+    current,
+    next: bumpVersion(current, impact),
+    impact,
+    changes,
+    unit: options.unit,
+    topology: options.topology ?? 'single',
+    dependencies,
+    pendingDependencies,
+    ready,
+  };
+}
+
+function effectiveImpact(artifact: ReleaseArtifact, unit?: string): Impact {
+  return unit === undefined ? artifact.impact : artifact.unitImpacts?.[unit] ?? artifact.impact;
+}
+
+function latestDependencyVersions(root: string, options: ReleaseAdapterOptions, pinned: Record<string, string>): Record<string, string> {
+  const pending: Record<string, string> = {};
+  for (const [dependency, state] of Object.entries(options.dependencies ?? {})) {
+    const latest = readManifests(root, state.releasesPath, dependency).at(-1)?.version;
+    if (latest === undefined) throw new Error(`release unit dependency has no manifest: ${dependency}`);
+    for (const source of state.versionSources) if (readReleaseVersion(root, source) !== latest) throw new Error(`dependency version source must match release ${latest}: ${source.path}`);
+    if (pinned[dependency] !== latest) pending[dependency] = latest;
+  }
+  return pending;
 }
 
 export function cutRelease(
@@ -309,7 +488,7 @@ export function validateReleaseVersions(root: string, options: ReleaseAdapterOpt
     validateDistributionVersions(root, options.distributionManifestPaths, options.releasesPath);
     return;
   }
-  const expected = readManifests(root, options.releasesPath).at(-1)?.version ?? '0.0.0';
+  const expected = readManifests(root, options.releasesPath, options.adapter === releaseAdapterV2 ? options.unit : undefined).at(-1)?.version ?? '0.0.0';
   for (const source of options.versionSources) {
     const actual = readReleaseVersion(root, source);
     if (actual !== expected) throw new Error(`version source must match release ${expected}: ${source.path}`);
@@ -339,7 +518,7 @@ export function validateReleaseSeal(
   options: ReleaseAdapterOptions = {},
   validation: ReleaseSealValidationOptions = {},
 ): void {
-  const latest = readManifests(root, options.releasesPath).at(-1);
+  const latest = readManifests(root, options.releasesPath, options.adapter === releaseAdapterV2 ? options.unit : undefined).at(-1);
   if (!latest) throw new Error('release sealing requires at least one release manifest');
   if (gitOutput(root, ['status', '--porcelain=v1', '--untracked-files=all'])) throw new Error('repository contains unsealed working tree changes');
   const manifestPath = `${options.releasesPath ?? 'releases'}/${latest.version}.yaml`.replaceAll('\\', '/');
@@ -400,11 +579,21 @@ export function checkRelease(
   validation: ReleaseSealValidationOptions = {},
 ): void {
   const { archived, assigned } = validateReleaseState(root, options);
-  const active = readActiveChangeIds(root, options.openSpecPaths);
+  const active = options.adapter === releaseAdapterV2
+    ? [...readSchemaAwareChanges(root, options.openSpecSources ?? [], 'active')]
+        .filter(([, artifact]) => matchesSelectors(artifact, options.selectors ?? []))
+        .map(([id]) => id)
+        .sort()
+    : readActiveChangeIds(root, options.openSpecPaths);
   if (active.length > 0) throw new Error(`active OpenSpec changes are not release-complete: ${active.join(', ')}`);
   const unassigned = [...archived.keys()].filter((id) => !assigned.has(id)).sort();
   if (unassigned.length > 0) throw new Error(`archived OpenSpec changes are not assigned to a release: ${unassigned.join(', ')}`);
   checkChangelog(root, options);
+  if (options.adapter === releaseAdapterV2 && options.topology === 'composed') {
+    const latest = readManifests(root, options.releasesPath, options.unit).at(-1) as ReleaseManifestV2 | undefined;
+    const pending = latestDependencyVersions(root, options, latest?.dependencies ?? {});
+    if (Object.keys(pending).length > 0) throw new Error(`sealed release unit has pending dependencies: ${Object.keys(pending).sort().join(', ')}`);
+  }
   validateReleaseSeal(root, options, validation);
 }
 
