@@ -44,6 +44,9 @@ importers:
       '@astrojs/starlight':
         specifier: 0.41.7
         version: 0.41.7(@astrojs/markdown-remark@7.2.2)(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@25.7.0)(astro@7.2.2(@astrojs/markdown-remark@7.2.2))(typescript@6.0.3)(yaml@2.9.0)
+      '@fontsource-variable/fira-code':
+        specifier: 5.3.0
+        version: 5.3.0
       '@fontsource-variable/fraunces':
         specifier: 5.3.0
         version: 5.3.0
@@ -762,6 +765,9 @@ packages:
     resolution: {integrity: sha512-yKV8mFz+J5+epLugvcSt7B+mBkkCSycOB6euLJmW6JL+2jhL+Um0JZ6zuGIdXcbsd3jU2+YQfeDz2EVwft++LA==}
     engines: {node: '>=20.19.0'}
     hasBin: true
+
+  '@fontsource-variable/fira-code@5.3.0':
+    resolution: {integrity: sha512-ZhvHeknlicraKVSJBa1NrJnXDVByUkC407zwgELYfmnx3p9g8vwIPfQCxx8YD3K7dAeCdLuHJOHlpMfRsIcApQ==}
 
   '@fontsource-variable/fraunces@5.3.0':
     resolution: {integrity: sha512-9BYGySn4AHEJdgp9Z28tQ3X+laJMEOITXkQarZXeloWQZDq5oOvXJ3kDA8c7MGIfpogIaZfjrQBqmda8POOCKA==}
@@ -4994,6 +5000,8 @@ snapshots:
       ora: 9.4.1
       yaml: 2.9.0
       zod: 4.4.3
+
+  '@fontsource-variable/fira-code@5.3.0': {}
 
   '@fontsource-variable/fraunces@5.3.0': {}
 
