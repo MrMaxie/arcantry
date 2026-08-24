@@ -1,0 +1,105 @@
+---
+import { faHeart } from '@fortawesome/free-solid-svg-icons';
+
+const [heartWidth, heartHeight, , , heartPath] = faHeart.icon;
+const heartPathData = Array.isArray(heartPath) ? heartPath[0] : heartPath;
+---
+
+<div class="sidebar-foot">
+  <span class="sidebar-credit">
+    Created with <span class="sr-only">love </span>
+    <span class="sidebar-heart" aria-hidden="true">
+      <svg viewBox={`0 0 ${heartWidth} ${heartHeight}`}>
+        <title>Heart</title>
+        <path d={heartPathData} />
+      </svg>
+    </span>
+    by Maxie
+  </span>
+</div>
+
+<style>
+@layer starlight.core {
+  .sidebar-foot {
+    display: flex;
+    align-items: center;
+    min-height: 3.25rem;
+    padding: 0.8rem 1.35rem;
+    border-top: 1px solid var(--ar-border);
+    color: var(--ar-text-soft);
+    font-size: 0.65rem;
+  }
+  .sidebar-credit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.26rem;
+  }
+  .sidebar-heart {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 0.9rem;
+    height: 0.9rem;
+    flex: 0 0 auto;
+    color: var(--ar-heart);
+  }
+  .sidebar-heart::before {
+    content: '';
+    position: absolute;
+    inset: -0.35rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--ar-heart) 34%, transparent), transparent 68%);
+    filter: blur(3px);
+    opacity: 0.65;
+    animation: sidebar-heart-glow 1.8s ease-in-out infinite;
+  }
+  .sidebar-heart svg {
+    position: relative;
+    width: 0.72rem;
+    height: 0.72rem;
+    fill: currentColor;
+    animation: sidebar-heart-pulse 1.8s ease-in-out infinite;
+    transform-origin: center;
+    will-change: transform;
+  }
+  @keyframes sidebar-heart-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    14% {
+      transform: scale(1.24);
+    }
+    28% {
+      transform: scale(1.04);
+    }
+    42% {
+      transform: scale(1.18);
+    }
+    58% {
+      transform: scale(1);
+    }
+  }
+  @keyframes sidebar-heart-glow {
+    0%,
+    100% {
+      opacity: 0.45;
+      transform: scale(0.82);
+    }
+    22% {
+      opacity: 0.9;
+      transform: scale(1.12);
+    }
+    48% {
+      opacity: 0.58;
+      transform: scale(0.94);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar-heart::before,
+    .sidebar-heart svg {
+      animation: none;
+    }
+  }
+}
+</style>

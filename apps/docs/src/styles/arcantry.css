@@ -9,6 +9,7 @@
   --ar-surface: #f4f3f2;
   --ar-surface-raised: #faf9f8;
   --ar-text: #232426;
+  --ar-effect-ink: #232426;
   --ar-text-muted: #5d5e60;
   --ar-text-soft: #6b6c6e;
   --ar-border: #d0cfcf;
@@ -50,7 +51,8 @@
   --ar-bg-subtle: #171717;
   --ar-surface: #1d1d1d;
   --ar-surface-raised: #202020;
-  --ar-text: #f1efec;
+  --ar-text: #ffffff;
+  --ar-effect-ink: #f1efec;
   --ar-text-muted: #b9b6b2;
   --ar-text-soft: #8f8c88;
   --ar-border: #353535;
@@ -160,7 +162,7 @@ textarea {
   tbody
   tr:nth-child(even)
   > td:nth-child(odd):not(:where(.not-content *)) {
-  background: color-mix(in srgb, var(--ar-text) 1.8%, var(--ar-bg));
+  background: color-mix(in srgb, var(--ar-effect-ink) 1.8%, var(--ar-bg));
 }
 
 .sl-markdown-content
@@ -192,7 +194,7 @@ textarea {
     )
     border-box;
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--ar-text) 5%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--ar-effect-ink) 5%, transparent),
     0 0.45rem 1.35rem color-mix(in srgb, var(--ar-accent-violet) 7%, transparent);
   overflow: hidden;
 }

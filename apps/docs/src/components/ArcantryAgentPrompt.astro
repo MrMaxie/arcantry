@@ -2,10 +2,11 @@
 import { Icon } from '@astrojs/starlight/components';
 
 interface Props {
-  variant?: 'button' | 'full';
+  variant?: 'button' | 'link' | 'full';
+  label?: string;
 }
 
-const { variant = 'button' } = Astro.props;
+const { variant = 'button', label = 'Copy agent prompt' } = Astro.props;
 const agentPrompt = `Install Arcantry on this computer using the official getting-started guide.
 
 - Detect the operating system, architecture, and available package managers or runtimes before choosing a method.
@@ -21,10 +22,10 @@ const agentPrompt = `Install Arcantry on this computer using the official gettin
   {variant === 'full' && (
     <pre><code>{agentPrompt}</code></pre>
   )}
-  <button type="button" data-copy={agentPrompt} aria-label="Copy agent installation prompt">
+  <button type="button" data-copy={agentPrompt} data-default-label={label} aria-label="Copy agent installation prompt">
     <span class="copy-icon copy-idle" aria-hidden="true"><Icon name="document" /></span>
     <span class="copy-icon copy-done" aria-hidden="true"><Icon name="approve-check" /></span>
-    <span data-copy-label>Copy agent prompt</span>
+    <span data-copy-label>{label}</span>
   </button>
 </arcantry-agent-prompt>
 
@@ -67,7 +68,7 @@ class ArcantryAgentPrompt extends HTMLElement {
     window.setTimeout(() => {
       delete button.dataset.copied;
       button.setAttribute('aria-label', 'Copy agent installation prompt');
-      label.textContent = 'Copy agent prompt';
+      label.textContent = button.dataset.defaultLabel ?? 'Copy agent prompt';
     }, 3000);
   };
 }
@@ -115,6 +116,21 @@ if (!customElements.get('arcantry-agent-prompt')) {
   .agent-prompt button:focus-visible {
     outline: 2px solid var(--ar-accent-violet);
     outline-offset: 2px;
+  }
+  .agent-prompt-link button {
+    min-height: auto;
+    padding: 0.15rem 0;
+    border: 0;
+    border-radius: 0;
+    color: var(--ar-text-muted);
+    background: transparent;
+    font-size: 0.75rem !important;
+  }
+  .agent-prompt-link button:hover {
+    border-color: transparent;
+    color: var(--ar-text);
+    background: transparent;
+    transform: none;
   }
   .copy-icon {
     display: grid;

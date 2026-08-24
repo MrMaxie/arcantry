@@ -1,0 +1,1408 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+import ArcantrySidebarFooter from './ArcantrySidebarFooter.astro';
+import ArcantrySidebarLink from './ArcantrySidebarLink.astro';
+
+const setupStages = [
+  { key: 'mode', href: '#setup-goal', marker: '01', label: 'Your goal', disabled: false },
+  { key: 'installed', href: '#setup-installed', marker: '02', label: 'Arcantry status', disabled: true },
+  { key: 'repo', href: '#setup-repo', marker: '03', label: 'Git setup', disabled: true },
+  { key: 'git', href: '#setup-git', marker: '04', label: 'Local Git', disabled: true },
+  { key: 'scope', href: '#setup-scope', marker: '05', label: 'Sharing', disabled: true },
+  { key: 'changes', href: '#setup-changes', marker: '06', label: 'Current setup', disabled: true },
+  { key: 'knowledge', href: '#setup-knowledge', marker: '07', label: 'Knowledge', disabled: true },
+  { key: 'host', href: '#setup-host', marker: '08', label: 'Your agent', disabled: true },
+  { key: 'execution', href: '#setup-execution', marker: '09', label: 'Review and apply', disabled: true },
+] as const;
+---
+
+<arcantry-configurator class="not-content">
+  <section class="configurator-shell" aria-labelledby="configurator-title">
+    <aside class="configurator-sidebar" aria-label="Configurator navigation">
+      <nav class="configurator-side-nav">
+        <div class="side-nav-group">
+          <p>Explore</p>
+          <ArcantrySidebarLink href="/arcantry/" label="Homepage" icon="rocket" />
+          <ArcantrySidebarLink href="/arcantry/getting-started/" label="Documentation" icon="open-book" />
+        </div>
+        <div class="side-nav-group stage-links">
+          <p>Setup steps</p>
+          {setupStages.map((stage) => (
+              <ArcantrySidebarLink
+                href={stage.href}
+                label={stage.label}
+                marker={stage.marker}
+                stage={stage.key}
+                disabled={stage.disabled}
+                current="step"
+              />
+            ))}
+        </div>
+      </nav>
+      <ArcantrySidebarFooter />
+    </aside>
+
+    <div class="configurator-main">
+      <details class="configurator-mobile-nav">
+        <summary>Setup navigation</summary>
+        <div>
+          <a href="/arcantry/">Homepage</a>
+          <a href="/arcantry/getting-started/">Documentation</a>
+          <a href="#setup-goal" data-stage-link="mode">Your goal</a>
+          <a href="#setup-installed" data-stage-link="installed" aria-disabled="true" tabindex="-1">Arcantry status</a>
+          <a href="#setup-repo" data-stage-link="repo" aria-disabled="true" tabindex="-1">Git setup</a>
+          <a href="#setup-git" data-stage-link="git" aria-disabled="true" tabindex="-1">Local Git</a>
+          <a href="#setup-scope" data-stage-link="scope" aria-disabled="true" tabindex="-1">Sharing</a>
+          <a href="#setup-changes" data-stage-link="changes" aria-disabled="true" tabindex="-1">Current setup</a>
+          <a href="#setup-knowledge" data-stage-link="knowledge" aria-disabled="true" tabindex="-1">Knowledge</a>
+          <a href="#setup-host" data-stage-link="host" aria-disabled="true" tabindex="-1">Your agent</a>
+          <a href="#setup-execution" data-stage-link="execution" aria-disabled="true" tabindex="-1">Review and apply</a>
+        </div>
+      </details>
+
+      <header class="configurator-intro">
+        <p class="configurator-kicker">Arcantry setup</p>
+        <h1 id="configurator-title">Create Arcantry setup instructions for your agent.</h1>
+        <p>
+          Answer a few questions about your project. You will get a ready-to-copy plan that asks your agent to install
+          or update Arcantry, choose a setup that fits, and show you how to use it.
+        </p>
+      </header>
+
+      <form id="configurator-scenario-form" class="scenario-panel" data-scenario-form>
+        <fieldset id="setup-goal" data-question="mode">
+          <legend><span>01</span>What are you trying to do?</legend>
+          <div class="choice-grid">
+            <label class="choice">
+              <input type="radio" name="mode" value="new" data-affects="goal install adoption guide">
+              <span><strong>Set up Arcantry here</strong><small>This project does not use it yet.</small></span>
+            </label>
+            <label class="choice">
+              <input type="radio" name="mode" value="existing" data-affects="goal install adoption guide">
+              <span
+                ><strong>Change an existing setup</strong><small>Review what is here and adapt it safely.</small></span
+              >
+            </label>
+            <label class="choice choice-wide">
+              <input type="radio" name="mode" value="unsure" data-affects="goal install adoption guide">
+              <span
+                ><strong>I am not sure yet</strong
+                ><small>Let my agent determine the current state before recommending anything.</small></span
+              >
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset id="setup-installed" data-question="installed" hidden>
+          <legend><span>02</span>Is Arcantry already available on this computer?</legend>
+          <div class="choice-grid choice-grid-compact">
+            <label class="choice"
+              ><input type="radio" name="installed" value="yes" data-affects="install">
+              <span><strong>Yes</strong><small>It is already available on this computer.</small></span></label
+            >
+            <label class="choice"
+              ><input type="radio" name="installed" value="no" data-affects="install">
+              <span><strong>No</strong><small>It needs to be installed before setup.</small></span></label
+            >
+            <label class="choice"
+              ><input type="radio" name="installed" value="unsure" data-affects="install">
+              <span><strong>I do not know</strong><small>Your agent will check before continuing.</small></span></label
+            >
+          </div>
+        </fieldset>
+
+        <fieldset id="setup-repo" data-question="repo" hidden>
+          <legend><span>03</span>Does this project already use Git?</legend>
+          <p class="question-help">Git and GitHub are different. Arcantry can work without either one.</p>
+          <div class="choice-grid">
+            <label class="choice"
+              ><input type="radio" name="repo" value="yes" data-affects="inspect adoption">
+              <span><strong>Yes</strong><small>It is already a Git repository.</small></span></label
+            >
+            <label class="choice"
+              ><input type="radio" name="repo" value="no" data-affects="inspect adoption">
+              <span><strong>No</strong><small>There is no local Git repository.</small></span></label
+            >
+            <label class="choice"
+              ><input type="radio" name="repo" value="unsure" data-affects="inspect adoption">
+              <span><strong>I do not know</strong><small>Ask the agent to check.</small></span></label
+            >
+            <label class="choice"
+              ><input type="radio" name="repo" value="no-github" data-affects="inspect adoption">
+              <span><strong>We do not use GitHub</strong><small>Local Git may still make sense.</small></span></label
+            >
+          </div>
+        </fieldset>
+
+        <fieldset id="setup-git" data-question="git" hidden>
+          <legend><span>04</span>Should your agent help you start with local Git?</legend>
+          <p class="question-help">
+            This can stay entirely on your computer. A GitHub account or remote is not required.
+          </p>
+          <div class="choice-grid choice-grid-compact">
+            <label class="choice"
+              ><input type="radio" name="git" value="yes" data-affects="inspect">
+              <span><strong>Yes</strong><small>Set it up after asking.</small></span></label
+            >
+            <label class="choice"
+              ><input type="radio" name="git" value="explain" data-affects="inspect">
+              <span><strong>Explain it first</strong><small>Help me decide.</small></span></label
+            >
+            <label class="choice"
+              ><input type="radio" name="git" value="no" data-affects="inspect">
+              <span><strong>No</strong><small>Keep working without Git.</small></span></label
+            >
+          </div>
+        </fieldset>
+
+        <fieldset id="setup-scope" data-question="scope" hidden>
+          <legend><span>05</span>Who should share this Arcantry setup?</legend>
+          <p class="question-help">
+            This decides whether the configuration is shared, private, external, or still only a recommendation.
+          </p>
+          <div class="choice-grid">
+            <label class="choice"
+              ><input type="radio" name="scope" value="private" data-affects="adoption guide">
+              <span><strong>Only me</strong><small>Keep the setup private to this computer.</small></span></label
+            >
+            <label class="choice"
+              ><input type="radio" name="scope" value="shared" data-affects="adoption guide">
+              <span
+                ><strong>Everyone on the project</strong><small>Track the same setup for collaborators.</small></span
+              ></label
+            >
+            <label class="choice"
+              ><input type="radio" name="scope" value="external" data-affects="adoption guide">
+              <span
+                ><strong>Do not change the project</strong
+                ><small>Control it from outside the project directory.</small></span
+              ></label
+            >
+            <label class="choice"
+              ><input type="radio" name="scope" value="recommend" data-affects="adoption guide">
+              <span
+                ><strong>Let my agent recommend</strong><small>Compare the tradeoffs after inspection.</small></span
+              ></label
+            >
+          </div>
+        </fieldset>
+
+        <fieldset id="setup-changes" data-question="changes" hidden>
+          <legend><span>06</span>What should change in the current setup?</legend>
+          <p class="question-help">
+            Choose everything that sounds relevant. Your agent will verify the current state first.
+          </p>
+          <div class="choice-grid">
+            <label class="choice"
+              ><input type="checkbox" name="changes" value="boundaries" data-affects="adoption">
+              <span
+                ><strong>Shared and private boundaries</strong><small>Who can see which project knowledge.</small></span
+              ></label
+            >
+            <label class="choice"
+              ><input type="checkbox" name="changes" value="sources" data-affects="adoption sources">
+              <span
+                ><strong>Knowledge sources</strong><small>OpenSpec, changelog, todo.txt, or their paths.</small></span
+              ></label
+            >
+            <label class="choice"
+              ><input type="checkbox" name="changes" value="guidance" data-affects="adoption host guide">
+              <span><strong>Agent guidance</strong><small>Instructions or agent compatibility.</small></span></label
+            >
+            <label class="choice"
+              ><input type="checkbox" name="changes" value="repair" data-affects="adoption">
+              <span
+                ><strong>Repair or update it</strong><small>Diagnose drift and recommend the safe repair.</small></span
+              ></label
+            >
+            <label class="choice choice-wide"
+              ><input type="checkbox" name="changes" value="unsure" data-exclusive data-affects="adoption">
+              <span
+                ><strong>I do not know what needs changing</strong
+                ><small>Ask the agent to explain the current setup and its options.</small></span
+              ></label
+            >
+          </div>
+        </fieldset>
+
+        <fieldset id="setup-knowledge" data-question="knowledge" hidden>
+          <legend><span>06</span>What should Arcantry help organize?</legend>
+          <p class="question-help">These are independent sources. Choosing one does not force the others.</p>
+          <div class="choice-grid">
+            <label class="choice"
+              ><input type="checkbox" name="knowledge" value="openspec" data-affects="sources guide">
+              <span
+                ><strong>Requirements and planned changes</strong
+                ><small>OpenSpec for accepted product and engineering intent.</small></span
+              ></label
+            >
+            <label class="choice"
+              ><input type="checkbox" name="knowledge" value="todo" data-affects="sources guide">
+              <span><strong>Quick task queue</strong><small>todo.txt for lightweight project work.</small></span></label
+            >
+            <label class="choice"
+              ><input type="checkbox" name="knowledge" value="changelog" data-affects="sources guide">
+              <span
+                ><strong>Release history</strong><small>A changelog derived from accepted intent.</small></span
+              ></label
+            >
+            <label class="choice"
+              ><input type="checkbox" name="knowledge" value="skills" data-affects="sources host guide">
+              <span
+                ><strong>Reusable agent skills</strong
+                ><small>Procedures that stay independent from project authority.</small></span
+              ></label
+            >
+            <label class="choice choice-wide"
+              ><input type="checkbox" name="knowledge" value="inspect" data-exclusive data-affects="sources guide">
+              <span
+                ><strong>Only inspect for now</strong
+                ><small>Do not create or adopt a knowledge source yet.</small></span
+              ></label
+            >
+          </div>
+        </fieldset>
+
+        <fieldset id="setup-host" data-question="host" hidden>
+          <legend><span>07</span>Which agent will use these instructions?</legend>
+          <p class="question-help">
+            Arcantry uses universal agent files. Extra compatibility should be added only when it is needed.
+          </p>
+          <div class="choice-grid choice-grid-compact">
+            <label class="choice"
+              ><input type="radio" name="host" value="codex" data-affects="host guide">
+              <span><strong>Codex</strong></span></label
+            >
+            <label class="choice"
+              ><input type="radio" name="host" value="claude" data-affects="host guide">
+              <span><strong>Claude Code</strong></span></label
+            >
+            <label class="choice"
+              ><input type="radio" name="host" value="other" data-affects="host guide">
+              <span><strong>Another agent</strong></span></label
+            >
+            <label class="choice"
+              ><input type="radio" name="host" value="several" data-affects="host guide">
+              <span><strong>Several agents</strong></span></label
+            >
+            <label class="choice choice-wide"
+              ><input type="radio" name="host" value="unsure" data-affects="host guide">
+              <span><strong>I am not sure</strong></span></label
+            >
+          </div>
+        </fieldset>
+
+        <fieldset id="setup-execution" data-question="execution" hidden>
+          <legend><span>08</span>How far should your agent go?</legend>
+          <p class="question-help">Every path begins with inspection and a recommendation.</p>
+          <div class="choice-grid">
+            <label class="choice"
+              ><input type="radio" name="execution" value="apply" data-affects="agreement guide">
+              <span
+                ><strong>Make approved changes</strong><small>Propose first, then proceed after I agree.</small></span
+              ></label
+            >
+            <label class="choice"
+              ><input type="radio" name="execution" value="plan" data-affects="agreement guide">
+              <span
+                ><strong>Stop after the recommendation</strong
+                ><small>Do not change files or install anything.</small></span
+              ></label
+            >
+            <label class="choice choice-wide"
+              ><input type="radio" name="execution" value="guide" data-affects="agreement guide">
+              <span
+                ><strong>Guide me one command at a time</strong
+                ><small>Explain each step and wait for me between commands.</small></span
+              ></label
+            >
+          </div>
+        </fieldset>
+
+        <p class="next-question-hint" data-next-question-hint>
+          <span>Answer the current question to continue</span>
+          <Icon name="down-arrow" aria-hidden="true" />
+        </p>
+      </form>
+    </div>
+
+    <aside class="prompt-panel" aria-labelledby="prompt-preview-title">
+      <div class="prompt-heading">
+        <div class="prompt-progress" aria-live="polite">
+          <div class="prompt-progress-row">
+            <span data-progress-label>0 of 7 answered</span>
+            <button
+              type="reset"
+              form="configurator-scenario-form"
+              class="reset-scenario"
+              data-reset-scenario
+              hidden
+              disabled
+              tabindex="-1"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5.6 6.4A8 8 0 1 1 4 11.2H2A10 10 0 1 0 4.2 5L2 7.2V2h2v2.1A10 10 0 0 1 5.6 2.8v3.6Z"></path>
+              </svg>
+              <span>Start over</span>
+            </button>
+          </div>
+          <span class="progress-track" aria-hidden="true"><span data-progress-bar></span></span>
+        </div>
+        <div class="prompt-heading-copy">
+          <h2 id="prompt-preview-title">Instructions for your agent</h2>
+          <p>Preview how your agent will help you get started with Arcantry.</p>
+        </div>
+      </div>
+      <div class="prompt-preview" data-prompt-preview>
+        <section data-prompt-block="goal">
+          <h3>Goal</h3>
+          <p data-prompt-text="goal"></p>
+        </section>
+        <section data-prompt-block="install">
+          <h3>Install</h3>
+          <p data-prompt-text="install"></p>
+        </section>
+        <section data-prompt-block="inspect">
+          <h3>Inspect</h3>
+          <p data-prompt-text="inspect"></p>
+        </section>
+        <section data-prompt-block="adoption">
+          <h3>Configure</h3>
+          <p data-prompt-text="adoption"></p>
+        </section>
+        <section data-prompt-block="sources">
+          <h3>Knowledge</h3>
+          <p data-prompt-text="sources"></p>
+        </section>
+        <section data-prompt-block="host">
+          <h3>Agent files</h3>
+          <p data-prompt-text="host"></p>
+        </section>
+        <section data-prompt-block="agreement">
+          <h3>Working agreement</h3>
+          <p data-prompt-text="agreement"></p>
+        </section>
+        <section data-prompt-block="guide">
+          <h3>Teach me</h3>
+          <p data-prompt-text="guide"></p>
+        </section>
+      </div>
+      <div class="prompt-actions">
+        <button type="button" class="copy-prompt" data-copy-prompt>
+          <span data-copy-icon aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m12 2 1.5 5.2L19 9l-5.5 1.8L12 16l-1.5-5.2L5 9l5.5-1.8L12 2Z"></path>
+              <path d="m19 15 .8 2.7 2.7.8-2.7.8L19 22l-.8-2.7-2.7-.8 2.7-.8L19 15Z"></path>
+              <path d="m5 14 .7 2.3L8 17l-2.3.7L5 20l-.7-2.3L2 17l2.3-.7L5 14Z"></path>
+            </svg>
+          </span>
+          <span data-copy-label>Copy generated prompt</span>
+        </button>
+      </div>
+    </aside>
+  </section>
+</arcantry-configurator>
+
+<script>
+const radioNames = ['mode', 'installed', 'repo', 'git', 'scope', 'host', 'execution'] as const;
+const checkboxNames = ['changes', 'knowledge'] as const;
+const paramNames = {
+  mode: 'm',
+  installed: 'i',
+  repo: 'r',
+  git: 'g',
+  scope: 's',
+  changes: 'c',
+  knowledge: 'k',
+  host: 'h',
+  execution: 'x',
+} as const;
+
+const validValues: Record<string, readonly string[]> = {
+  mode: ['new', 'existing', 'unsure'],
+  installed: ['yes', 'no', 'unsure'],
+  repo: ['yes', 'no', 'unsure', 'no-github'],
+  git: ['yes', 'explain', 'no'],
+  scope: ['private', 'shared', 'external', 'recommend'],
+  changes: ['boundaries', 'sources', 'guidance', 'repair', 'unsure'],
+  knowledge: ['openspec', 'todo', 'changelog', 'skills', 'inspect'],
+  host: ['codex', 'claude', 'other', 'several', 'unsure'],
+  execution: ['apply', 'plan', 'guide'],
+};
+
+interface PromptBlock {
+  key: string;
+  title: string;
+  text: string;
+}
+
+async function copyConfiguratorPrompt(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const input = document.createElement('textarea');
+    input.value = text;
+    input.setAttribute('readonly', '');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.append(input);
+    input.select();
+    const legacyDocument = document as unknown as { execCommand(command: 'copy'): boolean };
+    const copied = legacyDocument.execCommand('copy');
+    input.remove();
+    return copied;
+  }
+}
+
+class ArcantryConfigurator extends HTMLElement {
+  private prompt = '';
+  private timers = new Map<string, number>();
+  private startedWithoutSelections = true;
+  private stageFrame = 0;
+
+  connectedCallback(): void {
+    this.restoreFromUrl();
+    this.render(false);
+    this.startedWithoutSelections = !this.hasSelections();
+    this.querySelector('form')?.addEventListener('change', this.change);
+    this.querySelector('form')?.addEventListener('reset', this.reset);
+    this.querySelector('[data-copy-prompt]')?.addEventListener('click', this.copy);
+    window.addEventListener('popstate', this.restore);
+    window.addEventListener('beforeunload', this.beforeUnload);
+    window.addEventListener('scroll', this.scheduleStageUpdate, { passive: true });
+    document.addEventListener('astro:before-preparation', this.beforePreparation);
+    this.addEventListener('click', this.stageClick);
+    this.scheduleStageUpdate();
+  }
+
+  disconnectedCallback(): void {
+    this.querySelector('form')?.removeEventListener('change', this.change);
+    this.querySelector('form')?.removeEventListener('reset', this.reset);
+    this.querySelector('[data-copy-prompt]')?.removeEventListener('click', this.copy);
+    window.removeEventListener('popstate', this.restore);
+    window.removeEventListener('beforeunload', this.beforeUnload);
+    window.removeEventListener('scroll', this.scheduleStageUpdate);
+    document.removeEventListener('astro:before-preparation', this.beforePreparation);
+    this.removeEventListener('click', this.stageClick);
+    if (this.stageFrame) window.cancelAnimationFrame(this.stageFrame);
+    this.timers.forEach((timer) => {
+      window.clearTimeout(timer);
+    });
+  }
+
+  private value(name: string): string {
+    return this.querySelector<HTMLInputElement>(`input[name="${name}"]:checked`)?.value ?? '';
+  }
+
+  private values(name: string): string[] {
+    return [...this.querySelectorAll<HTMLInputElement>(`input[name="${name}"]:checked`)].map((input) => input.value);
+  }
+
+  private hasSelections(): boolean {
+    return [...radioNames, ...checkboxNames].some((name) => this.values(name).length > 0);
+  }
+
+  private shouldWarnBeforeLeaving(): boolean {
+    return this.startedWithoutSelections && this.hasSelections();
+  }
+
+  private beforeUnload = (event: BeforeUnloadEvent): void => {
+    if (!this.shouldWarnBeforeLeaving()) return;
+    event.preventDefault();
+    const legacyEvent = event as unknown as { returnValue: string };
+    legacyEvent.returnValue = '';
+  };
+
+  private beforePreparation = (event: Event): void => {
+    if (!this.shouldWarnBeforeLeaving()) return;
+    if (!window.confirm('Your Arcantry setup choices have changed. Leave this page?')) event.preventDefault();
+  };
+
+  private stageClick = (event: Event): void => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const link = target.closest<HTMLAnchorElement>('[data-stage-link]');
+    if (link?.getAttribute('aria-disabled') === 'true') event.preventDefault();
+  };
+
+  private scheduleStageUpdate = (): void => {
+    if (this.stageFrame) return;
+    this.stageFrame = window.requestAnimationFrame(() => {
+      this.stageFrame = 0;
+      this.updateStageNavigation();
+    });
+  };
+
+  private updateStageNavigation(): void {
+    const visibleQuestions = [...this.querySelectorAll<HTMLFieldSetElement>('[data-question]:not([hidden])')];
+    const navHeight = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sl-nav-height'));
+    const threshold = (Number.isFinite(navHeight) ? navHeight : 70) + Math.min(window.innerHeight * 0.2, 140);
+    let activeQuestion = visibleQuestions[0];
+    visibleQuestions.forEach((fieldset) => {
+      if (fieldset.getBoundingClientRect().top <= threshold) activeQuestion = fieldset;
+    });
+    const reachedPageEnd = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+    const lastVisibleQuestion = visibleQuestions.at(-1);
+    if (reachedPageEnd && lastVisibleQuestion) activeQuestion = lastVisibleQuestion;
+    const activeName = activeQuestion?.dataset.question;
+
+    this.querySelectorAll<HTMLAnchorElement>('[data-stage-link]').forEach((link) => {
+      const name = link.dataset.stageLink;
+      const fieldset = name ? this.querySelector<HTMLFieldSetElement>(`[data-question="${name}"]`) : null;
+      const available = Boolean(fieldset && !fieldset.hidden);
+      link.setAttribute('aria-disabled', String(!available));
+      link.toggleAttribute('tabindex', !available);
+      if (!available) link.setAttribute('tabindex', '-1');
+      const active = available && name === activeName;
+      link.classList.toggle('active', active);
+      if (active) link.setAttribute('aria-current', 'step');
+      else link.removeAttribute('aria-current');
+    });
+  }
+
+  private setVisible(name: string, visible: boolean): void {
+    const fieldset = this.querySelector<HTMLFieldSetElement>(`[data-question="${name}"]`);
+    if (!fieldset) return;
+    fieldset.hidden = !visible;
+    if (!visible) {
+      fieldset.querySelectorAll<HTMLInputElement>('input:checked').forEach((input) => {
+        input.checked = false;
+      });
+    }
+  }
+
+  private restoreFromUrl(): void {
+    const params = new URL(window.location.href).searchParams;
+    [...radioNames, ...checkboxNames].forEach((name) => {
+      const values = (params.get(paramNames[name]) ?? '')
+        .split(',')
+        .filter((value) => validValues[name]?.includes(value));
+      values.forEach((value) => {
+        const input = this.querySelector<HTMLInputElement>(`input[name="${name}"][value="${value}"]`);
+        if (input) input.checked = true;
+      });
+    });
+  }
+
+  private restore = (): void => {
+    this.querySelectorAll<HTMLInputElement>('input:checked').forEach((input) => {
+      input.checked = false;
+    });
+    this.restoreFromUrl();
+    this.render(false);
+  };
+
+  private change = (event: Event): void => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
+    if (input.type === 'checkbox' && input.checked) {
+      const group = [...this.querySelectorAll<HTMLInputElement>(`input[name="${input.name}"]`)].filter(
+        (candidate) => candidate !== input,
+      );
+      if (input.hasAttribute('data-exclusive'))
+        group.forEach((candidate) => {
+          candidate.checked = false;
+        });
+      else
+        group
+          .filter((candidate) => candidate.hasAttribute('data-exclusive'))
+          .forEach((candidate) => {
+            candidate.checked = false;
+          });
+    }
+    this.render(true, input.dataset.affects?.split(' ') ?? []);
+  };
+
+  private reset = (event: Event): void => {
+    event.preventDefault();
+    this.querySelectorAll<HTMLInputElement>('input:checked').forEach((input) => {
+      input.checked = false;
+    });
+    const url = new URL(window.location.href);
+    Object.values(paramNames).forEach((param) => {
+      url.searchParams.delete(param);
+    });
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    this.render(false);
+  };
+
+  private copy = async (): Promise<void> => {
+    const button = this.querySelector<HTMLButtonElement>('[data-copy-prompt]');
+    const label = this.querySelector<HTMLElement>('[data-copy-label]');
+    if (!button || !label || !(await copyConfiguratorPrompt(this.prompt))) return;
+    button.dataset.copied = 'true';
+    label.textContent = 'Prompt copied';
+    window.setTimeout(() => {
+      delete button.dataset.copied;
+      label.textContent = 'Copy generated prompt';
+    }, 2600);
+  };
+
+  private render(animate: boolean, affected: string[] = []): void {
+    const mode = this.value('mode');
+    const installed = this.value('installed');
+    const repo = this.value('repo');
+    const needsGitQuestion = repo === 'no' || repo === 'no-github';
+    const scope = this.value('scope');
+    const changes = this.values('changes');
+    const knowledge = this.values('knowledge');
+    const host = this.value('host');
+
+    this.setVisible('installed', Boolean(mode));
+    this.setVisible('repo', Boolean(mode && installed));
+    this.setVisible('git', Boolean(mode && installed && needsGitQuestion));
+    const repoComplete = Boolean(repo && (!needsGitQuestion || this.value('git')));
+    this.setVisible('scope', Boolean(mode && installed && repoComplete));
+    this.setVisible('changes', Boolean(scope && mode === 'existing'));
+    const changeComplete = mode !== 'existing' || changes.length > 0;
+    this.setVisible('knowledge', Boolean(scope && changeComplete));
+    this.setVisible('host', knowledge.length > 0);
+    this.setVisible('execution', Boolean(host));
+
+    this.querySelectorAll<HTMLFieldSetElement>('[data-question]:not([hidden])').forEach((fieldset, index) => {
+      const number = fieldset.querySelector<HTMLElement>('legend span');
+      if (number) number.textContent = String(index + 1).padStart(2, '0');
+    });
+
+    const targets = ['mode', 'installed', 'repo', 'scope', 'knowledge', 'host', 'execution'];
+    if (needsGitQuestion) targets.splice(3, 0, 'git');
+    if (mode === 'existing') targets.splice(targets.indexOf('knowledge'), 0, 'changes');
+    const answered = targets.filter((name) =>
+      (checkboxNames as readonly string[]).includes(name) ? this.values(name).length > 0 : Boolean(this.value(name)),
+    ).length;
+    const complete = answered === targets.length;
+    this.updateProgress(answered, targets.length);
+
+    const blocks = this.buildPrompt();
+    this.prompt = blocks.map((block) => `${block.title}\n${block.text}`).join('\n\n');
+    blocks.forEach((block) => {
+      const element = this.querySelector<HTMLElement>(`[data-prompt-block="${block.key}"]`);
+      const text = this.querySelector<HTMLElement>(`[data-prompt-text="${block.key}"]`);
+      if (!element || !text) return;
+      element.hidden = !block.text;
+      text.textContent = block.text;
+    });
+
+    const copyButton = this.querySelector<HTMLButtonElement>('[data-copy-prompt]');
+    const copyLabel = this.querySelector<HTMLElement>('[data-copy-label]');
+    const nextQuestionHint = this.querySelector<HTMLElement>('[data-next-question-hint]');
+    const resetButton = this.querySelector<HTMLButtonElement>('[data-reset-scenario]');
+    if (copyButton) copyButton.classList.toggle('is-complete', complete);
+    if (copyLabel && !copyButton?.dataset.copied) copyLabel.textContent = 'Copy generated prompt';
+    if (nextQuestionHint) nextQuestionHint.hidden = complete;
+    if (resetButton) {
+      const hasSelections = this.hasSelections();
+      resetButton.hidden = !hasSelections;
+      resetButton.disabled = !hasSelections;
+      resetButton.tabIndex = hasSelections ? 0 : -1;
+    }
+
+    this.updateUrl();
+    this.scheduleStageUpdate();
+    if (animate) this.flash(affected);
+  }
+
+  private buildPrompt(): PromptBlock[] {
+    const mode = this.value('mode');
+    const installed = this.value('installed');
+    const repo = this.value('repo');
+    const git = this.value('git');
+    const scope = this.value('scope');
+    const changes = this.values('changes');
+    const knowledge = this.values('knowledge');
+    const host = this.value('host');
+    const execution = this.value('execution');
+
+    const goal =
+      mode === 'new'
+        ? 'Help me decide whether Arcantry fits this project, then set it up only after you have inspected the project and explained your recommendation.'
+        : mode === 'existing'
+          ? 'Help me understand and safely adapt the Arcantry setup that already exists in this project.'
+          : 'Help me determine whether this project already uses Arcantry and whether adopting or changing it would be useful.';
+
+    const install =
+      installed === 'yes'
+        ? 'Confirm the installed Arcantry version before using it. If the command is unavailable, stop and explain the official installation choices.'
+        : installed === 'no'
+          ? 'Arcantry is not installed. Detect the operating system, architecture, and available package managers. Recommend an official installation route, show the exact command and its scope, and ask before running it. Verify the installed version afterward.'
+          : 'Check whether Arcantry is available on this computer. If it is missing, explain the official installation choices and ask before installing anything.';
+
+    let inspect =
+      'Start with read-only `arcantry repo inspect`. Treat missing configuration, Git, or knowledge sources as valid states rather than errors.';
+    if (repo === 'yes') inspect += ' This is already a Git repository, so preserve its tracked and untracked work.';
+    if (repo === 'unsure')
+      inspect +=
+        ' Check whether the directory is a Git repository and explain what that changes. Arcantry itself does not require Git.';
+    if (repo === 'no') {
+      if (git === 'yes')
+        inspect +=
+          ' There is no Git repository. Explain the benefit of local Git and ask before running `git init`; do not create a remote.';
+      if (git === 'explain')
+        inspect +=
+          ' There is no Git repository. Explain local Git without assuming I have used it before, then let me decide whether to initialize it.';
+      if (git === 'no') inspect += ' There is no Git repository and I do not want one created. Continue without Git.';
+    }
+    if (repo === 'no-github') {
+      inspect += ' Do not create or connect a GitHub remote.';
+      if (git === 'yes') inspect += ' Help me use Git locally, but ask before initializing it.';
+      if (git === 'explain') inspect += ' Explain the value of local Git without GitHub and let me decide.';
+      if (git === 'no') inspect += ' Continue without Git.';
+    }
+
+    let adoption = '';
+    if (scope === 'private')
+      adoption =
+        'Recommend private scope unless inspection finds a concrete reason it would not fit. Keep `.local/` private and do not add it to the shared `.gitignore`.';
+    if (scope === 'shared')
+      adoption =
+        'Recommend shared scope only if collaborators should use the same configuration and guidance. Preserve all project-owned content outside Arcantry-managed sections.';
+    if (scope === 'external')
+      adoption =
+        'Keep the target project unchanged. If configuration is useful, propose an explicit external configuration and explain where it would live before creating it.';
+    if (scope === 'recommend')
+      adoption =
+        'Compare configuration-free, private, shared, and external use in terms I can understand, then recommend the smallest useful option.';
+    if (mode === 'existing' && changes.length) {
+      const changeLabels: Record<string, string> = {
+        boundaries: 'shared and private boundaries',
+        sources: 'knowledge source responsibilities or paths',
+        guidance: 'agent guidance or compatibility',
+        repair: 'outdated or drifting managed files',
+        unsure: 'whatever inspection shows is confusing, outdated, or unnecessary',
+      };
+      adoption += ` I want to review ${changes.map((value) => changeLabels[value]).join(', ')}. Use read-only diagnostics first. For source changes, prepare a reviewable plan and keep apply as a separate step.`;
+    }
+
+    const sourceLabels: Record<string, string> = {
+      openspec: 'OpenSpec for accepted requirements and planned changes',
+      todo: 'todo.txt for a quick task queue',
+      changelog: 'a changelog for human release history',
+      skills: 'reusable agent skills as independent procedures',
+    };
+    const sources = knowledge.includes('inspect')
+      ? 'Only inspect the current knowledge stack for now. Do not create, adopt, move, or manage a source.'
+      : knowledge.length
+        ? `I am interested in ${knowledge.map((value) => sourceLabels[value]).join(', ')}. Check what already exists and whether each source makes sense here. Repository initialization does not create these sources, so propose each addition or transition separately.`
+        : 'Ask which project knowledge, if any, should be organized after inspection.';
+
+    const hostText: Record<string, string> = {
+      codex:
+        'I use Codex. Prefer universal `AGENTS.md` guidance and standard `.agents/skills` locations; do not add branded compatibility files.',
+      claude:
+        'I use Claude Code. Keep universal `AGENTS.md` as the source of guidance and explain the explicit Claude compatibility option before adding it.',
+      other:
+        'I use another coding agent. Prefer universal agent guidance and avoid provider-specific compatibility files unless they are demonstrably required.',
+      several:
+        'Several coding agents may use this project. Keep universal guidance canonical and add any branded compatibility adapter only after explaining why it is needed.',
+      unsure:
+        'I am not sure which agent integration I need. Inspect the current guidance files and recommend the most portable option.',
+    };
+
+    const agreementText: Record<string, string> = {
+      apply:
+        'After inspection, summarize what you found, what you recommend, and exactly which files or commands would change. Wait for my explicit approval before installation, Git initialization, repository initialization, updates, source transitions, or skill linking. Then validate the approved result.',
+      plan: 'Inspect and recommend only. Show the commands and affected files, but do not install anything or change project, Git, Arcantry, or skill state.',
+      guide:
+        'Guide me one command at a time. Explain what each command reads or changes, then wait for my confirmation before continuing.',
+    };
+
+    const guide = knowledge.includes('inspect')
+      ? 'Finish by explaining what Arcantry found, what I can safely ignore, and the smallest useful next decision. Keep the explanation practical and avoid assuming I know Git, TOML, OpenSpec, or release tooling.'
+      : 'Finish with a short, practical guide for the setup we chose: what Arcantry now manages, what remains mine, which everyday commands to use, and how to ask an agent for future changes without crossing shared and private boundaries.';
+
+    return [
+      { key: 'goal', title: 'Goal', text: goal },
+      { key: 'install', title: 'Install', text: install },
+      { key: 'inspect', title: 'Inspect', text: inspect },
+      { key: 'adoption', title: 'Configure', text: adoption },
+      { key: 'sources', title: 'Knowledge', text: sources },
+      {
+        key: 'host',
+        title: 'Agent files',
+        text: host
+          ? hostText[host]
+          : 'Ask which coding agent should use the resulting guidance before adding compatibility files.',
+      },
+      {
+        key: 'agreement',
+        title: 'Working agreement',
+        text: execution
+          ? agreementText[execution]
+          : 'Inspect and explain first. Do not make changes until I choose how far you should go.',
+      },
+      { key: 'guide', title: 'Teach me', text: guide },
+    ];
+  }
+
+  private updateProgress(answered: number, total: number): void {
+    const label = this.querySelector<HTMLElement>('[data-progress-label]');
+    const bar = this.querySelector<HTMLElement>('[data-progress-bar]');
+    if (label) label.textContent = `${answered} of ${total} answered`;
+    if (bar) bar.style.transform = `scaleX(${total ? answered / total : 0})`;
+  }
+
+  private updateUrl(): void {
+    const url = new URL(window.location.href);
+    radioNames.forEach((name) => {
+      const value = this.value(name);
+      if (value) url.searchParams.set(paramNames[name], value);
+      else url.searchParams.delete(paramNames[name]);
+    });
+    checkboxNames.forEach((name) => {
+      const values = this.values(name);
+      if (values.length) url.searchParams.set(paramNames[name], values.join(','));
+      else url.searchParams.delete(paramNames[name]);
+    });
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  }
+
+  private flash(keys: string[]): void {
+    keys.forEach((key) => {
+      const block = this.querySelector<HTMLElement>(`[data-prompt-block="${key}"]`);
+      if (!block || block.hidden) return;
+      block.classList.remove('is-updated');
+      void block.offsetWidth;
+      block.classList.add('is-updated');
+      const currentTimer = this.timers.get(key);
+      if (currentTimer) window.clearTimeout(currentTimer);
+      this.timers.set(
+        key,
+        window.setTimeout(() => block.classList.remove('is-updated'), 780),
+      );
+    });
+  }
+}
+
+if (!customElements.get('arcantry-configurator')) {
+  customElements.define('arcantry-configurator', ArcantryConfigurator);
+}
+</script>
+
+<style>
+@layer starlight.core {
+  arcantry-configurator {
+    display: block;
+    width: 100%;
+    color: var(--ar-text);
+    font-family: var(--ar-font-sans);
+  }
+  .configurator-shell {
+    display: grid;
+    grid-template-columns: var(--sl-sidebar-width) minmax(0, 1fr) minmax(18rem, 20.5rem);
+    align-items: start;
+    width: 100%;
+  }
+  .configurator-sidebar {
+    position: sticky;
+    top: var(--sl-nav-height);
+    display: flex;
+    align-self: start;
+    flex-direction: column;
+    height: calc(100dvh - var(--sl-nav-height));
+    overflow-y: auto;
+    border-right: 1px solid var(--ar-border);
+    background: var(--ar-bg-subtle);
+  }
+  .configurator-side-nav {
+    flex: 1;
+    padding: 1.5rem 0.9rem 2rem;
+  }
+  .side-nav-group + .side-nav-group {
+    margin-top: 1.7rem;
+  }
+  .side-nav-group {
+    display: grid;
+    gap: 0.1rem;
+  }
+  .side-nav-group > p {
+    margin: 0;
+    padding: 0 0.7rem 0.5rem;
+    color: var(--ar-text-soft);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+  .configurator-main {
+    min-width: 0;
+    padding: clamp(2.2rem, 4vw, 4rem) clamp(1.5rem, 3vw, 3rem) 3rem;
+  }
+  .configurator-mobile-nav {
+    display: none;
+  }
+  .configurator-intro {
+    margin-bottom: clamp(2.2rem, 4vw, 3.2rem);
+  }
+  .configurator-kicker {
+    margin: 0 0 0.65rem;
+    color: var(--ar-accent-blue);
+    font-size: 0.66rem;
+    font-weight: 750;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .configurator-intro h1 {
+    max-width: 16ch;
+    margin: 0;
+    color: var(--ar-text);
+    font-family: var(--ar-font-sans);
+    font-size: clamp(2.25rem, 4.2vw, 4rem);
+    font-weight: 620;
+    letter-spacing: -0.055em;
+    line-height: 0.98;
+  }
+  .configurator-intro > p:not(.configurator-kicker) {
+    max-width: 48rem;
+    margin: 1.2rem 0 0;
+    color: var(--ar-text-muted);
+    font-size: 0.95rem;
+    line-height: 1.65;
+  }
+  .progress-track {
+    height: 3px;
+    overflow: hidden;
+    background: var(--ar-border);
+  }
+  .progress-track > span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--ar-accent-blue), var(--ar-accent-violet), var(--ar-accent-pink));
+    background-size: 220% 100%;
+    animation: progress-gradient-shift 8s ease-in-out infinite alternate;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .scenario-panel {
+    min-width: 0;
+  }
+  .scenario-panel fieldset {
+    scroll-margin-top: calc(var(--sl-nav-height) + 1rem);
+    min-width: 0;
+    margin: 0;
+    padding: 1.35rem 0;
+    border: 0;
+    animation: question-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .scenario-panel fieldset + fieldset {
+    border-top: 0;
+  }
+  .scenario-panel fieldset[hidden] {
+    display: none;
+  }
+  .scenario-panel legend {
+    display: flex;
+    align-items: baseline;
+    gap: 0.7rem;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    color: var(--ar-text);
+    font-size: 1.02rem;
+    font-weight: 720;
+    letter-spacing: -0.025em;
+  }
+  .scenario-panel legend span {
+    color: var(--ar-accent-blue);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.64rem;
+    letter-spacing: 0.06em;
+  }
+  .scenario-panel legend + .choice-grid {
+    margin-top: 0;
+  }
+  .question-help {
+    max-width: 48rem;
+    margin: 0.55rem 0 1.1rem;
+    color: var(--ar-text-soft);
+    font-size: 0.76rem;
+    line-height: 1.55;
+  }
+  .choice-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+  .choice-grid-compact {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .choice {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1rem minmax(0, 1fr);
+    gap: 0.7rem;
+    min-width: 0;
+    padding: 0.9rem;
+    border: 1px solid var(--ar-border);
+    background: transparent;
+    cursor: pointer;
+    transition:
+      border-color 150ms ease,
+      background-color 150ms ease,
+      transform 150ms ease;
+  }
+  .choice-wide {
+    grid-column: 1 / -1;
+  }
+  .choice:hover {
+    border-color: var(--ar-text-soft);
+    background: var(--ar-bg-subtle);
+  }
+  .choice:active {
+    transform: translateY(1px);
+  }
+  .choice:has(input:checked) {
+    border-color: color-mix(in srgb, var(--ar-accent-blue) 68%, var(--ar-border));
+    background: color-mix(in srgb, var(--ar-accent-blue) 6%, var(--ar-bg));
+  }
+  .choice input {
+    width: 0.95rem;
+    height: 0.95rem;
+    margin: 0.13rem 0 0;
+    accent-color: var(--ar-accent-blue);
+  }
+  .choice:has(input:focus-visible) {
+    outline: 2px solid var(--ar-accent-blue);
+    outline-offset: 2px;
+  }
+  .choice > span {
+    display: grid;
+    gap: 0.28rem;
+    min-width: 0;
+  }
+  .choice strong {
+    color: var(--ar-text);
+    font-size: 0.8rem;
+    line-height: 1.35;
+  }
+  .choice small {
+    color: var(--ar-text-soft);
+    font-size: 0.69rem;
+    line-height: 1.45;
+  }
+  .next-question-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0.85rem 0 0.95rem;
+    border-top: 0;
+    color: var(--ar-text-soft);
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.5;
+    text-align: center;
+  }
+  .next-question-hint :global(svg) {
+    width: 0.85rem;
+    height: 0.85rem;
+    flex: 0 0 auto;
+  }
+  .next-question-hint[hidden] {
+    display: none;
+  }
+  .prompt-panel {
+    position: sticky;
+    top: var(--sl-nav-height);
+    display: grid;
+    align-self: start;
+    height: calc(100dvh - var(--sl-nav-height));
+    grid-template-rows: auto minmax(8rem, 1fr) auto;
+    overflow: hidden;
+    border-left: 1px solid var(--ar-border);
+    background: var(--ar-bg-subtle);
+  }
+  .prompt-heading {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--ar-border);
+    background: var(--ar-bg-subtle);
+  }
+  .prompt-progress {
+    display: grid;
+    gap: 0.65rem;
+    color: var(--ar-text-soft);
+    font-size: 0.68rem;
+  }
+  .prompt-progress-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .prompt-heading-copy {
+    display: grid;
+    gap: 0.42rem;
+  }
+  .prompt-heading h2 {
+    margin: 0;
+    color: var(--ar-text);
+    font-family: var(--ar-font-sans);
+    font-size: 0.92rem;
+    font-weight: 720;
+    letter-spacing: -0.025em;
+  }
+  .prompt-heading-copy p {
+    margin: 0;
+    color: var(--ar-text-muted);
+    font-size: 0.68rem;
+    line-height: 1.5;
+  }
+  .reset-scenario {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 2rem;
+    padding: 0.4rem 0.55rem;
+    border: 1px solid var(--ar-border);
+    background: transparent;
+    color: var(--ar-text);
+    cursor: pointer;
+    font-family: var(--ar-font-sans);
+    font-size: 0.68rem;
+    font-weight: 680;
+    line-height: 1;
+    white-space: nowrap;
+    transition:
+      border-color 150ms ease,
+      background-color 150ms ease,
+      color 150ms ease;
+  }
+  .reset-scenario :global(svg) {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+  .reset-scenario[hidden] {
+    display: none;
+  }
+  .reset-scenario:hover:not(:disabled) {
+    border-color: var(--ar-text-soft);
+    background: var(--ar-surface);
+  }
+  .reset-scenario:disabled {
+    cursor: not-allowed;
+    opacity: 0.42;
+  }
+  .prompt-preview {
+    overflow-y: auto;
+    background: var(--ar-bg);
+  }
+  .prompt-preview section {
+    position: relative;
+    margin: 0;
+    padding: 0.85rem 1rem;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .prompt-preview section + section {
+    border-top: 1px solid var(--ar-border-soft);
+  }
+  .prompt-preview section::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background: color-mix(in srgb, var(--ar-accent-blue) 13%, transparent);
+    opacity: 0;
+    transform: translateX(-0.4rem);
+  }
+  .prompt-preview section.is-updated::before {
+    animation: prompt-flash 760ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .prompt-preview h3 {
+    margin: 0 0 0.35rem;
+    color: var(--ar-accent-blue);
+    font-size: 0.58rem;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .prompt-preview p {
+    margin: 0;
+    color: var(--ar-text-muted);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.69rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+  }
+  .prompt-actions {
+    display: block;
+    padding: 0;
+    border-top: 1px solid var(--ar-border);
+    background: var(--ar-bg-subtle);
+  }
+  .copy-prompt {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 2.7rem;
+    padding: 0.65rem 0.85rem;
+    border: 0;
+    background: #fff;
+    color: #111;
+    cursor: pointer;
+    font-family: var(--ar-font-sans);
+    font-size: 0.72rem;
+    font-weight: 720;
+    transition:
+      filter 150ms ease,
+      background-position 500ms ease;
+  }
+  .copy-prompt.is-complete {
+    background: linear-gradient(100deg, var(--ar-accent-blue), var(--ar-accent-violet), var(--ar-accent-pink));
+    color: #111;
+  }
+  .copy-prompt:hover {
+    filter: brightness(0.93);
+  }
+  .copy-prompt:active {
+    filter: brightness(0.97);
+  }
+  .copy-prompt :global(svg) {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+  .copy-prompt [data-copy-label] {
+    font-size: 0.68rem;
+    font-weight: 720;
+    line-height: 1.2;
+  }
+  @keyframes progress-gradient-shift {
+    from {
+      background-position: 0% 50%;
+    }
+    to {
+      background-position: 100% 50%;
+    }
+  }
+  @keyframes question-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.35rem);
+    }
+  }
+  @keyframes prompt-flash {
+    0% {
+      opacity: 0;
+      transform: translateX(-0.4rem);
+    }
+    28% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(0);
+    }
+  }
+  @media (max-width: 64rem) {
+    .configurator-shell {
+      grid-template-columns: 13.5rem minmax(0, 1fr) 17.5rem;
+    }
+    .configurator-main {
+      padding-inline: 1.5rem;
+    }
+  }
+  @media (min-width: 50rem) {
+    .configurator-shell {
+      height: calc(100dvh - var(--sl-nav-height));
+      min-height: 0;
+      overflow: hidden;
+    }
+    .configurator-sidebar,
+    .prompt-panel {
+      top: auto;
+      height: 100%;
+    }
+    .configurator-main {
+      height: 100%;
+      overflow-y: auto;
+    }
+  }
+  @media (max-width: 49.99rem) {
+    .configurator-shell {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .configurator-sidebar {
+      display: none;
+    }
+    .configurator-main {
+      width: min(100%, 42rem);
+      margin-inline: auto;
+      padding: 1rem 1rem 2.5rem;
+    }
+    .configurator-mobile-nav {
+      display: block;
+      margin: 0 -1rem 2.4rem;
+      border-bottom: 1px solid var(--ar-border);
+      background: var(--ar-bg-subtle);
+    }
+    .configurator-mobile-nav summary {
+      padding: 0.85rem 1rem;
+      color: var(--ar-text-muted);
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .configurator-mobile-nav > div {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.2rem;
+      padding: 0 1rem 1rem;
+    }
+    .configurator-mobile-nav a {
+      min-width: 0;
+      padding: 0.45rem 0.55rem;
+      color: var(--ar-text-muted);
+      font-size: 0.7rem;
+      text-decoration: none;
+    }
+    .configurator-mobile-nav a.active {
+      background: color-mix(in srgb, var(--ar-accent-blue) 7%, transparent);
+      color: var(--ar-text);
+    }
+    .configurator-mobile-nav a[aria-disabled='true'] {
+      opacity: 0.35;
+    }
+    .configurator-intro h1 {
+      font-size: clamp(2.2rem, 11vw, 3.2rem);
+    }
+    .prompt-panel {
+      position: relative;
+      top: auto;
+      width: min(100%, 42rem);
+      height: auto;
+      max-height: 34rem;
+      margin-inline: auto;
+      border-top: 1px solid var(--ar-border);
+      border-left: 0;
+    }
+    .choice-grid,
+    .choice-grid-compact {
+      grid-template-columns: 1fr;
+    }
+    .choice-wide {
+      grid-column: auto;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .scenario-panel fieldset,
+    .progress-track > span,
+    .prompt-preview section.is-updated::before {
+      animation: none;
+    }
+    .progress-track > span,
+    .choice,
+    .copy-prompt,
+    .reset-scenario {
+      transition: none;
+    }
+  }
+}
+</style>
