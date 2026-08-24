@@ -60,7 +60,7 @@ describe('npm package identity', () => {
     expect(commandPicker).toContain('value: `npm install --global ${packageName}`');
     expect(commandPicker).toContain('value: `npx ${packageName} repo inspect`');
     expect(commandPicker).toContain('value: `pnpm dlx ${packageName} repo inspect`');
-    expect(commandPicker).toContain('value: `bunx ${packageName} repo inspect`');
+    expect(commandPicker).not.toContain('value: `bunx ${packageName} repo inspect`');
     expect(commandPicker).toContain('value: `nubx ${packageName} repo inspect`');
     expect(commandPicker).toContain('arcantry-installer.ps1');
     expect(commandPicker).toContain('arcantry-installer.sh');
