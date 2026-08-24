@@ -18,22 +18,15 @@ const faviconHref = `${import.meta.env.BASE_URL}favicon.svg`;
   <div class="header-search" transition:name="arcantry-search"><Search /></div>
   <div class="header-actions" transition:name="arcantry-actions">
     <a class="github-link" href="https://github.com/MrMaxie/arcantry" aria-label="Arcantry on GitHub" title="GitHub">
-      <Icon name="github" />
+      <Icon name="github" size="1.125rem" />
     </a>
     <arcantry-theme-control>
       <button class="theme-button" type="button" aria-label="Change color theme" title="Change color theme">
         <span class="theme-icon theme-light">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="3.5" />
-            <path
-              d="M12 2.5v2M12 19.5v2M4.5 12h-2M21.5 12h-2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4"
-            />
-          </svg>
+          <Icon name="sun" size="1.125rem" />
         </span>
         <span class="theme-icon theme-dark">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M20 15.2A8 8 0 0 1 8.8 4 7.2 7.2 0 1 0 20 15.2Z" />
-          </svg>
+          <Icon name="moon" size="1.125rem" />
         </span>
       </button>
     </arcantry-theme-control>
@@ -175,8 +168,8 @@ if (!customElements.get('arcantry-theme-control')) {
     gap: 0.5rem;
   }
   .github-link {
-    width: 2rem;
-    height: 2rem;
+    width: 2.55rem;
+    height: 2.55rem;
     display: grid;
     place-items: center;
     flex: 0 0 auto;
@@ -205,8 +198,8 @@ if (!customElements.get('arcantry-theme-control')) {
   .theme-button {
     display: grid;
     place-items: center;
-    width: 2rem;
-    height: 2rem;
+    width: 2.55rem;
+    height: 2.55rem;
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -225,23 +218,9 @@ if (!customElements.get('arcantry-theme-control')) {
   }
   .theme-icon {
     display: none;
-    width: 1rem;
-    height: 1rem;
+    width: 1.35rem;
+    height: 1.35rem;
     place-items: center;
-  }
-  .github-link :global(svg),
-  .theme-icon :global(svg),
-  .theme-icon > svg {
-    display: block;
-    width: 1rem;
-    height: 1rem;
-  }
-  .theme-icon > svg {
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.25;
-    stroke-linecap: round;
-    stroke-linejoin: round;
   }
   .theme-button[data-mode='light'] .theme-light,
   .theme-button[data-mode='dark'] .theme-dark {
@@ -255,9 +234,11 @@ if (!customElements.get('arcantry-theme-control')) {
   .brand-version {
     transition: opacity 150ms ease;
   }
-  .brand-symbol,
   .brand-wordmark {
     filter: var(--ar-logo-filter);
+  }
+  .brand-symbol {
+    filter: var(--ar-logo-symbol-filter);
   }
   .brand-lockup:focus-visible,
   .github-link:focus-visible,
@@ -277,15 +258,29 @@ if (!customElements.get('arcantry-theme-control')) {
     color: var(--ar-text-muted) !important;
     font-size: 0.75rem !important;
   }
+  :global(site-search button[data-open-modal] > svg) {
+    width: 1.125rem !important;
+    height: 1.125rem !important;
+    flex: 0 0 auto;
+  }
+  :global(site-search button[data-open-modal] kbd) {
+    display: none !important;
+  }
   :global(site-search button[data-open-modal]:hover) {
     border-color: var(--ar-text-soft) !important;
     color: var(--ar-text) !important;
   }
 
-  :global(html[data-has-hero]) .header-shell {
+  :global(html[data-has-hero]) .header-shell,
+  :global(.arcantry-page:not(.has-sidebar)) .header-shell {
     width: calc(100% - 2rem);
     max-width: 72rem;
     padding-inline: 0;
+  }
+  :global(body:has(arcantry-configurator)) .header-shell {
+    width: 100%;
+    max-width: none;
+    padding-inline: 1.25rem;
   }
   @media (max-width: 49.99rem) {
     .header-shell {
@@ -314,25 +309,30 @@ if (!customElements.get('arcantry-theme-control')) {
     }
     .github-link,
     .theme-button {
-      width: 2.25rem;
-      height: 2.25rem;
+      width: 2.75rem;
+      height: 2.75rem;
     }
-    .github-link :global(svg),
-    .theme-icon :global(svg),
-    .theme-icon > svg,
     .theme-icon {
-      width: 1.12rem;
-      height: 1.12rem;
+      width: 1.125rem;
+      height: 1.125rem;
     }
     :global(site-search button[data-open-modal]) {
-      min-width: 2.25rem !important;
-      height: 2.25rem !important;
+      min-width: 2.75rem !important;
+      height: 2.75rem !important;
       font-size: 0.86rem !important;
     }
-    :global(html[data-has-hero]) .header-search {
+    :global(site-search button[data-open-modal] > svg) {
+      width: 1.125rem !important;
+      height: 1.125rem !important;
+    }
+    :global(html[data-has-hero]) .header-search,
+    :global(.arcantry-page:not(.has-sidebar)) .header-search {
       flex: 1 1 auto;
       width: auto;
       max-width: none;
+    }
+    :global(body:has(arcantry-configurator)) .header-shell {
+      padding-inline: 0.8rem;
     }
   }
 

@@ -7,19 +7,18 @@ import { faHeart } from '@fortawesome/free-solid-svg-icons';
 import packageManifest from '../../../../packages/arcantry/package.json';
 
 const { hasSidebar } = Astro.locals.starlightRoute;
-const isHomepage = Astro.url.pathname === import.meta.env.BASE_URL;
 const [heartWidth, heartHeight, , , heartPath] = faHeart.icon;
 const heartPathData = Array.isArray(heartPath) ? heartPath[0] : heartPath;
 ---
 
 <footer class="page-footer">
-  {hasSidebar && (
+  {Boolean(hasSidebar) && (
     <div class="page-meta">
       <EditLink />
       <LastUpdated />
     </div>
   )}
-  {!isHomepage && (
+  {Boolean(hasSidebar) && (
     <div class="pagination-transition" transition:name="arcantry-next-action">
       <Pagination />
     </div>

@@ -211,11 +211,14 @@ const faviconHref = `${import.meta.env.BASE_URL}favicon.svg`;
   <section class="setup-invitation" aria-labelledby="setup-invitation-title">
     <p>Your setup</p>
     <h3 id="setup-invitation-title">
-      Every project has different boundaries. Build a setup that keeps its knowledge <span>safe</span>.
+      <span class="setup-heading-line">Every project has different boundaries.</span>
+      <span class="setup-heading-line"
+        >Build a setup that keeps its knowledge <span class="setup-accent">safe</span>.</span
+      >
     </h3>
     <div class="setup-actions">
-      <a class="setup-primary" href="/arcantry/adoption/#choose-an-adoption-path">
-        <strong>Configure your setup</strong>
+      <a class="setup-primary" href="/arcantry/configurator/">
+        <span class="setup-primary-label"><Icon name="setting" /><strong>Configure your setup</strong></span>
         <Icon name="right-arrow" />
       </a>
       <a class="setup-next" href="/arcantry/getting-started/" transition:name="arcantry-next-action">
@@ -360,7 +363,7 @@ arcantry-knowledge-graph {
 }
 .preset-selector button:hover {
   color: var(--ar-text);
-  background: color-mix(in srgb, var(--ar-text) 3%, transparent);
+  background: color-mix(in srgb, var(--ar-effect-ink) 3%, transparent);
 }
 .preset-selector button[aria-pressed='true'] {
   color: var(--ar-text);
@@ -601,8 +604,16 @@ arcantry-knowledge-graph {
   line-height: 1.12 !important;
   letter-spacing: -0.025em;
 }
-.setup-invitation h3 span {
-  background: linear-gradient(90deg, var(--ar-accent-blue), var(--ar-accent-violet), var(--ar-accent-pink));
+.setup-invitation h3 .setup-heading-line {
+  display: block;
+}
+.setup-invitation h3 .setup-accent {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ar-accent-blue) 50%, var(--ar-effect-ink)),
+    color-mix(in srgb, var(--ar-accent-violet) 50%, var(--ar-effect-ink)),
+    color-mix(in srgb, var(--ar-accent-pink) 50%, var(--ar-effect-ink))
+  );
   background-clip: text;
   color: transparent;
 }
@@ -655,6 +666,15 @@ arcantry-knowledge-graph {
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.2rem;
+}
+.setup-primary-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+.setup-primary-label svg {
+  color: var(--ar-accent-violet);
 }
 .setup-primary strong {
   font-size: 1rem;

@@ -1,0 +1,110 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+import type { StarlightIcon } from '@astrojs/starlight/types';
+
+interface Props {
+  href: string;
+  label: string;
+  icon?: StarlightIcon;
+  marker?: string;
+  depth?: number;
+  active?: boolean;
+  disabled?: boolean;
+  stage?: string;
+  current?: 'page' | 'step';
+}
+
+const {
+  href,
+  label,
+  icon = 'document',
+  marker,
+  depth = 0,
+  active = false,
+  disabled = false,
+  stage,
+  current = 'page',
+} = Astro.props;
+---
+
+<a
+  class:list={['nav-link', { 'nav-sublink': depth > 0, active }]}
+  href={href}
+  aria-current={active ? current : undefined}
+  aria-disabled={disabled ? 'true' : undefined}
+  tabindex={disabled ? -1 : undefined}
+  data-stage-link={stage}
+  style={`--nav-depth: ${depth}`}
+>
+  <span class:list={['nav-icon-slot', { 'nav-marker': marker }]} aria-hidden="true">
+    {marker ? marker : <Icon name={icon} />}
+  </span>
+  <span>{label}</span>
+</a>
+
+<style>
+@layer starlight.core {
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-inline: -0.9rem;
+    padding: 0.5rem 0.9rem 0.5rem calc(1.6rem + var(--nav-depth, 0) * 1.15rem);
+    border-left: 2px solid transparent;
+    color: var(--ar-text-muted);
+    text-decoration: none;
+    font-size: 0.83rem;
+    font-weight: 560;
+    letter-spacing: -0.015em;
+    transition:
+      color 150ms ease,
+      background-color 150ms ease,
+      border-color 150ms ease;
+  }
+  .nav-icon-slot {
+    display: grid;
+    width: 0.9rem;
+    flex: 0 0 0.9rem;
+    place-items: center;
+  }
+  .nav-link :global(svg) {
+    flex: 0 0 auto;
+    color: var(--ar-text-soft);
+    font-size: 0.9rem;
+    transition: color 150ms ease;
+  }
+  .nav-link:hover {
+    color: var(--ar-text);
+    background: var(--ar-surface);
+  }
+  .nav-link:hover :global(svg) {
+    color: var(--ar-accent-blue);
+  }
+  .nav-link.active :global(svg) {
+    color: var(--ar-accent-violet);
+  }
+  .nav-link.active {
+    color: var(--ar-text);
+    border-left-color: var(--ar-accent-violet);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--ar-accent-violet) 9%, transparent), transparent 82%);
+  }
+  .nav-marker {
+    color: var(--ar-text-soft);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.05em;
+  }
+  .nav-link[aria-disabled='true'] {
+    cursor: default;
+    opacity: 0.35;
+  }
+  .nav-link[aria-disabled='true']:hover {
+    color: var(--ar-text-muted);
+    background: transparent;
+  }
+  .nav-sublink {
+    margin-inline: 0;
+    font-size: 0.78rem;
+  }
+}
+</style>
