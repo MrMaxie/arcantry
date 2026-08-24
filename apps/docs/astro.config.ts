@@ -5,6 +5,9 @@ import skillSidebar from './src/generated/skill-sidebar';
 export default defineConfig({
   site: 'https://mrmaxie.github.io',
   base: '/arcantry/',
+  devToolbar: {
+    enabled: false,
+  },
   integrations: [
     starlight({
       title: 'Arcantry',
@@ -29,6 +32,7 @@ export default defineConfig({
             { label: 'Homepage', slug: 'index' },
             { label: 'Get started', slug: 'getting-started' },
             { label: 'Adoption paths', slug: 'adoption' },
+            { label: 'Changelog', slug: 'changelog' },
           ],
         },
         {

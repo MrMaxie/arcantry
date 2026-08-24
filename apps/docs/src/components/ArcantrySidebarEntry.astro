@@ -1,6 +1,7 @@
 ---
 import { Icon } from '@astrojs/starlight/components';
 import type { StarlightIcon } from '@astrojs/starlight/types';
+import ArcantrySidebarLink from './ArcantrySidebarLink.astro';
 
 type SidebarLink = {
   type: 'link';
@@ -54,15 +55,13 @@ const iconFor = (candidate: SidebarEntry): StarlightIcon => {
 ---
 
 {entry.type === 'link' ? (
-  <a
-    class:list={['nav-link', { 'nav-sublink': depth > 0, active: entry.isCurrent }]}
+  <ArcantrySidebarLink
     href={entry.href}
-    aria-current={entry.isCurrent ? 'page' : undefined}
-    style={`--nav-depth: ${depth}`}
-  >
-    <span class="nav-icon-slot" aria-hidden="true"><Icon name={iconFor(entry)} /></span>
-    <span>{entry.label}</span>
-  </a>
+    label={entry.label}
+    icon={iconFor(entry)}
+    depth={depth}
+    active={entry.isCurrent}
+  />
 ) : (
   <details class:list={['nav-subgroup', { 'nav-nested': depth > 0 }]} open={!entry.collapsed || containsCurrent(entry)} style={`--nav-depth: ${depth}`}>
     <summary>
@@ -80,49 +79,11 @@ const iconFor = (candidate: SidebarEntry): StarlightIcon => {
 
 <style>
 @layer starlight.core {
-  .nav-link {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    margin-inline: -0.9rem;
-    padding: 0.5rem 0.9rem 0.5rem calc(1.6rem + var(--nav-depth, 0) * 1.15rem);
-    border-left: 2px solid transparent;
-    color: var(--ar-text-muted);
-    text-decoration: none;
-    font-size: 0.83rem;
-    font-weight: 560;
-    letter-spacing: -0.015em;
-    transition:
-      color 150ms ease,
-      background-color 150ms ease,
-      border-color 150ms ease;
-  }
   .nav-icon-slot {
     display: grid;
     width: 0.9rem;
     flex: 0 0 0.9rem;
     place-items: center;
-  }
-  .nav-link :global(svg) {
-    flex: 0 0 auto;
-    color: var(--ar-text-soft);
-    font-size: 0.9rem;
-    transition: color 150ms ease;
-  }
-  .nav-link:hover {
-    color: var(--ar-text);
-    background: var(--ar-surface);
-  }
-  .nav-link:hover :global(svg) {
-    color: var(--ar-accent-blue);
-  }
-  .nav-link.active :global(svg) {
-    color: var(--ar-accent-violet);
-  }
-  .nav-link.active {
-    color: var(--ar-text);
-    border-left-color: var(--ar-accent-violet);
-    background: linear-gradient(90deg, color-mix(in srgb, var(--ar-accent-violet) 9%, transparent), transparent 82%);
   }
   .nav-subgroup {
     margin-inline: -0.9rem;
@@ -174,10 +135,6 @@ const iconFor = (candidate: SidebarEntry): StarlightIcon => {
     display: grid;
     gap: 0.08rem;
     padding-bottom: 0.2rem;
-  }
-  .nav-sublink {
-    margin-inline: 0;
-    font-size: 0.78rem;
   }
 }
 </style>

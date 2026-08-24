@@ -1,5 +1,6 @@
 ---
 import type {} from '@astrojs/starlight';
+import { Icon } from '@astrojs/starlight/components';
 import ArcantryAgentPrompt from './ArcantryAgentPrompt.astro';
 import ArcantryAmbientCanvas from './ArcantryAmbientCanvas.astro';
 import ArcantryCommandPicker from './ArcantryCommandPicker.astro';
@@ -31,14 +32,23 @@ const homeHref = Astro.locals.starlightRoute.siteTitleHref;
       <h1>{titleLead}<span>{titleAccent}</span></h1>
       {pageHero.tagline && <p class="hero-tagline">{pageHero.tagline}</p>}
       <ArcantryCommandPicker idPrefix="hero-command" variant="hero" />
-      {pageHero.actions?.length && (
+      {Boolean(pageHero.actions?.length) && (
         <div class="hero-actions">
-          {pageHero.actions.map((action) => (
-            <a class:list={['hero-action', action.variant === 'primary' ? 'primary' : 'secondary']} href={action.link}>
-              {action.text}
+          <div class="hero-buttons">
+            {pageHero.actions.map((action) => (
+              <a class:list={['hero-action', action.variant === 'primary' ? 'primary' : 'secondary']} href={action.link}>
+                <Icon name={action.variant === 'primary' ? 'rocket' : 'setting'} />
+                <span>{action.text}</span>
+              </a>
+            ))}
+          </div>
+          <div class="hero-text-actions">
+            <a class="hero-text-action" href="/arcantry/changelog/">
+              <Icon name="clock" />
+              <span>Changelog</span>
             </a>
-          ))}
-          <ArcantryAgentPrompt variant="button" />
+            <ArcantryAgentPrompt variant="link" label="Copy the starter prompt for your agent" />
+          </div>
         </div>
       )}
     </div>
@@ -105,12 +115,22 @@ const homeHref = Astro.locals.starlightRoute.siteTitleHref;
     letter-spacing: -0.015em;
   }
   .hero-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.7rem;
+    display: grid;
+    gap: 0.75rem;
     margin-top: 2rem;
   }
+  .hero-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0.7rem;
+  }
   .hero-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    min-height: 2.9rem;
     padding: 0.72rem 1rem;
     border: 1px solid var(--ar-border);
     border-radius: 0.2rem;
@@ -122,6 +142,11 @@ const homeHref = Astro.locals.starlightRoute.siteTitleHref;
       background-color 150ms ease,
       border-color 150ms ease,
       transform 150ms ease;
+  }
+  .hero-action :global(svg) {
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 auto;
   }
   .hero-action.primary {
     color: var(--ar-invert);
@@ -139,6 +164,31 @@ const homeHref = Astro.locals.starlightRoute.siteTitleHref;
   .hero-action.secondary:hover {
     border-color: var(--ar-text-soft);
     background: var(--ar-bg-subtle);
+  }
+  .hero-text-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem 1.15rem;
+  }
+  .hero-text-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.15rem 0;
+    color: var(--ar-text-muted);
+    font-size: 0.75rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition: color 150ms ease;
+  }
+  .hero-text-action:hover {
+    color: var(--ar-text);
+  }
+  .hero-text-action :global(svg) {
+    width: 0.9rem;
+    height: 0.9rem;
+    flex: 0 0 auto;
   }
   .not-found-shell {
     display: grid;

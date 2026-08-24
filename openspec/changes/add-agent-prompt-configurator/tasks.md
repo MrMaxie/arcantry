@@ -1,0 +1,27 @@
+# Tasks
+
+- [x] Replace the placeholder configurator with a full-width two-panel form and compact prompt preview.
+- [x] Add progressive questions and conditional follow-ups for new and existing Arcantry scenarios.
+- [x] Generate installation, inspection, adoption, source, compatibility, approval, and usage guidance from the selected answers.
+- [x] Encode relevant choices in compact URL query parameters and restore them after reload.
+- [x] Add copy feedback, affected-section highlighting, reduced-motion behavior, and responsive layout.
+- [x] Validate OpenSpec, Astro diagnostics, production build, desktop interaction, URL restoration, and mobile layout.
+- [x] Replace implementation-focused configurator copy with setup-focused language and remove redundant persistence text.
+- [x] Keep the empty URL unselected, gate each follow-up, and warn only visitors who started empty and made selections.
+- [x] Present reset as a button, remove empty status spacing, reduce shell gaps, and theme documentation scrollbars.
+- [x] Revalidate OpenSpec, Astro diagnostics, build, navigation warnings, URL entry states, and responsive layout.
+- [x] Reframe the configurator as a full-width documentation shell with stage navigation, central questions, and a right preview.
+- [x] Add stage availability and scroll tracking, move wide-screen footer links left, and collapse navigation on narrow screens.
+- [x] Align the configurator header to the application grid and correct the compact logo contrast by theme.
+- [x] Revalidate OpenSpec, diagnostics, build, stage navigation, header alignment, logo contrast, and responsive layouts.
+- [x] Clarify the generated-instructions outcome, reuse the exact documentation sidebar primitives, and use pure white for strong dark-theme foregrounds.
+- [x] Revalidate documentation and configurator navigation, footer, copy, dark-theme controls, responsive layouts, and project checks.
+- [x] Move reset into the preview controls, strengthen the continuation cue, and remove trailing form and shell chrome.
+- [x] Revalidate the corrected desktop flow, reset behavior, responsive layout, and project checks.
+- [x] Move progress into the preview header, add its gradient treatment, clarify the preview purpose, and simplify redundant question help.
+- [x] Revalidate preview hierarchy, surface contrast, reset sizing, question spacing, and responsive behavior.
+- [x] Tighten question rhythm, add concise option notes, remove redundant separators, and mute continuation guidance.
+- [x] Keep prompt copy available, make completion colorful, hide empty reset, moderate header icons, and remove shortcut badges.
+- [x] Revalidate full-screen scrolling, partial and complete prompt copying, reset visibility, header controls, and responsive layout.
+- [x] Reduce the generated-prompt action typography and revalidate it at desktop and mobile widths.
+- [x] Distinguish generated instructions with monospace typography and add visible copy-action hover feedback.
