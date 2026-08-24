@@ -2,7 +2,7 @@
 
 ### Requirement: Installation guidance distinguishes native and npm use
 
-The documentation MUST present direct archives, checksum-verifying sh and PowerShell installers, and the `arcantry` npm package as supported installation paths. It MUST list the supported operating-system and architecture matrix, explain that the Linux archives support both glibc and musl systems, and retain npm/npx, pnpm, Bun and Nub package-runner guidance. It MUST describe installation from the user's task without exposing launcher, optional-package, migration-oracle or build-pipeline details. It MUST NOT document Homebrew, Scoop, unsupported targets, signing or automatic updates as delivered behavior.
+The documentation MUST present direct archives, checksum-verifying sh and PowerShell installers, and the `arcantry` npm package as supported installation paths. It MUST list the supported operating-system and architecture matrix, explain that the Linux archives support both glibc and musl systems, and retain npm/npx, pnpm, and Nub package-runner guidance. It MUST describe installation from the user's task without exposing launcher, optional-package, migration-oracle or build-pipeline details. It MUST NOT document Homebrew, Scoop, unsupported targets, signing or automatic updates as delivered behavior.
 
 #### Scenario: A user chooses an installation path
 
