@@ -1,0 +1,4 @@
+interface:
+  display_name: "Design Coherent GUI"
+  short_description: "Design balanced, consistent graphical interfaces"
+  default_prompt: "Use $design-coherent-gui to design or audit this graphical interface for audience fit, balanced density, and reusable UI contracts."
