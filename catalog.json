@@ -32,6 +32,11 @@
       "tags": ["automation", "conversations", "workflow"]
     },
     {
+      "name": "design-coherent-gui",
+      "family": "content-safely",
+      "tags": ["components", "gui", "layout"]
+    },
+    {
       "name": "design-terminal-ux",
       "family": "content-safely",
       "tags": ["cli", "tui", "ux"]

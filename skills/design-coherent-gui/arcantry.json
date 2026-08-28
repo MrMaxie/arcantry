@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "summary": "Design graphical interfaces with audience-fit density, purposeful layout, and reusable visual and behavioral contracts.",
+  "scenarios": [
+    {
+      "title": "Recompose a settings panel",
+      "prompt": "Use the design-coherent-gui skill to reorganize this graphical settings panel for its actual users without making it either crowded or cryptically minimal.",
+      "outcome": "A task-led hierarchy with justified copy, naturally grouped controls, useful field sizing, and no accidental gaps or redundant containers."
+    },
+    {
+      "title": "Unify repeated graphical controls",
+      "prompt": "Use the design-coherent-gui skill to audit these pages and implement one coherent contract for equivalent buttons, icons, tags, and effects.",
+      "outcome": "A complete candidate inventory, evidence-based component reuse or variants, preserved unique layouts, and rendered cross-surface verification."
+    }
+  ]
+}
