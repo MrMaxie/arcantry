@@ -9,13 +9,13 @@ pub fn render(arguments: &[String]) -> Option<String> {
   {
     return None;
   }
-  let root = crate::cli::command();
+  let root = arcantry_cli::clap_command();
   let (command, path) = resolve_command(&root, arguments);
   Some(format_help(command, &path))
 }
 
 pub fn root() -> String {
-  let command = crate::cli::command();
+  let command = arcantry_cli::clap_command();
   format_help(&command, &[])
 }
 

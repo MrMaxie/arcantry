@@ -59,17 +59,11 @@ jobs:
       - name: Install musl tools
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install --yes musl-tools
-      - name: Run the compatibility fixture suite on the target family
-        run: cargo test --workspace
-      - name: Build target archive
-        run: mise exec -- dist build --artifacts=local --target=${{ matrix.target }} --tag=${{ github.ref_name }} --allow-dirty
-      - name: Smoke native executable
-        run: cargo run -p xtask -- smoke-target --target "${{ matrix.target }}"
+      - name: Verify native target and package
+        run: just native-target-check "${{ matrix.target }}" "${{ github.ref_name }}"
       - name: Smoke static Linux executable on Alpine musl
         if: runner.os == 'Linux'
         run: docker run --rm -v "$PWD:/work" -w /work alpine:3.23 "/work/target/${{ matrix.target }}/dist/arcantry" --version
-      - name: Smoke npm launcher and platform package
-        run: just package-target-smoke "${{ matrix.target }}"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: native-${{ matrix.target }}

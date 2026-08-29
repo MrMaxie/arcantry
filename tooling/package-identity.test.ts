@@ -104,13 +104,23 @@ describe('npm package identity', () => {
   it('runs compatibility and native smoke coverage across the declared release matrix', () => {
     const workflow = readFileSync(join(root, '.github', 'workflows', 'release.yml'), 'utf8');
     for (const target of nativeTargets) expect(workflow, target.triple).toContain(`target: ${target.triple}`);
-    expect(workflow).toContain('run: cargo test --workspace');
+    expect(workflow).toContain('just native-target-check "${{ matrix.target }}" "${{ github.ref_name }}"');
     expect(workflow).toContain('alpine:3.23');
-    expect(workflow).toContain('just package-target-smoke "${{ matrix.target }}"');
     expect(workflow).toContain('installer-smoke:');
     expect(workflow).toContain('windows-2025');
     expect(workflow).toContain('Smoke installers on their native operating system');
     expect(workflow).toMatch(/publish:\s+needs:\s+- assemble\s+- installer-smoke/u);
+  });
+
+  it('runs the complete native implementation gate on the host and disposable Linux', () => {
+    const justfile = readFileSync(join(root, 'justfile'), 'utf8');
+    const dockerfile = readFileSync(join(root, 'containers', 'rust-cli-test', 'Dockerfile'), 'utf8');
+    const xtask = readFileSync(join(root, 'xtask', 'src', 'linux_system.rs'), 'utf8');
+    expect(justfile).toContain('linux-system-test:');
+    expect(justfile).toMatch(/ci:.*linux-system-test/u);
+    expect(dockerfile).toContain('rust:1.97.1-alpine3.23@sha256:');
+    expect(xtask).toContain('cargo clippy --workspace --all-targets -- -D warnings');
+    expect(xtask).toContain('cargo test -p arcantry-cli --test cli_contract');
   });
 
   it('documents the active trusted-publishing workflow', () => {

@@ -1,4 +1,3 @@
-mod cli;
 mod embedded;
 mod help;
 mod parse_error;
@@ -8,55 +7,57 @@ mod skills_cmd;
 mod todo_cmd;
 
 use anyhow::Result;
-use clap::{Parser, error::ErrorKind};
-pub(crate) use cli::{
+pub(crate) use arcantry_cli::cli::{
   Cli, Command, ReleaseCommand, RepoCommand, RepoPlanArgs, SkillDoctorOptions, SkillLinkOptions,
   SkillUnlinkOptions, SkillsCommand, TodoCommand,
 };
+use clap::{Parser, error::ErrorKind};
 use std::path::{Path, PathBuf};
+use std::process::ExitCode;
 
-fn main() {
+fn main() -> ExitCode {
   let raw = std::env::args_os().collect::<Vec<_>>();
   let arguments = raw
     .iter()
     .skip(1)
-    .filter_map(|value| value.to_str().map(str::to_owned))
-    .collect::<Vec<_>>();
+    .map(|value| value.to_str().map(str::to_owned))
+    .collect::<Option<Vec<_>>>();
   if raw.len() == 1 {
     eprint!("{}", help::root());
-    std::process::exit(1);
+    return ExitCode::FAILURE;
   }
-  if let Some(error) = parse_error::render(&arguments) {
-    eprint!("{error}");
-    std::process::exit(1);
-  }
-  if let Some(output) = help::render(&arguments) {
-    print!("{output}");
-    return;
+  if let Some(arguments) = &arguments {
+    if let Some(error) = parse_error::render(arguments) {
+      eprint!("{error}");
+      return ExitCode::FAILURE;
+    }
+    if let Some(output) = help::render(arguments) {
+      print!("{output}");
+      return ExitCode::SUCCESS;
+    }
   }
   if raw.len() == 2 && matches!(raw[1].to_str(), Some("--version" | "-V")) {
     println!("{}", arcantry_core::VERSION);
-    return;
+    return ExitCode::SUCCESS;
   }
   let cli = match Cli::try_parse_from(raw) {
     Ok(cli) => cli,
     Err(error) => {
       let kind = error.kind();
       let _ = error.print();
-      std::process::exit(
-        if matches!(kind, ErrorKind::DisplayHelp | ErrorKind::DisplayVersion) {
-          0
-        } else {
-          1
-        },
-      );
+      return if matches!(kind, ErrorKind::DisplayHelp | ErrorKind::DisplayVersion) {
+        ExitCode::SUCCESS
+      } else {
+        ExitCode::FAILURE
+      };
     }
   };
   match execute(cli) {
-    Ok(code) => std::process::exit(code),
+    Ok(0) => ExitCode::SUCCESS,
+    Ok(code) => ExitCode::from(code.clamp(1, u8::MAX.into()) as u8),
     Err(error) => {
       eprintln!("Error: {error}");
-      std::process::exit(1);
+      ExitCode::FAILURE
     }
   }
 }

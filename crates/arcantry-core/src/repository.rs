@@ -2,6 +2,7 @@ use crate::config::{ProjectConfig, parse_project_config, render_project_config, 
 use crate::managed_content::{
   ManagedSectionResult, contains_managed_section, remove_managed_section, upsert_managed_section,
 };
+use crate::project_plan::{ProjectPlan, create_delete_operation, create_write_operation};
 use anyhow::{Context, Result, bail};
 use serde::Serialize;
 use std::fs;
@@ -123,7 +124,7 @@ pub fn init(cwd: &Path, scope: Scope, compatibility: bool) -> Result<Vec<Reposit
       &mut changes,
     )?;
   }
-  apply_changes(changes)
+  apply_changes(&root, scope, changes)
 }
 
 pub fn update(cwd: &Path, scope: Scope, compatibility: bool) -> Result<Vec<RepositoryChange>> {
@@ -158,7 +159,7 @@ pub fn update(cwd: &Path, scope: Scope, compatibility: bool) -> Result<Vec<Repos
       &mut changes,
     )?;
   }
-  apply_changes(changes)
+  apply_changes(&root, scope, changes)
 }
 
 pub fn remove(cwd: &Path, scope: Scope) -> Result<Vec<RepositoryChange>> {
@@ -179,17 +180,23 @@ pub fn remove(cwd: &Path, scope: Scope) -> Result<Vec<RepositoryChange>> {
   }
   plan_section_removal(&root, guidance_path(scope), &mut changes)?;
   plan_section_removal(&root, claude_path(scope), &mut changes)?;
-  apply_changes(changes)
+  apply_changes(&root, scope, changes)
 }
 
 pub fn validate(
   cwd: &Path,
   config_path_override: Option<&Path>,
+  cwd_explicit: bool,
   doctor: bool,
 ) -> Result<RepositoryReport> {
   let repository_root = resolve_repository_root(cwd).ok();
-  let root = repository_root.clone().unwrap_or_else(|| cwd.to_path_buf());
-  let project = resolve_project(&root, config_path_override, true, Some(crate::VERSION))?;
+  let project = resolve_project(
+    cwd,
+    config_path_override,
+    cwd_explicit,
+    Some(crate::VERSION),
+  )?;
+  let root = project.root.clone();
   let mut diagnostics = Vec::new();
   let Some(config_path) = project.config_path.clone() else {
     return Ok(RepositoryReport {
@@ -237,7 +244,23 @@ pub fn validate(
   })
 }
 
-fn apply_changes(changes: Vec<PlannedChange>) -> Result<Vec<RepositoryChange>> {
+fn apply_changes(
+  root: &Path,
+  scope: Scope,
+  changes: Vec<PlannedChange>,
+) -> Result<Vec<RepositoryChange>> {
+  apply_changes_with(root, scope, changes, crate::project_plan::apply)
+}
+
+fn apply_changes_with(
+  root: &Path,
+  scope: Scope,
+  changes: Vec<PlannedChange>,
+  apply: impl FnOnce(
+    &ProjectPlan,
+    &crate::project_plan::ApplyAuthority,
+  ) -> Result<crate::project_plan::ApplyOutcome>,
+) -> Result<Vec<RepositoryChange>> {
   for change in &changes {
     if read_optional(&change.path)? != change.expected {
       bail!(
@@ -246,16 +269,41 @@ fn apply_changes(changes: Vec<PlannedChange>) -> Result<Vec<RepositoryChange>> {
       );
     }
   }
+  let visibility = match scope {
+    Scope::Shared => crate::config::Visibility::Shared,
+    Scope::Private => crate::config::Visibility::Private,
+  };
+  let mut plan = ProjectPlan::new(
+    root.to_path_buf(),
+    "repository",
+    if changes.iter().any(|change| change.content.is_some()) {
+      "adopt"
+    } else {
+      "remove"
+    },
+    "arcantry-repository@1",
+  );
   for change in &changes {
-    if let Some(content) = &change.content {
-      if let Some(parent) = change.path.parent() {
-        fs::create_dir_all(parent)?;
-      }
-      fs::write(&change.path, content)?;
-    } else if change.path.exists() {
-      fs::remove_file(&change.path)?;
+    let plan_path = change
+      .path
+      .strip_prefix(root)
+      .map(|path| path.to_string_lossy().replace('\\', "/"))
+      .unwrap_or_else(|_| change.path.to_string_lossy().into_owned());
+    plan
+      .operations
+      .push(if let Some(content) = &change.content {
+        create_write_operation(root, &plan_path, content.clone(), visibility)?
+      } else {
+        create_delete_operation(root, &plan_path, visibility)?
+      });
+  }
+  let mut authority = crate::project_plan::ApplyAuthority::new(root)?;
+  for change in &changes {
+    if !change.path.starts_with(root) {
+      authority = authority.allow_exact(&change.path)?;
     }
   }
+  apply(&plan, &authority)?;
   Ok(
     changes
       .into_iter()
@@ -639,6 +687,85 @@ mod tests {
         "refs/remotes/origin/master",
       ],
     );
+  }
+
+  fn transaction_artifacts(root: &Path) -> Vec<PathBuf> {
+    fn visit(directory: &Path, found: &mut Vec<PathBuf>) {
+      for entry in fs::read_dir(directory).unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        if entry
+          .file_name()
+          .to_string_lossy()
+          .starts_with(".arcantry-")
+        {
+          found.push(path.clone());
+        }
+        if entry.file_type().unwrap().is_dir() {
+          visit(&path, found);
+        }
+      }
+    }
+    let mut found = Vec::new();
+    visit(root, &mut found);
+    found
+  }
+
+  #[test]
+  fn repository_changes_restore_updates_deletes_and_created_parents_after_failure() {
+    let directory = tempfile::tempdir().unwrap();
+    let root = directory.path();
+    fs::write(root.join("AGENTS.md"), "before\n").unwrap();
+    fs::write(root.join("remove.txt"), "preserve\n").unwrap();
+    let changes = vec![
+      PlannedChange {
+        action: "update",
+        path: root.join("AGENTS.md"),
+        display_path: "AGENTS.md".to_owned(),
+        content: Some("after\n".to_owned()),
+        expected: Some("before\n".to_owned()),
+      },
+      PlannedChange {
+        action: "remove",
+        path: root.join("remove.txt"),
+        display_path: "remove.txt".to_owned(),
+        content: None,
+        expected: Some("preserve\n".to_owned()),
+      },
+      PlannedChange {
+        action: "create",
+        path: root.join(".local/arcantry.toml"),
+        display_path: ".local/arcantry.toml".to_owned(),
+        content: Some("config_version = 1\n".to_owned()),
+        expected: None,
+      },
+    ];
+
+    let error = apply_changes_with(root, Scope::Private, changes, |plan, authority| {
+      crate::project_plan::apply_with_checkpoint(plan, authority, |phase, index| {
+        if phase == crate::project_plan::TransactionPhase::Commit && index == 2 {
+          bail!("injected repository commit failure");
+        }
+        Ok(())
+      })
+    })
+    .unwrap_err();
+
+    assert!(
+      error
+        .to_string()
+        .contains("injected repository commit failure")
+    );
+    assert_eq!(
+      fs::read_to_string(root.join("AGENTS.md")).unwrap(),
+      "before\n"
+    );
+    assert_eq!(
+      fs::read_to_string(root.join("remove.txt")).unwrap(),
+      "preserve\n"
+    );
+    assert!(!root.join(".local").exists());
+    assert!(transaction_artifacts(root).is_empty());
   }
 
   #[test]

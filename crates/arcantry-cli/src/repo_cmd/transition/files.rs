@@ -154,10 +154,38 @@ pub(super) fn plan_directory_relocation(
   operations: &mut Vec<PlanOperation>,
   conflicts: &mut Vec<String>,
 ) -> Result<()> {
-  let mut files = WalkDir::new(&source.absolute_path)
+  let entries = WalkDir::new(&source.absolute_path)
     .min_depth(1)
     .into_iter()
     .collect::<std::result::Result<Vec<_>, _>>()?;
+  let mut unsupported = Vec::new();
+  for entry in &entries {
+    let file_type = entry.file_type();
+    let kind = if file_type.is_symlink() {
+      Some("symbolic link")
+    } else if file_type.is_dir() && fs::read_dir(entry.path())?.next().is_none() {
+      Some("empty directory")
+    } else if file_type.is_file() || file_type.is_dir() {
+      None
+    } else {
+      Some("unsupported filesystem entry")
+    };
+    if let Some(kind) = kind {
+      unsupported.push(format!(
+        "{} ({kind})",
+        plan_path(&source.absolute_path, entry.path())
+      ));
+    }
+  }
+  if !unsupported.is_empty() {
+    unsupported.sort();
+    conflicts.push(format!(
+      "Relocate cannot preserve every source entry: {}.",
+      unsupported.join(", ")
+    ));
+    return Ok(());
+  }
+  let mut files = entries;
   files.retain(|entry| entry.file_type().is_file());
   files.sort_by_key(|entry| entry.path().to_path_buf());
   for entry in files {
