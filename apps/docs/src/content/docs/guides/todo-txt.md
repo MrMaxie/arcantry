@@ -24,6 +24,8 @@ arcantry todo list --source local
 
 Todo mutations produce a plan by default. They do not write until `--apply` is present.
 
+<!-- cli-evidence: todo-preview-first -->
+
 ```sh
 arcantry todo add "Review adapter +Arcantry @desk" --source root
 arcantry todo add "Review private notes @desk" --source local

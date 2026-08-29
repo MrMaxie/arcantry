@@ -14,9 +14,11 @@ mise provisions the pinned contributor toolchain. The root `justfile` is the doc
 | `just format` | Format the `justfile` and Rust with the repository's two-space policy, then format TypeScript, JavaScript and Astro with Biome. |
 | `just generate` | Refresh package metadata and documentation projections from canonical sources. |
 | `just native-conformance` | Compare CLI behavior across the black-box compatibility suite. |
+| `just rust-coverage` | Enforce reviewed per-file Rust line and branch coverage floors for every production module. |
+| `just native-target-check <target>` | Verify one declared native target through tests, build, executable smoke and platform-package smoke. |
 | `just openspec-validate` | Run strict validation for the OpenSpec schema and every change. |
 | `just package-check` | Build and smoke-test the npm packages for the current platform. |
-| `just ci` | Validate OpenSpec, release consistency, tests, generated state, builds and public self-checks. |
+| `just ci` | Validate OpenSpec, release consistency, tests, generated state, builds, blocking Rust coverage and public self-checks. |
 | `just docs` | Generate documentation projections and start the documentation site locally. |
 | `just release-plan` | Show unassigned archived changes and the resulting SemVer bump. |
 | `just release-cut` | Create the next release manifest from that plan. |

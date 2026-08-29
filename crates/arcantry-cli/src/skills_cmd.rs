@@ -1,6 +1,7 @@
 use crate::{SkillDoctorOptions, SkillLinkOptions, SkillUnlinkOptions, SkillsCommand, embedded};
 use anyhow::{Context, Result, bail};
-use arcantry_core::{catalog, repository};
+use arcantry_core::config::Visibility;
+use arcantry_core::{catalog, project_plan, repository};
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -310,11 +311,18 @@ fn exclude_private_links(root: &Path, name: &str, targets: &[PathBuf]) -> Result
   } else {
     root.join(candidate)
   };
+  if path.exists() && !path.is_file() {
+    bail!(
+      "Private Git exclusion path is not a file: {}",
+      path.display()
+    );
+  }
   let mut content = match fs::read_to_string(&path) {
     Ok(content) => content,
     Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
     Err(error) => return Err(error.into()),
   };
+  let original = content.clone();
   let mut entries = vec![".local/".to_owned()];
   for target in targets {
     if let Ok(relative) = target.strip_prefix(root) {
@@ -334,10 +342,35 @@ fn exclude_private_links(root: &Path, name: &str, targets: &[PathBuf]) -> Result
       content.push('\n');
     }
   }
-  if let Some(parent) = path.parent() {
-    fs::create_dir_all(parent)?;
+  if content == original {
+    return Ok(());
   }
-  fs::write(path, content)?;
+  let plan_path = path
+    .strip_prefix(root)
+    .map(|relative| relative.to_string_lossy().replace('\\', "/"))
+    .unwrap_or_else(|_| path.to_string_lossy().into_owned());
+  let mut plan = project_plan::ProjectPlan::new(
+    root.to_path_buf(),
+    "private-skill-links",
+    "adopt",
+    "git-exclude@1",
+  );
+  plan.operations.push(project_plan::create_write_operation(
+    root,
+    &plan_path,
+    content,
+    Visibility::Private,
+  )?);
+  if !plan.operations.is_empty() {
+    let mut authority = project_plan::ApplyAuthority::new(root)?;
+    if path.is_absolute() && !path.starts_with(root) {
+      authority = authority.allow_exact(&path)?;
+    }
+    let outcome = project_plan::apply(&plan, &authority)?;
+    for warning in outcome.warnings {
+      eprintln!("WARNING: {warning}");
+    }
+  }
   Ok(())
 }
 

@@ -5,8 +5,8 @@ use anyhow::{Result, bail};
 use arcantry_core::config::{Management, SourceKind, Visibility, resolve_project};
 use arcantry_core::knowledge::{KnowledgeInspection, inspect as inspect_knowledge};
 use arcantry_core::project_plan::{
-  Action, ProjectPlan, apply as apply_plan, create_write_operation, parse as parse_plan,
-  render as render_plan, serialize as serialize_plan,
+  Action, ApplyAuthority, ApplyOutcome, ProjectPlan, apply as apply_plan, create_write_operation,
+  parse as parse_plan, render as render_plan, serialize as serialize_plan,
 };
 use arcantry_core::repository;
 use std::fs;
@@ -41,7 +41,10 @@ pub fn execute(
       }
       Ok(code)
     }
-    RepoCommand::Apply { plan } => {
+    RepoCommand::Apply {
+      plan,
+      allow_outside,
+    } => {
       let content = if plan == "-" {
         let mut content = String::new();
         io::stdin().read_to_string(&mut content)?;
@@ -49,11 +52,22 @@ pub fn execute(
       } else {
         fs::read_to_string(cwd.join(plan))?
       };
-      let applied = apply_plan(&parse_plan(&content)?)?;
-      if applied.is_empty() {
+      let parsed = parse_plan(&content)?;
+      let inspection = project_inspection(cwd, config, cwd_explicit)?;
+      let mut authority = ApplyAuthority::new(&inspection.root)?;
+      for path in allow_outside {
+        authority = authority.allow_exact(&if path.is_absolute() {
+          path
+        } else {
+          cwd.join(path)
+        })?;
+      }
+      let outcome = apply_plan(&parsed, &authority)?;
+      render_apply_warnings(&outcome);
+      if outcome.operations.is_empty() {
         println!("No file changes.");
       } else {
-        for operation in applied {
+        for operation in outcome.operations {
           println!("{}: {}", action_name(&operation.action), operation.path);
         }
       }
@@ -101,21 +115,40 @@ pub fn handle_plan(plan: ProjectPlan, apply: bool, json: bool) -> Result<i32> {
     }
     return Ok(i32::from(!plan.conflicts.is_empty()));
   }
-  let applied = apply_plan(&plan)?;
+  let authority = authority_for_generated_plan(&plan)?;
+  let outcome = apply_plan(&plan, &authority)?;
+  render_apply_warnings(&outcome);
   if json {
     println!(
       "{}",
-      serde_json::to_string_pretty(&serde_json::json!({ "applied": applied }))?
+      serde_json::to_string_pretty(&serde_json::json!({ "applied": outcome.operations }))?
     );
   } else {
-    for operation in &applied {
+    for operation in &outcome.operations {
       println!("{}: {}", action_name(&operation.action), operation.path);
     }
-    if applied.is_empty() {
+    if outcome.operations.is_empty() {
       println!("No file changes.");
     }
   }
   Ok(0)
+}
+
+fn authority_for_generated_plan(plan: &ProjectPlan) -> Result<ApplyAuthority> {
+  let mut authority = ApplyAuthority::new(&plan.root)?;
+  for operation in &plan.operations {
+    let path = Path::new(&operation.path);
+    if path.is_absolute() {
+      authority = authority.allow_exact(path)?;
+    }
+  }
+  Ok(authority)
+}
+
+fn render_apply_warnings(outcome: &ApplyOutcome) {
+  for warning in &outcome.warnings {
+    eprintln!("WARNING: {warning}");
+  }
 }
 
 pub(super) fn add_private_exclude_operation(
@@ -203,7 +236,7 @@ fn validate_repository_and_knowledge(
   cwd_explicit: bool,
   doctor: bool,
 ) -> Result<i32> {
-  let report = repository::validate(cwd, config, doctor)?;
+  let report = repository::validate(cwd, config, cwd_explicit, doctor)?;
   let mut valid = report.valid;
   for diagnostic in report.diagnostics {
     let line = format!(

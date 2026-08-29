@@ -11,7 +11,7 @@ pub fn render(arguments: &[String]) -> Option<String> {
     return None;
   }
 
-  let root = crate::cli::command();
+  let root = arcantry_cli::clap_command();
   for argument in root
     .get_arguments()
     .filter(|argument| argument.is_global_set())
