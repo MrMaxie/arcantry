@@ -45,26 +45,49 @@ A completed change MUST NOT pass final repository validation or appear in releas
 
 ### Requirement: Release manifests only group changes
 
-A release manifest MUST contain a version, release date and explicit list of archived change ids. It MUST NOT duplicate change prose or specification deltas.
+A release manifest MUST contain its format, release unit, version, release date and explicit list of archived change ids. A composed unit manifest MUST also pin the exact versions of all direct dependencies. A manifest MUST NOT duplicate change prose or specification deltas. Assignment uniqueness MUST be enforced per `(unit, change)` pair, so one change MAY be released by multiple matching units at different versions or times.
 
 #### Scenario: A release is cut
 
 - **WHEN** a release manifest is created
 - **THEN** it groups archived change ids without copying their prose or deltas
 
+#### Scenario: One outcome affects multiple units
+
+- **WHEN** an archived change matches more than one release unit
+- **THEN** each unit may assign that change in its own manifest stream
+- **AND** assigning it in one unit does not assign it in another
+
+#### Scenario: A composed manifest is created
+
+- **WHEN** a composed unit release is cut
+- **THEN** its manifest pins the latest released version of every direct dependency
+- **AND** contains no copied release prose
+
 ### Requirement: SemVer impact belongs to the change
 
-Every completed product or engineering change MUST declare `patch`, `minor` or `major` impact in its release artifact and be assigned to a new SemVer release. The release version MUST be computed from the highest impact in the release. Internal completion MUST NOT depend on external publication.
+Every release-bearing change MUST declare `patch`, `minor` or `major` impact and MAY declare `unit_impacts` overrides for matched release units. `openspec-release@2` MUST reject `impact: none`. A unit release version MUST be computed from the highest effective impact for that unit. A change MAY acknowledge direct dependency adoption through `dependency_updates`, but dependency movement alone MUST NOT create or bump a parent release.
 
 #### Scenario: A release contains mixed impacts
 
-- **WHEN** the release plan contains more than one archived change
-- **THEN** the next version is computed from the highest declared impact
+- **WHEN** a unit release plan contains more than one archived change
+- **THEN** the next version is computed from the highest effective impact for that unit
 
 #### Scenario: A release is not published
 
 - **WHEN** completed changes are retained only in the repository
-- **THEN** they still produce a new SemVer manifest, aligned distribution versions and a changelog version section
+- **THEN** they still produce a new SemVer manifest, aligned unit version sources and a unit changelog version section
+
+#### Scenario: One outcome has different unit impacts
+
+- **WHEN** a release-bearing change matches multiple units and declares a unit impact override
+- **THEN** each unit plan uses its override or the global impact fallback
+
+#### Scenario: A child unit releases independently
+
+- **WHEN** a child unit releases a newer version without an eligible parent change acknowledging it
+- **THEN** the parent has a pending dependency update
+- **AND** no parent version or manifest changes automatically
 
 ### Requirement: Release components identify affected product surfaces
 
@@ -96,22 +119,32 @@ New managed changelogs MUST follow Keep a Changelog 2.0 structure with a fixed p
 
 ### Requirement: Release state is validated as a whole
 
-Repository validation MUST fail when a manifest references a missing or active change, reuses a change id, breaks descending SemVer order, contains an invalid component id, leaves completed changes unassigned, has distribution version drift, has generated changelog drift or leaves repository changes after the newest release seal. Validation of contributed release artifact content MUST use input-bounded parsing that does not exhibit polynomial regular-expression behavior.
+Repository validation MUST validate configured release units, schema-aware release classification, unit-scoped assignments, version sources, dependency pins and generated changelogs. Every release-bearing archived change MUST match at least one unit. In multi-unit mode, normal unscoped checking MUST validate every unit. Sealed checking MUST require one unit, require a clean worktree and the exact HEAD commit that introduced that unit's latest manifest, and scope active or unassigned change checks to that unit. Composed sealed checking MUST also verify direct dependency manifests, pins and version sources at that commit. Later releases of other units MUST NOT invalidate an earlier unit seal.
 
 #### Scenario: Release metadata drifts
 
-- **WHEN** a manifest, distribution version or generated changelog violates a release invariant
+- **WHEN** a manifest, unit version source, dependency pin or generated changelog violates a release invariant
 - **THEN** repository validation fails with the violated invariant
 
 #### Scenario: Repository work follows the newest release seal
 
-- **WHEN** strict release validation finds a commit after the commit introducing the newest release manifest
-- **THEN** validation fails and requires the work to be represented by archived OpenSpec intent and a newer internal release
+- **WHEN** sealed validation finds target-unit work after the commit introducing that unit's newest release manifest
+- **THEN** validation fails and requires that work to be represented by archived OpenSpec intent and a newer unit release
 
 #### Scenario: A malformed release title contains excessive whitespace
 
 - **WHEN** validation reads a release artifact whose title line contains no title after a long whitespace sequence
 - **THEN** validation rejects the title in work proportional to the artifact size
+
+#### Scenario: A release-bearing change has no owner
+
+- **WHEN** an archived release-bearing change matches no configured unit
+- **THEN** validation fails instead of silently omitting it
+
+#### Scenario: One unit is sealed while another has pending work
+
+- **WHEN** sealed checking targets a unit whose own release state is complete and other units have unrelated active or unassigned changes
+- **THEN** those unrelated units do not block the target unit seal
 
 ### Requirement: Git history is coverage evidence only
 
@@ -138,28 +171,115 @@ Release validation MAY use Git history to prove a configured release seal when G
 
 ### Requirement: Repository commands are stable
 
-The repository MUST expose stable commands for checking, building, serving, validating changes, planning releases, cutting releases and rendering the changelog.
+The repository MUST keep a root `justfile` as the only task runner and expose stable recipes for checking, building, serving documentation, validating changes, planning releases, cutting releases and rendering the changelog. mise MUST pin and provision `just` and Nub. The recipes MUST invoke package management and the underlying repository tools directly through Nub without routing through root package scripts. Dependency installation, Node provisioning and repository tool execution MUST NOT require pnpm.
 
 #### Scenario: A contributor inspects repository commands
 
-- **WHEN** they use the documented command interface
-- **THEN** check, build, serve, validation, release planning, release cutting, and changelog rendering remain available
+- **WHEN** they install the pinned tools with mise and list or use the documented `just` recipes
+- **THEN** check, build, serve, validation, release planning, release cutting and changelog rendering remain available
+
+#### Scenario: CI starts from a clean checkout
+
+- **WHEN** a GitHub-hosted runner checks out the repository
+- **THEN** mise provisions the pinned `just` and Nub versions
+- **AND** `just ci-setup` uses Nub to provision the repository's Node version, expose it to later workflow steps and install the frozen workspace lockfile
+- **AND** CI runs the same `just ci` quality gate used by contributors
 
 ### Requirement: External publication consumes sealed release state
 
-An external package publication MUST consume a repository state already sealed by the newest release manifest. Its trigger and registry metadata MUST NOT define release prose, category, SemVer impact, visibility or components.
+Every external npm or GitHub Release publication MUST consume a repository state already sealed by the newest release manifest. The Git tag, native executable versions, native archive names and checksums, JavaScript package version, platform package versions and release-seal commit MUST identify the same release. Publication triggers and registry or release metadata MUST NOT define release prose, category, SemVer impact, visibility or components.
 
 #### Scenario: A release tag matches the seal
 
-- **WHEN** npm publication runs for `v<version>`
-- **THEN** the tag version, newest release manifest, distribution version and release-seal commit all match before registry mutation
+- **WHEN** npm and native artifact publication run for `v<version>`
+- **THEN** the tag version, newest release manifest, every distribution version and release-seal commit all match before external mutation
 
 #### Scenario: Publication inputs disagree
 
-- **WHEN** the tag, manifest, package version or checked-out commit does not identify the same sealed release
-- **THEN** publication fails without changing registry state
+- **WHEN** the tag, manifest, package version, native archive version, checksum set or checked-out commit does not identify the same sealed release
+- **THEN** all unpublished outputs remain private and publication fails without replacing an existing artifact
 
 #### Scenario: A version already exists
 
-- **WHEN** the target package version is already public in npm
+- **WHEN** the target `arcantry` package version or public GitHub Release already exists
 - **THEN** publication fails as a duplicate instead of overwriting or reusing that version
+
+#### Scenario: A platform package exists during a safe retry
+
+- **WHEN** a platform package version was published before an interrupted main-package publication
+- **THEN** the retry accepts it only when its immutable registry integrity matches the retained verified archive from the same seal
+- **AND** otherwise fails without publishing the main package
+
+### Requirement: Adopted projects configure release sources explicitly
+
+An adopted project MAY configure the OpenSpec release adapter, release manifest directory, managed changelog source, repository URL, tag prefix and version sources. Each version source MUST name a supported adapter and path. Arcantry MUST NOT infer or update an unconfigured version source.
+
+#### Scenario: A Cargo workspace is configured
+
+- **WHEN** a project configures `cargo-workspace@1` for `Cargo.toml`
+- **THEN** release validation reads only `[workspace.package] version`
+- **AND** release cutting updates only that version entry
+
+#### Scenario: Release configuration is absent
+
+- **WHEN** a release command runs without a release configuration
+- **THEN** it fails without changing project files
+
+### Requirement: Brownfield baselines preserve unknown history
+
+A baseline release manifest MUST identify an existing SemVer version and ISO date, MUST declare `baseline: true`, and MAY contain no changes. A baseline MUST NOT invent release prose or make historical internal change artifacts public.
+
+#### Scenario: An existing release becomes the baseline
+
+- **WHEN** baseline planning finds aligned configured version sources and no manifest for the requested version
+- **THEN** it plans a baseline manifest and deterministic changelog boundary
+
+#### Scenario: A later release is cut
+
+- **WHEN** unassigned archived changes exist after the baseline
+- **THEN** the next version is computed from their highest declared impact
+- **AND** the new manifest is not marked as a baseline
+
+### Requirement: Public changelog excludes internal changes
+
+Release manifests MUST retain every assigned archived change, including internal changes, while public changelog rendering MUST omit entries whose release visibility is `internal`.
+
+#### Scenario: A release contains only internal changes
+
+- **WHEN** the changelog is rendered for a manifest whose assigned changes are all internal
+- **THEN** the version remains part of release state
+- **AND** no internal release title or body appears in the public changelog
+
+### Requirement: Release checking has consistency and seal modes
+
+Normal release checking MUST validate artifacts, assignments, configured version sources and generated changelog consistency while allowing active or unassigned changes. Sealed release checking MUST additionally require no active or unassigned changes and enforce the configured Git release seal.
+
+#### Scenario: Work remains after a valid baseline
+
+- **WHEN** normal release checking finds active or unassigned changes but all persisted release artifacts are consistent
+- **THEN** it reports success without treating the repository as release-sealed
+
+#### Scenario: Final sealing is requested
+
+- **WHEN** sealed checking finds active or unassigned changes
+- **THEN** it fails without mutating the repository
+
+### Requirement: Release units own their changelog scope
+
+Independent topologies MUST render only per-unit changelogs and MUST NOT synthesize a root changelog. In composed topologies, a parent changelog MAY serve as the product summary but MUST include only outcomes selected for that parent and MUST NOT copy child entries automatically.
+
+#### Scenario: A child change has no parent outcome
+
+- **WHEN** a child release is rendered and no parent change selects or acknowledges it
+- **THEN** the child entry appears only in the child changelog
+- **AND** the parent changelog remains unchanged
+
+### Requirement: Normal and sealed release checks remain distinct
+
+Normal release checking MUST validate persisted release consistency while allowing active or unassigned work. Sealed checking MUST additionally require complete scoped assignment, a clean Git state and the configured release seal. The two modes MUST have separate executable native scenarios.
+
+#### Scenario: Active work exists during normal checking
+
+- **WHEN** persisted release artifacts are consistent and active or unassigned work exists
+- **THEN** normal release checking succeeds
+- **AND** sealed checking fails
