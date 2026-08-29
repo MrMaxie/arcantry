@@ -7,7 +7,7 @@ Define safe repository adoption, diagnostics and removal while preserving projec
 
 ### Requirement: Repository guidance uses explicit information layers
 
-Arcantry MUST keep machine-local execution state in `.local/`, accepted product and engineering intent in configured OpenSpec sources, human release history in configured changelog sources, and quick task queues in configured todo.txt sources. Shared and private layers MUST remain independent unless an explicit reviewed operation promotes or relocates content. `.local/` MUST remain private when Git is present.
+Arcantry MUST keep machine-local execution state in `.local/`, accepted product and engineering intent in configured shared or private OpenSpec sources, human release history in configured shared or private changelog sources, quick task queues in configured todo.txt sources, and procedural capabilities in independently managed skill packages. `AGENTS.md` and `.agents` MUST be the universal guidance and skill surfaces. Shared and private layers MUST remain independent unless an explicit reviewed operation promotes or relocates content. `.local/` MUST remain private when Git is present unless the configured default remote branch already tracks it; that established repository policy MUST be preserved and reported as a conflict with Arcantry's private-local convention.
 
 #### Scenario: A project uses both information scopes
 
@@ -24,12 +24,30 @@ Arcantry MUST keep machine-local execution state in `.local/`, accepted product 
 #### Scenario: An established repository adopts Arcantry
 
 - **WHEN** Arcantry initializes one repository scope
-- **THEN** it manages only the configuration and guidance for that scope
+- **THEN** it manages only the configuration and universal guidance for that scope
 - **AND** configured source responsibilities remain distinct
+
+#### Scenario: The remote repository already tracks local state
+
+- **WHEN** the configured default remote branch tracks content under `.local/`
+- **THEN** adoption preserves that established repository policy
+- **AND** reports its conflict with Arcantry's private-local convention
+
+#### Scenario: Only the local index tracks local state
+
+- **WHEN** `.local/` is absent from the configured default remote branch but present in the current index
+- **THEN** adoption plans removal from the index as a separate explicitly authorized operation
+- **AND** preserves the working files
+
+#### Scenario: Claude compatibility is present
+
+- **WHEN** repository diagnostics find managed Claude guidance or skill adapters
+- **THEN** they identify the related `AGENTS.md`, `.local/AGENTS.md`, or canonical skill package as the source
+- **AND** do not report the adapter as independent project guidance or a duplicate skill
 
 ### Requirement: Adoption preserves existing repository ownership
 
-Initialization and update MUST preserve unowned files and user-editable content. `repo init --scope shared` MUST create only shared TOML configuration and managed repository guidance. `repo init --scope private` MUST create only private TOML configuration, private managed guidance, and a `.local/` Git exclusion when applicable. Initialization MUST NOT create package-manager, runtime, task-runner, OpenSpec source, changelog, or todo scaffolding.
+Initialization and update MUST preserve unowned files and user-editable content. `repo init --scope shared` MUST create only shared TOML configuration and managed repository guidance. `repo init --scope private` MUST create only private TOML configuration, private managed guidance, and a `.local/` Git exclusion when applicable. Initialization MUST NOT create package-manager, runtime, task-runner, OpenSpec source, changelog, todo or skill scaffolding. Claude compatibility files MUST require an explicit compatibility option and MUST preserve user-authored content outside the managed import.
 
 #### Scenario: A repository adopts private guidance
 
@@ -47,6 +65,12 @@ Initialization and update MUST preserve unowned files and user-editable content.
 
 - **WHEN** Arcantry encounters an existing agent instruction file
 - **THEN** it manages only its marked section when that section can be safely inserted
+- **AND** preserves all surrounding content
+
+#### Scenario: Existing Claude guidance is adapted
+
+- **WHEN** compatibility is requested and the relevant Claude file already contains user-authored instructions
+- **THEN** Arcantry inserts or refreshes only its managed import
 - **AND** preserves all surrounding content
 
 ### Requirement: Removal is limited to verified managed artifacts
@@ -104,3 +128,19 @@ Arcantry CI MUST initialize ephemeral private adoption state through the built p
 - **WHEN** the checkout has no private Arcantry configuration
 - **THEN** the quality gate runs `arcantry repo init --scope private` before public validation
 - **AND** the generated `.local` state remains uncommitted and excluded from Git
+
+### Requirement: Adoption lifecycle commands have direct native evidence
+
+The native contract suite MUST exercise shared and private `repo init`, `repo update` and `repo remove`. It MUST verify that initialization creates only the selected configuration and managed guidance boundary and does not create runtime, package-manager, task-runner, OpenSpec, changelog or todo scaffolding.
+
+#### Scenario: Minimal adoption is verified
+
+- **WHEN** shared or private repository state is initialized and later removed
+- **THEN** executable evidence accounts for every resulting project file
+- **AND** unrelated repository content remains unchanged
+
+#### Scenario: Adoption fails after an earlier managed file was staged or committed
+
+- **WHEN** shared or private initialization, update or removal encounters a filesystem failure
+- **THEN** every managed file and private Git exclusion entry matches its pre-command state
+- **AND** no empty parent directory or transaction artifact remains

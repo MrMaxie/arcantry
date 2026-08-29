@@ -1,4 +1,9 @@
-## ADDED Requirements
+# native-distribution Specification
+
+## Purpose
+TBD - created by archiving change ship-native-rust-cli. Update Purpose after archive.
+
+## Requirements
 
 ### Requirement: Native releases support the declared platform matrix
 
@@ -46,6 +51,16 @@ Cross-compilation alone MUST NOT qualify a target for publication. Each release 
 - **WHEN** the release pipeline cannot run the candidate on its declared target
 - **THEN** that target and the complete release remain unpublished
 - **AND** the build is not reported as supported from compilation evidence alone
+
+### Requirement: Native implementation completion has host and Linux system evidence
+
+The native CLI implementation MUST pass the complete repository gate on the current host and a disposable Linux system test managed by Testcontainers. The Linux test MUST use the pinned Rust image and `Cargo.lock`, run Clippy, all Rust workspace tests, the black-box CLI contract and a direct compiled-binary smoke test, and MUST fail when Docker is unavailable.
+
+#### Scenario: Local native verification is complete
+
+- **WHEN** the native implementation is qualified for completion
+- **THEN** the host repository gate passes
+- **AND** the disposable Linux system test passes and removes its container
 
 ### Requirement: Runtime assets are embedded and safely materialized
 

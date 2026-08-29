@@ -12,13 +12,26 @@ The public skill catalog MUST be generated deterministically from validated skil
 
 ### Requirement: Skills support individual and complete distribution
 
-Users MUST be able to inspect and link one catalog skill through the CLI into the standard user or repository `.agents/skills` directory. Adoption guidance MUST recommend user scope first and MUST NOT install, update, or copy a skill without explicit authorization for that action and scope. A repository-private package or override MUST remain an explicit fallback when the required capability is missing or the user-wide skill is unsuitable. Codex MAY consume the standard Agent Skills surface directly. Claude Code MAY use an explicitly requested compatibility link into `.claude/skills`. The public catalog MUST remain compatible with manual copying, symbolic linking, and independent Agent Skills installers without requiring those tools as runtime dependencies.
+Users MUST be able to inspect and link one catalog skill through the CLI into the standard user or repository `.agents/skills` directory. Adoption guidance MUST recommend user scope first and MUST NOT install, update, or copy a skill without explicit authorization for that action and scope. A repository-private package or override MUST remain an explicit fallback when the required capability is missing or the user-wide skill is unsuitable. Codex MAY consume the standard Agent Skills surface directly. Claude Code MAY use an explicitly requested compatibility link into `.claude/skills`. The public catalog MUST remain compatible with canonical checkouts, the installed JavaScript package, the native executable's embedded catalog, manual copying, symbolic linking and independent Agent Skills installers without requiring those tools as runtime dependencies. Before creating a link from embedded content, the native CLI MUST materialize and verify an exact versioned public catalog in the user's operating-system-standard data directory.
 
 #### Scenario: A user chooses one catalog skill
 
 - **WHEN** the user selects a skill from a canonical checkout or installed package
 - **THEN** they can link it into a standard user or repository scope with the Arcantry CLI
 - **AND** the installed package remains an independently readable skill directory
+
+#### Scenario: A user chooses one skill from the standalone executable
+
+- **WHEN** the user links an embedded skill without an explicit catalog root
+- **THEN** Arcantry verifies or atomically materializes the exact release catalog
+- **AND** the link targets that durable versioned skill directory
+- **AND** repeating the command does not create a duplicate installation
+
+#### Scenario: A user unlinks an embedded skill
+
+- **WHEN** the target is an exact link to the selected skill in the verified materialization
+- **THEN** Arcantry removes only that link
+- **AND** preserves the versioned catalog and unrelated user content
 
 #### Scenario: Adoption needs an unavailable or unsuitable skill
 
