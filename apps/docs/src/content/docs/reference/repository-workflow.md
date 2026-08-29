@@ -15,6 +15,8 @@ Inspection reports the resolved root, configuration mode, source ids, paths, kin
 
 Use the reported source id in the next step. Inspection does not create a configuration or source.
 
+<!-- cli-evidence: inspect-read-only -->
+
 ## Plan one transition
 
 ```sh
@@ -34,6 +36,8 @@ Available transitions are:
 
 Use `--to-path`, `--to-adapter`, `--managed-from`, and `--delete-source` only when the selected transition needs them. Planning reports conflicts and does not write.
 
+<!-- cli-evidence: plan-read-only -->
+
 ## Serialize and protect the plan
 
 `repo apply` accepts the complete JSON plan produced by `--json`:
@@ -50,13 +54,15 @@ The plan records its format version, Arcantry version, project root, source and 
 arcantry repo apply --plan plan.json
 ```
 
-Use `--plan -` to read JSON from standard input. Before writing, apply verifies the plan format, exact Arcantry version, conflicts, expected path hashes, and planned content hashes. It stages and verifies writes, commits the ordered operations, verifies the targets, and rolls back committed operations if the transaction fails.
+Use `--plan -` to read JSON from standard input. Before writing, apply resolves the current project again and verifies the plan root, format, exact Arcantry version, conflicts, path authority, expected path hashes, and planned content hashes. Operations inside the project root need no extra flag. Repeat `--allow-outside <path>` for each exact external operation path; permission for one path does not include its parent, children, or siblings. Apply stages and verifies writes, commits the ordered operations, verifies the targets, and rolls back committed operations if the transaction fails before final cleanup. A cleanup failure after the committed result is verified remains a successful apply and is reported as a warning.
 
 For relocation with deletion, the target is staged and verified before the separately requested source deletion is committed.
 
 ## Replan after drift
 
 If a source changes after planning or during apply, Arcantry rejects the plan before accepting the changed state. Do not edit hash fields or reuse the stale plan. Run `repo inspect`, recreate the plan from current inputs, and apply the replacement.
+
+<!-- cli-evidence: apply-rejects-drift -->
 
 An Arcantry update can also invalidate a serialized plan because plans bind to the exact tool version. Replan with the version that will perform the apply.
 

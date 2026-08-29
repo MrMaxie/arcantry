@@ -54,3 +54,72 @@ pub(super) fn add_configured_source(
   );
   render_project_config(&config)
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use arcantry_core::config::SourceKind;
+  use std::path::PathBuf;
+
+  fn source(id: &str, visibility: Visibility) -> ProjectSource {
+    ProjectSource {
+      id: id.to_owned(),
+      kind: SourceKind::TodoTxt,
+      path: "todo.txt".to_owned(),
+      management: Management::Observe,
+      adapter: "todo-txt@1".to_owned(),
+      from: Vec::new(),
+      managed_from: None,
+      visibility,
+      scope: ".".to_owned(),
+      absolute_path: PathBuf::from("todo.txt"),
+      exists: true,
+      origin: "discovered",
+      confidence: "high",
+      adapter_status: "supported",
+    }
+  }
+
+  #[test]
+  fn adds_a_discovered_source_with_schema_and_inferred_visibility() {
+    let rendered = add_configured_source(
+      "config_version = 1\n",
+      &source("tasks", Visibility::Private),
+      SourceUpdate {
+        path: ".local/todo.txt".to_owned(),
+        management: Management::Manage,
+        adapter: "todo-txt@1".to_owned(),
+        from: vec!["legacy".to_owned()],
+        managed_from: None,
+      },
+      false,
+    )
+    .unwrap();
+
+    assert!(rendered.contains("[toml-schema]"));
+    assert!(rendered.contains("[sources.tasks]"));
+    assert!(rendered.contains("path = \".local/todo.txt\""));
+    assert!(!rendered.contains("visibility ="));
+  }
+
+  #[test]
+  fn rejects_an_existing_configured_source() {
+    let configured = "config_version = 1\n\n[sources.tasks]\nkind = \"todo-txt\"\npath = \"todo.txt\"\nadapter = \"todo-txt@1\"\n";
+
+    let error = add_configured_source(
+      configured,
+      &source("tasks", Visibility::Shared),
+      SourceUpdate {
+        path: "other.txt".to_owned(),
+        management: Management::Manage,
+        adapter: "todo-txt@1".to_owned(),
+        from: Vec::new(),
+        managed_from: None,
+      },
+      false,
+    )
+    .unwrap_err();
+
+    assert!(error.to_string().contains("already exists"));
+  }
+}

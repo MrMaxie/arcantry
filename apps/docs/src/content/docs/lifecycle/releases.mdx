@@ -91,7 +91,9 @@ A composed parent plan reports newer child releases as pending. The parent adopt
 
 `release-cut` creates the manifest from the computed plan. It does not ask commits what changed and is run only as part of an explicitly authorized release.
 
-`release-check` rejects active changes, unassigned archives, distribution version drift, stale generated changelog content, uncommitted work, and commits after the latest release manifest. `just check` runs it automatically.
+Normal `release check` validates persisted release consistency while allowing active and unassigned work. `release check --sealed` is the final gate: it also rejects active changes, unassigned archives, uncommitted work, and commits after the latest release manifest. `just check` runs the normal consistency check automatically.
+
+{/* cli-evidence: release-local-only */}
 
 The commit that introduces an authorized release manifest is the Arcantry release seal. It must also contain the archived OpenSpec changes, aligned distribution versions, and generated changelog. Later work on `master` continues under the unchanged `1.0.0` policy and does not by itself authorize another release.
 

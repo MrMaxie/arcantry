@@ -20,13 +20,15 @@ Global options appear before the command group.
 
 | Command | Contract |
 | --- | --- |
-| `repo init --scope shared|private [--compat claude]` | Create minimal configuration and universal managed guidance for one scope. Private scope also ensures the local Git exclusion. |
-| `repo update --scope shared|private [--compat claude]` | Refresh verified universal guidance and optionally add the Claude import adapter. |
-| `repo remove --scope shared|private` | Remove only verified configuration and managed guidance for one scope. |
+| `repo init --scope <shared\|private> [--compat claude]` | Create minimal configuration and universal managed guidance for one scope. Private scope also ensures the local Git exclusion. |
+| `repo update --scope <shared\|private> [--compat claude]` | Refresh verified universal guidance and optionally add the Claude import adapter. |
+| `repo remove --scope <shared\|private>` | Remove only verified configuration and managed guidance for one scope. |
 | `repo validate` | Validate the active repository boundary and configured knowledge sources without writing. |
 | `repo doctor` | Add repair guidance to the same read-only validation. |
 
 Initialization does not create package-manager, runtime, task-runner, OpenSpec, changelog, or todo artifacts.
+
+<!-- cli-evidence: remove-owned-only -->
 
 `AGENTS.md` and `.local/AGENTS.md` remain canonical. `--compat claude` creates a managed import in `CLAUDE.md` or locally excluded `CLAUDE.local.md` without copying the guidance.
 
@@ -57,10 +59,10 @@ arcantry repo plan --source <id> --transition <strategy>
 ### `repo apply`
 
 ```text
-arcantry repo apply --plan <path|->
+arcantry repo apply --plan <path|-> [--allow-outside <path>...]
 ```
 
-Applies an unchanged plan. `-` reads standard input. Apply rejects conflicts, changed inputs, incompatible tool versions, and corrupt planned content before writing.
+Applies an unchanged plan to the currently resolved project. `-` reads standard input. Apply rejects a different project root, conflicts, changed inputs, incompatible tool versions, corrupt planned content, and operations outside the project before writing. Repeat `--allow-outside` for each exact external operation path that the plan is allowed to change.
 
 ## Todo commands
 
@@ -95,12 +97,11 @@ Composed plan JSON includes `dependencies`, newer `pendingDependencies`, and `re
 
 | Command | Contract |
 | --- | --- |
-| `skills list [--scope public|private] [--catalog-root <path>]` | List public catalog skills or private repository skills. |
-| `skills inspect <name> [--scope public|private] [--catalog-root <path>]` | Show one public or private canonical package. |
-| `skills link <name> --scope user|repo|private [--compat claude] [--replace]` | Link one canonical skill into the universal directory and optionally add the Claude alias. |
-| `skills link <name> --target <path> [--replace]` | Link to one advanced explicit destination. |
-| `skills unlink <name> --scope user|repo|private [--compat claude]` | Remove only exact universal and requested compatibility links. |
-| `skills doctor [--scope user|repo|private] [--compat claude] [--target <path>]` | Validate packages and optionally inspect universal and compatibility links. |
+| `skills list [--scope <public\|private>] [--catalog-root <path>]` | List public catalog skills or private repository skills. |
+| `skills inspect <name> [--scope <public\|private>] [--catalog-root <path>]` | Show one public or private canonical package. |
+| `skills link <name> (--scope <user\|repo\|private> [--compat claude] \| --target <path>) [--replace]` | Link one canonical skill into a standard scope or one advanced explicit destination. |
+| `skills unlink <name> (--scope <user\|repo\|private> [--compat claude] \| --target <path>)` | Remove only exact universal, compatibility, or explicit links. |
+| `skills doctor [--scope <user\|repo\|private>] [--compat claude] [--target <path>] [--catalog-root <path>]` | Validate packages and optionally inspect universal and compatibility links. |
 
 `--target` cannot be combined with `--scope` or `--compat`. User scope targets `~/.agents/skills`; repository and private scopes target `<repo>/.agents/skills`. `--compat claude` also targets the corresponding `.claude/skills` directory. Private scope reads the canonical package from `.local/skills` and excludes its links locally. `--replace` backs up an ordinary target instead of overwriting it silently.
 
