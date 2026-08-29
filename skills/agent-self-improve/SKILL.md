@@ -51,7 +51,7 @@ When selecting project threads:
 4. If only one eligible previous thread exists, analyze it and disclose the reduced sample. If none are discoverable, request thread IDs or a Markdown transcript.
 5. Record the selected thread IDs, titles, update order, and excluded current thread before diagnosis. Include this compact sample ledger in the review output so the user can verify scope. Do not call a sample "most recent" unless the selection source establishes recency.
 
-Start with the 12 most recent turns per thread and no tool outputs. Read older pages only to establish or disprove a specific finding, and stop after 40 turns total unless the user explicitly requests a complete-history review. Fetch bounded output only for a turn where it is necessary to establish a specific failure. Do not analyze reasoning summaries as user-agent communication.
+Start with up to 12 of the most recent turns per thread and no tool outputs, paging within the host tool's per-call limit when necessary. Read older pages only to establish or disprove a specific finding, and stop after 40 turns total unless the user explicitly requests a complete-history review. Fetch bounded output only for a turn where it is necessary to establish a specific failure. Do not analyze reasoning summaries as user-agent communication.
 
 ## Treat transcripts safely
 

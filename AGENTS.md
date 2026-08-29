@@ -19,7 +19,8 @@ When an OpenSpec requirement applies to a class of files, components, or pages, 
 
 ## Continuous 1.0 delivery and release authorization
 
-- Maintain the implementation, documentation, validation, packaging, and product-facing version references as a complete, release-ready 1.0 product. Do not present the product as a draft, release candidate, or incomplete pre-release while this policy is active.
+- Maintain the implementation, documentation, validation, packaging, and product-facing version references as a complete, release-ready 1.0 product.
+- Treat evidence-led private audits as diagnostic work, not product positioning: report verified defects and maturity risks directly without changing the 1.0 posture. In product-facing or externally shared artifacts, do not describe the product as a draft, release candidate, or incomplete pre-release while this policy is active.
 - Keep every Arcantry product and distributable version value at `1.0.0` until the user explicitly authorizes a version change. Continue improving the product under that unchanged version; readiness, elapsed work, merged changes, or successful validation never imply permission to bump it.
 - Do not cut or seal a release, change release manifests or release changelog headings, create or push a version tag, create a GitHub Release, or publish packages or versioned release artifacts without explicit user authorization for that release action.
 - Treat updates to the `master` branch and deployments to GitHub Pages as normal continuous delivery, not as release, tagging, or package-publication actions. Once the underlying commit, push, or merge is authorized, update `master` and Pages whenever the product or documentation requires it; no separate release approval is needed.

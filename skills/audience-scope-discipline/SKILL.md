@@ -29,11 +29,14 @@ If the audience or outcome is unclear, inspect project evidence first. Ask a dec
 
 Before creating or changing an externally visible, shared, exported, or generated artifact:
 
-1. Identify the source and current visibility of every project name, description, image, screenshot, code excerpt, brand, and derived asset.
+1. Identify the source conversation or artifact and current visibility of every factual claim, project name, description, image, screenshot, code excerpt, brand, and derived asset.
 2. Verify that the requester authorized the exact item, transformation, and intended audience.
 3. Treat access, inspection, ownership, and presence in local context as separate from permission to publish.
 4. Use private, confidential, NDA-covered, or brand-sensitive material only after explicit item-level approval of the public, redacted, or brandless form.
 5. If authority is missing or ambiguous, omit the item and stop at the publication decision boundary.
+6. For a message placed into a specific destination such as a pull request, ticket, chat, or email thread, build a destination-specific allowlist. Include a statement only when its source is known, publication is authorized, and it helps that recipient understand, decide, or act.
+7. Do not transfer thanks, confirmations, replies, questions, or continuation wording from another conversation as though they occurred in the destination. Name the outside source explicitly only when that reference is authorized and useful there.
+8. Before handoff or publication, read the draft using only the destination's visible history. Remove wording that depends on undisclosed context and any operational, diagnostic, or local detail the recipient does not need. Treat evidence used to verify the work as separate from evidence the recipient needs. Do not include routine validation results or execution parameters merely to prove due diligence. Include them only when the destination contract requests them, a result materially qualifies the claim, or the recipient needs the exact detail for a decision or next action. Reassuring the requester alone is not a destination purpose.
 
 Permission for one item does not authorize neighboring content from the same source.
 
