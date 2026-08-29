@@ -60,7 +60,9 @@ Require all of the following before changing any destination:
 2. An exact destination, such as a PR, browser form, or file.
 3. The requested action, such as prepare a draft, write to a file, submit, or publish.
 
-Do not require an extra confirmation when one unambiguous message both accepts named findings and authorizes an exact destination action. Never infer a stronger action: `prepare` or `fill` does not authorize `submit`, and `accept F1` alone authorizes only an English draft in chat.
+Treat the user's current unambiguous instruction as action-time confirmation for a non-public destination change when it both accepts named findings and authorizes that exact action. This includes adding the specified findings as pending browser review comments while leaving final review submission to the user.
+
+Before any external `submit` or `publish` action, show the exact final payload in chat and obtain explicit approval for that text. A plan or instruction that authorizes publishing after future work authorizes preparation only; it does not approve unseen agent-authored wording. This gate is already satisfied when the user supplies the exact payload and explicitly asks to publish it unchanged. If revalidation or destination adaptation materially changes approved text, show the revised payload and wait for approval. Never infer a stronger action: `prepare` or `fill` does not authorize `submit`, and `accept F1` alone authorizes only an English draft in chat.
 
 Before writing or publishing, revalidate that each accepted finding still matches the current diff and line anchor. Stop and report any stale, resolved, or materially changed finding instead of publishing it.
 
