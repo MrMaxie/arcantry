@@ -1,4 +1,5 @@
 mod binary;
+mod linux_system;
 mod release;
 mod smoke;
 
@@ -15,6 +16,8 @@ struct Arguments {
 
 #[derive(Debug, Subcommand)]
 enum Task {
+  /// Run the complete Rust CLI system gate in a disposable pinned Linux container.
+  LinuxSystemTest,
   /// Verify that a staged native executable reports the expected version.
   VerifyBinary {
     #[arg(long)]
@@ -52,6 +55,7 @@ enum Task {
 
 fn main() -> Result<()> {
   match Arguments::parse().command {
+    Task::LinuxSystemTest => linux_system::run(),
     Task::VerifyBinary {
       path,
       expected_version,

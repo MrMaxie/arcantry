@@ -48,6 +48,7 @@ pub struct LinkResult {
   pub source: PathBuf,
   pub target: PathBuf,
   pub backup: Option<PathBuf>,
+  created_directories: Vec<PathBuf>,
 }
 
 pub fn load(root: &Path) -> Result<Catalog> {
@@ -249,6 +250,16 @@ pub fn link(
   target_roots: &[PathBuf],
   replace: bool,
 ) -> Result<Vec<LinkResult>> {
+  link_with_checkpoint(source, name, target_roots, replace, |_, _| Ok(()))
+}
+
+fn link_with_checkpoint(
+  source: &Path,
+  name: &str,
+  target_roots: &[PathBuf],
+  replace: bool,
+  mut checkpoint: impl FnMut(&Path, usize) -> Result<()>,
+) -> Result<Vec<LinkResult>> {
   validate_source(source, name)?;
   let source = dunce::canonicalize(source)?;
   let roots = unique_paths(target_roots);
@@ -256,7 +267,7 @@ pub fn link(
     preflight_link(&source, name, root, replace)?;
   }
   let mut results = Vec::new();
-  for root in roots {
+  for (index, root) in roots.into_iter().enumerate() {
     let target = root.join(name);
     let result = (|| -> Result<LinkResult> {
       if target.exists() || fs::symlink_metadata(&target).is_ok() {
@@ -264,8 +275,9 @@ pub fn link(
           return Ok(LinkResult {
             status: "unchanged",
             source: source.clone(),
-            target,
+            target: target.clone(),
             backup: None,
+            created_directories: Vec::new(),
           });
         }
         let backup = next_backup(&target);
@@ -277,21 +289,41 @@ pub fn link(
         Ok(LinkResult {
           status: "linked",
           source: source.clone(),
-          target,
+          target: target.clone(),
           backup: Some(backup),
+          created_directories: Vec::new(),
         })
       } else {
-        create_directory_link(&source, &target)?;
+        let mut created_directories = missing_directories(
+          target
+            .parent()
+            .context("Skill link target has no parent directory.")?,
+        );
+        if let Err(error) = create_directory_link(&source, &target) {
+          retain_created_directories(&mut created_directories);
+          remove_created_directories(&created_directories)?;
+          return Err(error);
+        }
+        retain_created_directories(&mut created_directories);
         Ok(LinkResult {
           status: "linked",
           source: source.clone(),
-          target,
+          target: target.clone(),
           backup: None,
+          created_directories,
         })
       }
     })();
     match result {
-      Ok(result) => results.push(result),
+      Ok(result) => {
+        results.push(result);
+        if let Err(error) = checkpoint(&target, index) {
+          rollback_links(&results).with_context(|| {
+            format!("Linking failed and created skill links could not be rolled back: {error}")
+          })?;
+          return Err(error);
+        }
+      }
       Err(error) => {
         rollback_links(&results).with_context(|| {
           format!("Linking failed and earlier skill links could not be rolled back: {error}")
@@ -320,11 +352,27 @@ pub fn rollback_links(results: &[LinkResult]) -> Result<()> {
     if let Some(backup) = &result.backup {
       fs::rename(backup, &result.target)?;
     }
+    remove_created_directories(&result.created_directories)?;
   }
   Ok(())
 }
 
 pub fn unlink(source: &Path, name: &str, target_roots: &[PathBuf]) -> Result<Vec<LinkResult>> {
+  unlink_with_checkpoint(source, name, target_roots, |_, _, _| Ok(()))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum UnlinkPhase {
+  Stage,
+  Finalize,
+}
+
+fn unlink_with_checkpoint(
+  source: &Path,
+  name: &str,
+  target_roots: &[PathBuf],
+  mut checkpoint: impl FnMut(UnlinkPhase, &Path, usize) -> Result<()>,
+) -> Result<Vec<LinkResult>> {
   validate_source(source, name)?;
   let source = dunce::canonicalize(source)?;
   let roots = unique_paths(target_roots);
@@ -338,26 +386,105 @@ pub fn unlink(source: &Path, name: &str, target_roots: &[PathBuf]) -> Result<Vec
     }
   }
   let mut results = Vec::new();
-  for root in roots {
+  let mut staged = Vec::new();
+  for (index, root) in roots.into_iter().enumerate() {
     let target = root.join(name);
     if target.exists() || fs::symlink_metadata(&target).is_ok() {
-      remove_directory_link(&target)?;
+      let parent = target
+        .parent()
+        .context("Skill link target has no parent directory.")?;
+      let placeholder = tempfile::Builder::new()
+        .prefix(".arcantry-unlink-")
+        .tempfile_in(parent)?;
+      let backup = placeholder.path().to_path_buf();
+      placeholder.close()?;
+      if let Err(error) = fs::rename(&target, &backup) {
+        restore_unlinked(&source, &staged).with_context(|| {
+          format!("Unlinking failed and earlier skill links could not be restored: {error}")
+        })?;
+        return Err(error.into());
+      }
+      staged.push((target.clone(), backup));
       results.push(LinkResult {
         status: "unlinked",
         source: source.clone(),
-        target,
+        target: target.clone(),
         backup: None,
+        created_directories: Vec::new(),
       });
+      if let Err(error) = checkpoint(UnlinkPhase::Stage, &target, index) {
+        restore_unlinked(&source, &staged).with_context(|| {
+          format!("Unlinking failed and removed skill links could not be restored: {error}")
+        })?;
+        return Err(error);
+      }
     } else {
       results.push(LinkResult {
         status: "unchanged",
         source: source.clone(),
         target,
         backup: None,
+        created_directories: Vec::new(),
       });
     }
   }
+  for (index, (target, backup)) in staged.iter().enumerate() {
+    if let Err(error) = checkpoint(UnlinkPhase::Finalize, target, index) {
+      restore_unlinked(&source, &staged).with_context(|| {
+        format!("Unlink finalization failed and skill links could not be restored: {error}")
+      })?;
+      return Err(error);
+    }
+    if let Err(error) = remove_directory_link(backup) {
+      restore_unlinked(&source, &staged).with_context(|| {
+        format!("Unlink finalization failed and skill links could not be restored: {error}")
+      })?;
+      return Err(error);
+    }
+  }
   Ok(results)
+}
+
+fn missing_directories(parent: &Path) -> Vec<PathBuf> {
+  let mut missing = parent
+    .ancestors()
+    .take_while(|path| !path.exists())
+    .map(Path::to_path_buf)
+    .collect::<Vec<_>>();
+  missing.reverse();
+  missing
+}
+
+fn retain_created_directories(directories: &mut Vec<PathBuf>) {
+  directories.retain(|path| path.is_dir());
+}
+
+fn remove_created_directories(directories: &[PathBuf]) -> Result<()> {
+  for directory in directories.iter().rev() {
+    match fs::remove_dir(directory) {
+      Ok(()) => {}
+      Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+      Err(error) => return Err(error.into()),
+    }
+  }
+  Ok(())
+}
+
+fn restore_unlinked(source: &Path, staged: &[(PathBuf, PathBuf)]) -> Result<()> {
+  for (target, backup) in staged.iter().rev() {
+    if target.exists() || fs::symlink_metadata(target).is_ok() {
+      bail!(
+        "{} changed before the failed skill unlink operation could be rolled back.",
+        target.display()
+      );
+    }
+    if backup.exists() || fs::symlink_metadata(backup).is_ok() {
+      fs::rename(backup, target)?;
+    } else {
+      create_directory_link(source, target)?;
+    }
+  }
+  Ok(())
 }
 
 pub fn user_target() -> Result<PathBuf> {
@@ -528,6 +655,18 @@ fn remove_directory_link(target: &Path) -> Result<()> {
 mod tests {
   use super::*;
 
+  fn skill_fixture() -> (tempfile::TempDir, PathBuf) {
+    let fixture = tempfile::tempdir().unwrap();
+    let source = fixture.path().join("source").join("example");
+    fs::create_dir_all(&source).unwrap();
+    fs::write(
+      source.join("SKILL.md"),
+      "---\nname: example\ndescription: Example skill package for atomic link testing.\n---\n",
+    )
+    .unwrap();
+    (fixture, source)
+  }
+
   #[test]
   fn link_preflights_every_target_before_creating_any_link() {
     let fixture = tempfile::tempdir().unwrap();
@@ -569,6 +708,108 @@ mod tests {
 
     assert!(!target.join("example").exists());
     assert!(fs::symlink_metadata(target.join("example")).is_err());
+  }
+
+  #[test]
+  fn injected_multi_target_link_failure_removes_links_and_created_directories() {
+    let (fixture, source) = skill_fixture();
+    let standard = fixture.path().join(".agents").join("skills");
+    let compatible = fixture.path().join(".claude").join("skills");
+
+    let error = link_with_checkpoint(
+      &source,
+      "example",
+      &[standard.clone(), compatible.clone()],
+      false,
+      |_, index| {
+        if index == 0 {
+          bail!("injected link failure");
+        }
+        Ok(())
+      },
+    )
+    .unwrap_err();
+
+    assert!(error.to_string().contains("injected link failure"));
+    assert!(fs::symlink_metadata(standard.join("example")).is_err());
+    assert!(fs::symlink_metadata(compatible.join("example")).is_err());
+    assert!(!fixture.path().join(".agents").exists());
+    assert!(!fixture.path().join(".claude").exists());
+  }
+
+  #[test]
+  fn injected_multi_target_unlink_failure_restores_every_link() {
+    let (fixture, source) = skill_fixture();
+    let standard = fixture.path().join(".agents").join("skills");
+    let compatible = fixture.path().join(".claude").join("skills");
+    let targets = [standard.clone(), compatible.clone()];
+    link(&source, "example", &targets, false).unwrap();
+
+    let error = unlink_with_checkpoint(&source, "example", &targets, |phase, _, index| {
+      if phase == UnlinkPhase::Stage && index == 0 {
+        bail!("injected unlink failure");
+      }
+      Ok(())
+    })
+    .unwrap_err();
+
+    assert!(error.to_string().contains("injected unlink failure"));
+    for target in targets {
+      assert!(points_to(&target.join("example"), &source));
+      assert_eq!(fs::read_dir(target).unwrap().count(), 1);
+    }
+  }
+
+  #[test]
+  fn injected_unlink_finalization_failure_restores_every_link() {
+    let (fixture, source) = skill_fixture();
+    let standard = fixture.path().join(".agents").join("skills");
+    let compatible = fixture.path().join(".claude").join("skills");
+    let targets = [standard.clone(), compatible.clone()];
+    link(&source, "example", &targets, false).unwrap();
+
+    let error = unlink_with_checkpoint(&source, "example", &targets, |phase, _, index| {
+      if phase == UnlinkPhase::Finalize && index == 1 {
+        bail!("injected unlink finalization failure");
+      }
+      Ok(())
+    })
+    .unwrap_err();
+
+    assert!(
+      error
+        .to_string()
+        .contains("injected unlink finalization failure")
+    );
+    for target in targets {
+      assert!(points_to(&target.join("example"), &source));
+      assert_eq!(fs::read_dir(target).unwrap().count(), 1);
+    }
+  }
+
+  #[test]
+  fn injected_replacement_failure_restores_the_original_directory() {
+    let (fixture, source) = skill_fixture();
+    let target_root = fixture.path().join(".agents").join("skills");
+    let target = target_root.join("example");
+    fs::create_dir_all(&target).unwrap();
+    fs::write(target.join("owned-by-user.txt"), "preserve\n").unwrap();
+
+    let error = link_with_checkpoint(
+      &source,
+      "example",
+      std::slice::from_ref(&target_root),
+      true,
+      |_, _| bail!("injected replacement failure"),
+    )
+    .unwrap_err();
+
+    assert!(error.to_string().contains("injected replacement failure"));
+    assert_eq!(
+      fs::read_to_string(target.join("owned-by-user.txt")).unwrap(),
+      "preserve\n"
+    );
+    assert_eq!(fs::read_dir(&target_root).unwrap().count(), 1);
   }
 
   #[test]

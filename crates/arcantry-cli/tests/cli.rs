@@ -235,3 +235,145 @@ fn rolls_back_a_private_link_when_git_exclusion_cannot_be_updated() {
     String::from_utf8_lossy(&output.stderr)
   );
 }
+
+#[test]
+fn rejects_directory_relocation_that_would_drop_an_empty_directory() {
+  let repository = repository();
+  fs::create_dir_all(repository.path().join("openspec/empty")).unwrap();
+  fs::write(
+    repository.path().join("openspec/config.yaml"),
+    "schema: arcantry\n",
+  )
+  .unwrap();
+
+  let output = arcantry()
+    .args([
+      "--cwd",
+      repository.path().to_str().unwrap(),
+      "repo",
+      "plan",
+      "--source",
+      "openspec",
+      "--transition",
+      "relocate",
+      "--to-path",
+      "moved",
+      "--delete-source",
+      "--json",
+    ])
+    .output()
+    .unwrap();
+
+  assert!(!output.status.success());
+  assert!(String::from_utf8_lossy(&output.stdout).contains("empty directory"));
+  assert!(repository.path().join("openspec/empty").is_dir());
+  assert!(!repository.path().join("moved").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn rejects_directory_relocation_that_would_drop_a_symbolic_link() {
+  use std::os::unix::fs::symlink;
+
+  let repository = repository();
+  fs::create_dir(repository.path().join("openspec")).unwrap();
+  fs::write(
+    repository.path().join("openspec/config.yaml"),
+    "schema: arcantry\n",
+  )
+  .unwrap();
+  symlink(
+    "config.yaml",
+    repository.path().join("openspec/config-reference.yaml"),
+  )
+  .unwrap();
+
+  let output = arcantry()
+    .args([
+      "--cwd",
+      repository.path().to_str().unwrap(),
+      "repo",
+      "plan",
+      "--source",
+      "openspec",
+      "--transition",
+      "relocate",
+      "--to-path",
+      "moved",
+      "--delete-source",
+      "--json",
+    ])
+    .output()
+    .unwrap();
+
+  assert!(!output.status.success());
+  assert!(String::from_utf8_lossy(&output.stdout).contains("symbolic link"));
+  assert!(fs::symlink_metadata(repository.path().join("openspec/config-reference.yaml")).is_ok());
+  assert!(!repository.path().join("moved").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn accepts_a_non_utf8_cwd_path() {
+  use std::ffi::OsString;
+  use std::os::unix::ffi::OsStringExt;
+
+  let parent = tempfile::tempdir().unwrap();
+  let repository = parent
+    .path()
+    .join(OsString::from_vec(b"repo-\xff".to_vec()));
+  fs::create_dir(&repository).unwrap();
+  assert!(
+    ProcessCommand::new("git")
+      .args(["init", "--quiet"])
+      .current_dir(&repository)
+      .status()
+      .unwrap()
+      .success()
+  );
+
+  arcantry()
+    .arg("--cwd")
+    .arg(&repository)
+    .args(["repo", "inspect"])
+    .assert()
+    .success();
+}
+
+#[test]
+fn repository_validation_uses_the_implicitly_configured_project_root() {
+  let repository = repository();
+  arcantry()
+    .args([
+      "--cwd",
+      repository.path().to_str().unwrap(),
+      "repo",
+      "init",
+      "--scope",
+      "shared",
+    ])
+    .assert()
+    .success();
+  let root_guidance = fs::read_to_string(repository.path().join("AGENTS.md")).unwrap();
+  let config_path = repository.path().join("arcantry.toml");
+  let config = fs::read_to_string(&config_path).unwrap();
+  fs::write(
+    &config_path,
+    format!("{config}\n[project]\nroot = \"app\"\n"),
+  )
+  .unwrap();
+  fs::create_dir(repository.path().join("app")).unwrap();
+
+  arcantry()
+    .current_dir(repository.path())
+    .args(["repo", "validate"])
+    .assert()
+    .failure();
+
+  fs::write(repository.path().join("app/AGENTS.md"), root_guidance).unwrap();
+  arcantry()
+    .current_dir(repository.path())
+    .args(["repo", "validate"])
+    .assert()
+    .success();
+}

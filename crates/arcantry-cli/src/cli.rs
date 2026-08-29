@@ -70,6 +70,13 @@ pub enum RepoCommand {
       help = "Plan JSON file, or - for standard input."
     )]
     plan: String,
+    #[arg(
+      long,
+      value_name = "path",
+      action = clap::ArgAction::Append,
+      help = "Authorize one exact plan operation path outside the project root."
+    )]
+    allow_outside: Vec<PathBuf>,
   },
   #[command(about = "Initialize minimal shared or private Arcantry repository state.")]
   Init(RepoInitArgs),

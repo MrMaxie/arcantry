@@ -59,7 +59,20 @@ rust-deny:
 
 native-conformance:
   cargo build -p arcantry-cli
-  nub tooling/native-conformance.ts
+  cargo test -p arcantry-cli --test cli_contract
+
+native-target-check target tag="v1.0.0":
+  cargo test --workspace
+  mise exec -- dist build --artifacts=local --target={{ quote(target) }} --tag={{ quote(tag) }} --allow-dirty
+  cargo run -p xtask -- smoke-target --target {{ quote(target) }}
+  just package-target-smoke {{ quote(target) }}
+
+rust-coverage:
+  mise exec rust@nightly-2026-08-24 -- nub tooling/rust-coverage.ts
+  nub tooling/verify-rust-coverage.ts target/rust-coverage.lcov
+
+linux-system-test:
+  cargo run -p xtask -- linux-system-test
 
 [private]
 dist-plan:
@@ -163,4 +176,4 @@ openspec-validate:
   nub exec openspec schema validate arcantry
   nub exec openspec validate --all --strict --no-interactive
 
-ci: openspec-validate check build native-conformance dist-plan package-check arcantry-init arcantry-validate arcantry-skills-doctor
+ci: openspec-validate check build native-conformance rust-coverage linux-system-test dist-plan package-check arcantry-init arcantry-validate arcantry-skills-doctor

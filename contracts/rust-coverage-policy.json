@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "files": {
+    "crates/arcantry-cli/build.rs": { "line": 100, "branch": 100 },
+    "crates/arcantry-cli/src/cli.rs": { "line": 100, "branch": null },
+    "crates/arcantry-cli/src/embedded.rs": { "line": 80, "branch": 55 },
+    "crates/arcantry-cli/src/help.rs": { "line": 85, "branch": 75 },
+    "crates/arcantry-cli/src/main.rs": { "line": 80, "branch": 80 },
+    "crates/arcantry-cli/src/parse_error.rs": { "line": 70, "branch": 65 },
+    "crates/arcantry-cli/src/release_cmd.rs": { "line": 90, "branch": 55 },
+    "crates/arcantry-cli/src/repo_cmd/mod.rs": { "line": 65, "branch": 40 },
+    "crates/arcantry-cli/src/repo_cmd/transition/config.rs": { "line": 95, "branch": 60 },
+    "crates/arcantry-cli/src/repo_cmd/transition/files.rs": { "line": 60, "branch": 45 },
+    "crates/arcantry-cli/src/repo_cmd/transition/mod.rs": { "line": 60, "branch": 55 },
+    "crates/arcantry-cli/src/skills_cmd.rs": { "line": 50, "branch": 35 },
+    "crates/arcantry-cli/src/todo_cmd.rs": { "line": 80, "branch": 55 },
+    "crates/arcantry-core/src/catalog.rs": { "line": 75, "branch": 50 },
+    "crates/arcantry-core/src/changelog.rs": { "line": 80, "branch": 55 },
+    "crates/arcantry-core/src/config.rs": { "line": 85, "branch": 55 },
+    "crates/arcantry-core/src/knowledge.rs": { "line": 85, "branch": 80 },
+    "crates/arcantry-core/src/managed_content.rs": { "line": 65, "branch": 40 },
+    "crates/arcantry-core/src/project_plan.rs": { "line": 90, "branch": 70 },
+    "crates/arcantry-core/src/release.rs": { "line": 65, "branch": 30 },
+    "crates/arcantry-core/src/repository.rs": { "line": 80, "branch": 60 },
+    "crates/arcantry-core/src/todo.rs": { "line": 95, "branch": 75 }
+  },
+  "exclusions": {
+    "crates/arcantry-cli/src/lib.rs": "Module exports only and contains no executable statements.",
+    "crates/arcantry-core/src/lib.rs": "Module exports and the compile-time version constant contain no executable statements."
+  }
+}
