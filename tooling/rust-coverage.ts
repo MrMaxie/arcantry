@@ -48,6 +48,6 @@ try {
 run('cargo', ['test', '--workspace'], coverageEnvironment);
 run(
   'cargo',
-  ['llvm-cov', 'report', '--branch', '--lcov', '--output-path', 'target/rust-coverage.lcov'],
+  ['llvm-cov', 'report', '--branch', '--include-build-script', '--lcov', '--output-path', 'target/rust-coverage.lcov'],
   coverageEnvironment,
 );
