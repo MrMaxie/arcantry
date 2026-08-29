@@ -35,6 +35,8 @@ Use cargo-dist 0.32 for native archives, checksums, and its sh and PowerShell in
 
 Keep target metadata and publication behavior in reviewed repository tools. The release workflow invokes those tools with artifact roots and target identifiers; it does not embed package-integrity algorithms, registry retry logic or per-target binary-path mappings in workflow YAML.
 
+Qualify the native implementation locally through two system boundaries: the current host gate and a disposable Linux container managed by Testcontainers. The Linux image pins Rust 1.97.1 on Alpine 3.23 by tag and digest, copies only the shared Rust test inputs, uses `Cargo.lock`, and executes Clippy, the workspace tests, the black-box CLI contract and a direct binary smoke test. Docker unavailability is a hard failure of the complete local gate. The release matrix continues to invoke the shared target check before assembling artifacts.
+
 ## npm distribution
 
 Keep `arcantry` as the unscoped public package. Its existing JavaScript and type exports remain unchanged, while its `bin` entry becomes a narrow JavaScript launcher that resolves and executes an exact-version optional dependency without downloading code at install or execution time.
