@@ -13,7 +13,7 @@ Compose graphical interfaces around the user's task and the product's establishe
 - Use neither sparse nor dense presentation as a default. Match density to task frequency, expertise, comparison needs, consequence, and available space.
 - Treat text, controls, whitespace, borders, and emphasis as costs on attention and space.
 - Give equivalent roles one visual and behavioral contract. Reuse that contract instead of recreating it inline.
-- Preserve the established product language unless the requested outcome requires a deliberate change.
+- Give the user's task, product contract, and established product language precedence over visual-style or frontend-taste guidance. Such guidance may shape justified elements and states, but it must not add content, product claims, status displays, controls, sections, or user flows on its own; change established product language only when the requested outcome deliberately requires it.
 - Judge implementation through the rendered interface. Source structure alone does not prove coherence.
 
 ## Workflow
