@@ -207,10 +207,17 @@ Require reproduction, an existing project contract, or target-environment eviden
 Permit an adjacent change only when it:
 
 - removes the direct cause of the requested defect;
-- is required to compile, run, test, or safely validate the requested change;
+- is the smallest necessary change to compile, run, test, or safely validate the requested outcome;
 - prevents a concrete regression introduced by the requested change;
 - satisfies an applicable contract or acceptance criterion; or
 - addresses an immediate security, privacy, legal, or data-loss risk that cannot safely wait.
+
+Before treating a supporting tool or dependency as an in-scope blocker, verify
+that the requested outcome or an explicit project contract requires that exact
+mechanism. If an established simpler path preserves the outcome, use it. Do
+not patch or replace an auxiliary runtime, package manager, dependency, or
+verification tool merely to continue a preferred path; report it separately
+when the task can proceed without that repair.
 
 Require evidence before calling a refactor necessary. A refactor is necessary only when the minimal implementation would be unsafe, impossible, misleading, or would preserve the direct defect.
 
