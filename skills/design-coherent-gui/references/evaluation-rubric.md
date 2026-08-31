@@ -28,6 +28,12 @@ Pass when related controls are grouped, aligned, and sized for their values and 
 
 Fail when it leaves accidental holes around undersized controls or fills space decoratively.
 
+## Dynamic states and motion
+
+Pass when the response models every applicable asynchronous and collection state before coding, does not infer result cardinality from fixtures, keeps controls recognizable and geometrically stable across interaction states, and uses motion only for state or spatial continuity with a reduced-motion path.
+
+Fail when loading is absent, placeholders assume the current result count, incomplete collections shift unexpectedly, controls require hover to appear interactive, or hover, pressed, loading, and content-entry transitions introduce unexplained jumps or zoom.
+
 ## Component contracts
 
 Pass when the response inventories the complete affected candidate class, reuses an established component where semantic and behavioral contracts match, adds only meaningful shared variants, and keeps genuinely unique composition local.

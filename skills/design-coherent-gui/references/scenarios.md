@@ -82,6 +82,20 @@ Ask:
 
 Prefer an intentional stack that preserves meaning and interaction order. Avoid shrinking every control until the row technically fits.
 
+## Dynamic collection and state transitions
+
+A data-backed collection can contain zero, one, a few, or thousands of items. The current fixture has only a few, and loading has no established visible contract.
+
+Ask:
+
+- Which states and collection sizes can actually occur?
+- Does the loading treatment imply a result count that is not yet known?
+- Can loading exit and content enter without shifting the surrounding task?
+- Are controls recognizable before hover and stable while pressed?
+- Does each animation communicate state or spatial continuity, and is reduced motion preserved?
+
+Prefer feedback independent of unknown result cardinality, stable geometry, and explicit entry and exit behavior. Avoid fixture-shaped placeholders, phantom grid slots, hover-only affordances, decorative zoom, and motion that moves a control away from the pointer.
+
 ## Confusable requests outside the skill
 
 Do not select this skill merely because a task mentions UI:
