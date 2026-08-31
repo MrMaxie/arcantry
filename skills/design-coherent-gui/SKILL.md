@@ -32,16 +32,16 @@ Ask only for material product decisions that cannot be discovered. Do not ask th
 
 ### 2. Inventory the affected surface and component contracts
 
-Before implementation, inventory every matching control, component, and page in the requested surface. Inspect existing primitives, variants, tokens, spacing, icons, effects, and state conventions. Map each requested screen or user-task step to an implementation owner and decide whether it is a routed page, child view, or local state using the project's established navigation conventions. Classify each reusable-contract candidate as:
+Before implementation, keep a compact coverage ledger for every matching control, component, and page in the requested surface. For each row, record the requested task or screen, implementation owner, closest established analogue when one exists, current component or markup, relevant states and content constraints, and the reusable-contract disposition. Inspect existing primitives, variants, tokens, spacing, icons, effects, and state conventions. Decide whether each screen or task step is a routed page, child view, or local state using the project's established navigation conventions. Use these dispositions:
 
 - `reuse`: the established contract already fits;
 - `extend`: one meaningful recurring difference needs a shared variant;
 - `local`: the structure is unique and does not represent a reusable contract;
 - `out-of-scope`: the candidate is similar but outside the requested surface.
 
-Do not code until every requested screen or task step has an owner and every repeated role has a disposition. Keep the root entry point focused on routing and top-level composition; do not collapse the whole flow into it merely because it is initially small.
+Do not code until every requested screen or task step and every repeated role has a ledger row. Treat the closest established analogue as the default contract. For `extend` or `local`, record the concrete product or behavior difference that prevents direct reuse. For `out-of-scope`, record the scope boundary. A page-specific implementation choice is not a meaningful difference. Keep the root entry point focused on routing and top-level composition; do not collapse the whole flow into it merely because it is initially small.
 
-Repeat the inventory before completion. Do not treat examples named in the request as the complete surface when the outcome applies to a class of elements.
+Keep the ledger current through implementation and repeat the inventory before completion. Do not treat examples named in the request as the complete surface when the outcome applies to a class of elements.
 
 Do not invent component, token, selector, route, or breakpoint names when project evidence is unavailable. Describe the required role and contract generically, then mark the exact implementation owner for repository inspection.
 
@@ -78,7 +78,7 @@ Read [references/component-contracts.md](references/component-contracts.md) when
 
 ### 6. Verify the rendered result
 
-Use the available authorized browser or GUI tooling to inspect the actual interface. Compare analogous elements across the complete affected inventory and check the relevant:
+Use the available authorized browser or GUI tooling to inspect the actual interface. Drive final verification from the same coverage ledger. For each in-scope row, inspect the changed consumer and its closest established analogue at the same viewport and interaction state, then mark the row `pass` or `failed`. Reopen a row after any relevant code change or user-reported defect, and recheck peers that share its contract. Do not claim the affected surface coherent or verified while any row lacks final rendered evidence. Check the relevant:
 
 - desktop, narrow, and responsive layouts with representative content lengths and collection cardinalities that can occur; verify that incomplete rows and absent items do not leave phantom slots or shift the visible collection away from its intended alignment;
 - normal, hover, focus, active, pressed or toggled, disabled, loading, empty, validation, and error states that can occur; compare them directly and verify that controls are recognizable before hover and that state styling does not unintentionally move the control, its hit target, or nearby content;
@@ -111,5 +111,5 @@ Use [references/scenarios.md](references/scenarios.md) to stress-test uncertain 
 - Are related controls grouped, aligned, and sized for their actual values?
 - Does every gap or container express hierarchy instead of accidental geometry?
 - Do equivalent roles use the same component contract and states?
-- Is every applicable candidate accounted for as reused, extended, local, or out of scope?
+- Does the coverage ledger account for every applicable candidate as reused, extended, local, or out of scope, with final rendered evidence for every in-scope row?
 - Was the rendered result checked at the relevant viewports and interaction states?
