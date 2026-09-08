@@ -22,7 +22,7 @@ Configurations are never merged. A private configuration resolves its default pr
 config_version = 1
 
 [toml-schema]
-location = "https://mrmaxie.github.io/arcantry/schemas/arcantry-config-v1.tosd"
+location = "https://arcantry.dev/schemas/arcantry-config-v1.tosd"
 version = "1.0.0"
 ```
 
@@ -34,7 +34,7 @@ version = "1.0.0"
 config_version = 1
 
 [toml-schema]
-location = "https://mrmaxie.github.io/arcantry/schemas/arcantry-config-v1.tosd"
+location = "https://arcantry.dev/schemas/arcantry-config-v1.tosd"
 version = "1.0.0"
 
 [tool]
@@ -167,4 +167,4 @@ Version source adapters are `json-package@1` for a top-level JSON `version` and 
 
 A baseline manifest anchors an existing version without reconstructing unknown history. Later versions are computed from archived OpenSpec release artifacts. Internal artifacts stay in manifests and SemVer planning but are omitted from the public changelog. In composed projects, each parent manifest pins exact direct-dependency versions. A child release never bumps its parent automatically.
 
-The editor contract is [arcantry-config-v1.tosd](/arcantry/schemas/arcantry-config-v1.tosd). Runtime validation also enforces SemVer compatibility, graph cycles, authority overlap, path privacy, and changelog dependencies.
+The editor contract is [arcantry-config-v1.tosd](/schemas/arcantry-config-v1.tosd). Runtime validation also enforces SemVer compatibility, graph cycles, authority overlap, path privacy, and changelog dependencies.

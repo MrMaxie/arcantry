@@ -6,7 +6,7 @@
     "name": "Maxie",
     "url": "https://github.com/MrMaxie"
   },
-  "homepage": "https://maxie.dev/arcantry/",
+  "homepage": "https://arcantry.dev/",
   "repository": "https://github.com/MrMaxie/arcantry",
   "license": "Apache-2.0",
   "keywords": [
@@ -26,7 +26,7 @@
       "Read",
       "Write"
     ],
-    "websiteURL": "https://maxie.dev/arcantry/",
+    "websiteURL": "https://arcantry.dev/",
     "brandColor": "#FB255F",
     "defaultPrompt": [
       "Use Arcantry to adopt this repository or choose the smallest focused skill for the task."

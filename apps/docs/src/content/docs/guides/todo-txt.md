@@ -78,4 +78,4 @@ Arcantry updates existing queues incrementally. `todo add` appends one task, `to
 
 Arcantry does not turn the queue into an OpenSpec authority, judge task quality, or infer a workflow taxonomy.
 
-Use [Configuration](/arcantry/reference/configuration/) to place additional todo.txt sources or assign explicit management levels.
+Use [Configuration](/reference/configuration/) to place additional todo.txt sources or assign explicit management levels.

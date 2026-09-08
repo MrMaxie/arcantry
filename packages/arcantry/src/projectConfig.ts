@@ -8,7 +8,7 @@ export const projectConfigVersion = 1 as const;
 export const projectConfigFilename = 'arcantry.toml';
 export const privateProjectConfigPath = join('.local', projectConfigFilename);
 export const projectConfigSchemaLocation =
-  'https://mrmaxie.github.io/arcantry/schemas/arcantry-config-v1.tosd';
+  'https://arcantry.dev/schemas/arcantry-config-v1.tosd';
 
 export const managementSchema = z.enum(['ignore', 'observe', 'validate', 'manage']);
 export const sourceKindSchema = z.enum(['openspec', 'changelog', 'todo-txt']);

@@ -50,7 +50,7 @@
   "engines": {
     "node": ">=24.0.0"
   },
-  "homepage": "https://maxie.dev/arcantry/",
+  "homepage": "https://arcantry.dev/",
   "repository": {
     "type": "git",
     "url": "https://github.com/MrMaxie/arcantry.git"
