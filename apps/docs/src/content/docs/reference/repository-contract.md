@@ -76,4 +76,4 @@ Skills can be used without repository adoption. They do not install themselves o
 | Changelog | `keep-a-changelog@1`, `keep-a-changelog@2` | `keep-a-changelog@1`, `keep-a-changelog@2` |
 | todo.txt | `todo-txt@1` | `todo-txt@1` |
 
-An unsupported adapter stops before a partial transition. See [Configuration](/arcantry/reference/configuration/) for the TOML contract.
+An unsupported adapter stops before a partial transition. See [Configuration](/reference/configuration/) for the TOML contract.

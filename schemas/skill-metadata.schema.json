@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://maxie.dev/arcantry/schemas/skill-metadata.schema.json",
+  "$id": "https://arcantry.dev/schemas/skill-metadata.schema.json",
   "title": "Arcantry skill metadata",
   "type": "object",
   "additionalProperties": false,

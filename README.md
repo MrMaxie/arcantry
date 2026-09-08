@@ -1,7 +1,7 @@
 # Arcantry
 
 [![CI](https://github.com/MrMaxie/arcantry/actions/workflows/ci.yml/badge.svg)](https://github.com/MrMaxie/arcantry/actions/workflows/ci.yml)
-[![Documentation](https://img.shields.io/badge/docs-maxie.dev-6a4cc7)](https://maxie.dev/arcantry/)
+[![Documentation](https://img.shields.io/badge/docs-arcantry.dev-6a4cc7)](https://arcantry.dev/)
 [![License](https://img.shields.io/github/license/MrMaxie/arcantry)](LICENSE)
 
 Coordinate project knowledge and repeatable agent work without forcing a repository shape.
@@ -25,9 +25,9 @@ arcantry repo apply --plan plan.json
 
 ## Documentation
 
-Start with the [Arcantry documentation](https://maxie.dev/arcantry/). It covers adoption paths, CLI commands, configuration, the skill catalog and the release model.
+Start with the [Arcantry documentation](https://arcantry.dev/). It covers adoption paths, CLI commands, configuration, the skill catalog and the release model.
 
-The normative product and engineering contract lives in [`openspec/`](openspec/). Contributor commands are documented in the [contributor reference](https://maxie.dev/arcantry/reference/commands/).
+The normative product and engineering contract lives in [`openspec/`](openspec/). Contributor commands are documented in the [contributor reference](https://arcantry.dev/reference/commands/).
 
 ## Development
 

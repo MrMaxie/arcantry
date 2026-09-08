@@ -10,7 +10,7 @@ pub const PROJECT_CONFIG_VERSION: u8 = 1;
 pub const PROJECT_CONFIG_FILENAME: &str = "arcantry.toml";
 pub const PRIVATE_PROJECT_CONFIG_PATH: &str = ".local/arcantry.toml";
 pub const PROJECT_CONFIG_SCHEMA_LOCATION: &str =
-  "https://mrmaxie.github.io/arcantry/schemas/arcantry-config-v1.tosd";
+  "https://arcantry.dev/schemas/arcantry-config-v1.tosd";
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://maxie.dev/arcantry/schemas/catalog.schema.json",
+  "$id": "https://arcantry.dev/schemas/catalog.schema.json",
   "title": "Arcantry skill catalog",
   "type": "object",
   "additionalProperties": false,

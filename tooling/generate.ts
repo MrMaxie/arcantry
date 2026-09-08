@@ -64,7 +64,7 @@ const plugin = {
   version,
   description: 'Local-first project knowledge and focused agent skills.',
   author: { name: 'Maxie', url: 'https://github.com/MrMaxie' },
-  homepage: 'https://maxie.dev/arcantry/',
+  homepage: 'https://arcantry.dev/',
   repository: 'https://github.com/MrMaxie/arcantry',
   license: 'Apache-2.0',
   keywords: ['agent-skills', 'codex', 'repository-lifecycle'],
@@ -77,7 +77,7 @@ const plugin = {
     developerName: 'Maxie',
     category: 'Developer Tools',
     capabilities: ['Skills', 'Read', 'Write'],
-    websiteURL: 'https://maxie.dev/arcantry/',
+    websiteURL: 'https://arcantry.dev/',
     brandColor: '#FB255F',
     defaultPrompt: ['Use Arcantry to adopt this repository or choose the smallest focused skill for the task.'],
   },
@@ -123,7 +123,7 @@ for (const entry of catalog.skills) {
   catalogCards.set(
     entry.name,
     [
-      `<a class="skill-catalog-card" href="/arcantry/skills/${entry.name}/">`,
+      `<a class="skill-catalog-card" href="/skills/${entry.name}/">`,
       `  <p class="skill-catalog-version">Arcantry ${version}</p>`,
       `  <h3>${escapeHtml(agent.displayName)}</h3>`,
       `  <p class="skill-catalog-summary">${escapeHtml(metadata.summary)}</p>`,

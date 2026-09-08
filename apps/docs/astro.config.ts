@@ -3,8 +3,10 @@ import { defineConfig } from 'astro/config';
 import skillSidebar from './src/generated/skill-sidebar';
 
 export default defineConfig({
-  site: 'https://mrmaxie.github.io',
-  base: '/arcantry/',
+  site: 'https://arcantry.dev',
+  build: {
+    assets: 'static',
+  },
   devToolbar: {
     enabled: false,
   },

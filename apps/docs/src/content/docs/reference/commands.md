@@ -3,7 +3,7 @@ title: Contributor commands
 description: Stable contributor commands used to build and verify the Arcantry repository itself.
 ---
 
-mise provisions the pinned contributor toolchain. The root `justfile` is the documented task runner for building and verifying Arcantry. Recipes use Nub for TypeScript, JavaScript, and Astro paths, and Cargo for Rust paths. The product CLI is documented separately under [CLI](/arcantry/reference/cli/).
+mise provisions the pinned contributor toolchain. The root `justfile` is the documented task runner for building and verifying Arcantry. Recipes use Nub for TypeScript, JavaScript, and Astro paths, and Cargo for Rust paths. The product CLI is documented separately under [CLI](/reference/cli/).
 
 | Command | Contract |
 | --- | --- |

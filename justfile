@@ -33,6 +33,7 @@ build:
   nub tooling/generate.ts --docs-only
   nub exec --cwd packages/arcantry tsup
   nub exec --cwd apps/docs astro build
+  nub tooling/verify-docs-output.ts
   cargo build --workspace
 
 format:
