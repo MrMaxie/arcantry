@@ -10,28 +10,34 @@ const IMAGE_TAG: &str = "1.0.0";
 pub fn run() -> Result<()> {
   let root = workspace_root()?;
   let dockerfile = root.join("containers/rust-cli-test/Dockerfile");
-  let mut image = GenericBuildableImage::new(IMAGE_NAME, IMAGE_TAG)
-    .with_dockerfile(&dockerfile)
-    .with_file(root.join("Cargo.toml"), "Cargo.toml")
-    .with_file(root.join("Cargo.lock"), "Cargo.lock")
-    .with_file(root.join("catalog.json"), "catalog.json")
-    .with_file(root.join("crates"), "crates")
-    .with_file(root.join("xtask"), "xtask")
-    .with_file(root.join("contracts"), "contracts")
-    .with_file(
-      root.join("apps/docs/src/content/docs"),
-      "apps/docs/src/content/docs",
-    )
-    .with_file(root.join("skills"), "skills")
-    .with_file(root.join("schemas"), "schemas")
-    .with_file(
-      root.join("openspec/schemas/arcantry"),
-      "openspec/schemas/arcantry",
-    );
-  for optional in ["deny.toml", "LICENSE"] {
-    let source = root.join(optional);
+  let mut image = GenericBuildableImage::new(IMAGE_NAME, IMAGE_TAG).with_dockerfile(&dockerfile);
+  // Git's source inventory excludes private/local state and build output.
+  let inventory = std::process::Command::new("git")
+    .args([
+      "ls-files",
+      "--cached",
+      "--others",
+      "--exclude-standard",
+      "-z",
+    ])
+    .current_dir(&root)
+    .output()?;
+  if !inventory.status.success() {
+    bail!("Cannot inventory Linux test inputs.");
+  }
+  for relative in std::str::from_utf8(&inventory.stdout)?
+    .split('\0')
+    .filter(|p| !p.is_empty())
+  {
+    if relative
+      .split('/')
+      .any(|part| part.eq_ignore_ascii_case(".local"))
+    {
+      continue;
+    }
+    let source = root.join(relative);
     if source.is_file() {
-      image = image.with_file(source, optional);
+      image = image.with_file(source, relative);
     }
   }
 
@@ -42,9 +48,8 @@ pub fn run() -> Result<()> {
     .start()
     .context("Docker could not start the Linux system-test container.")?;
   let command = [
-    "cargo clippy --workspace --all-targets -- -D warnings",
-    "cargo test --workspace",
-    "cargo test -p arcantry-cli --test cli_contract",
+    "cargo clippy --workspace --all-targets --locked -- -D warnings",
+    "cargo test --workspace --locked",
     "cargo build -p arcantry-cli",
     "test \"$(target/debug/arcantry --version)\" = \"1.0.0\"",
     "target/debug/arcantry --help > /tmp/arcantry-help.txt",

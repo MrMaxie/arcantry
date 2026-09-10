@@ -92,6 +92,8 @@ pub enum RepoCommand {
   Recover {
     #[arg(long)]
     acknowledge: bool,
+    #[arg(long, value_name = "path", action = clap::ArgAction::Append)]
+    allow_outside: Vec<PathBuf>,
   },
   #[command(about = "Discover project knowledge sources without changing them.")]
   Inspect {

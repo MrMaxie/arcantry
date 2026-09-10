@@ -72,7 +72,7 @@ The audience and scope discipline skill MUST treat an existing artifact's establ
 
 ### Requirement: Self-improvement skills maintain reusable agent capabilities
 
-The self-improvement family MUST support capturing repeated work, evaluating and creating focused skills, maintaining scoped agent guidance, selecting relevant skills, and staging review findings behind explicit approval. Guidance changes MUST distinguish user, repository, and private repository scope and MUST remain approval-gated.
+The self-improvement family MUST support capturing repeated work, evaluating and creating focused skills, maintaining scoped agent guidance, selecting relevant skills, and staging review findings behind explicit approval. Guidance changes MUST distinguish user, repository, and private repository scope and honor existing user authorization. Missing authorization requires review of the exact proposed change; an already approved action MUST NOT require repeated approval.
 
 #### Scenario: A repeated workflow becomes reusable
 

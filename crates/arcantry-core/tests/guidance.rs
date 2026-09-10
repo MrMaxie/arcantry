@@ -38,6 +38,18 @@ fn three_answers_preserve_project_rules_and_dependency_order_without_approval() 
   let blocked = guidance::next(&project, Some("second")).unwrap();
   assert_eq!(blocked["authority"], "unknown");
   assert_eq!(blocked["blockers"].as_array().unwrap().len(), 1);
+  fs::create_dir_all(
+    root
+      .path()
+      .join("openspec/changes/archive/2026-09-10-first"),
+  )
+  .unwrap();
+  fs::remove_file(root.path().join("openspec/changes/first/tasks.md")).unwrap();
+  fs::remove_dir(root.path().join("openspec/changes/first")).unwrap();
+  assert_eq!(
+    guidance::next(&project, None).unwrap()["change"]["id"],
+    "second"
+  );
   let explanation = guidance::explain(&project, "tasks").unwrap();
   assert!(
     explanation["projectSources"]
@@ -84,4 +96,16 @@ fn environment_observation_and_diagnostics_do_not_read_values() {
   assert!(!report.contains("PRIVATE-SENTINEL"));
   assert!(!report.contains(&root.path().to_string_lossy().to_string()));
   assert!(context["rules"].to_string().contains("PRIVATE-SENTINEL"));
+}
+
+#[test]
+fn contradictory_workflow_configuration_is_rejected_without_inventing_an_order() {
+  let root = tempfile::tempdir().unwrap();
+  fs::write(
+    root.path().join("arcantry.toml"),
+    "config_version = 1\n[workflow.dependencies]\na = ['b']\nb = ['a']\n",
+  )
+  .unwrap();
+  let error = resolve_project(root.path(), None, true, None).unwrap_err();
+  assert!(error.to_string().contains("dependency cycle"));
 }

@@ -85,22 +85,6 @@ body:has(arcantry-configurator) .header-shell {
   padding-inline: 1.25rem;
 }
 
-@media (min-width: 50rem) {
-  body:has(arcantry-configurator) {
-    overflow-y: hidden;
-  }
-
-  body:has(arcantry-configurator) main {
-    height: calc(100dvh - var(--sl-nav-height));
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  body:has(arcantry-configurator) .page-footer {
-    display: none;
-  }
-}
-
 @media (max-width: 49.99rem) {
   body:has(arcantry-configurator) .header-shell {
     padding-inline: 0.8rem;

@@ -272,6 +272,23 @@ pub fn parse_project_config(
   {
     bail!("project.root must not be empty.");
   }
+  if let Some(workflow) = &config.workflow {
+    validate_cycles(
+      &workflow
+        .dependencies
+        .iter()
+        .map(|(id, dependencies)| {
+          (
+            id.as_str(),
+            dependencies.iter().map(String::as_str).collect(),
+          )
+        })
+        .collect(),
+    )?;
+    if workflow.order.iter().collect::<BTreeSet<_>>().len() != workflow.order.len() {
+      bail!("workflow.order must contain unique change ids.");
+    }
+  }
   if let Some(tool) = &config.tool {
     let requirement =
       VersionReq::parse(&tool.requires).context("tool.requires must be a valid SemVer range.")?;
@@ -345,7 +362,18 @@ pub fn parse_project_config(
       bail!("managed_from requires a changelog source and a full SemVer version.");
     }
   }
-  validate_dependency_cycles(&config.sources)?;
+  validate_cycles(
+    &config
+      .sources
+      .iter()
+      .map(|(id, source)| {
+        (
+          id.as_str(),
+          source.from.iter().map(String::as_str).collect(),
+        )
+      })
+      .collect(),
+  )?;
   let managed_openspec = config
     .sources
     .iter()
@@ -635,7 +663,18 @@ fn validate_release_units(
     if edges == 0 {
       bail!("composed release topology requires at least one dependency edge.");
     }
-    validate_release_unit_cycles(&release.units)?;
+    validate_cycles(
+      &release
+        .units
+        .iter()
+        .map(|(id, unit)| {
+          (
+            id.as_str(),
+            unit.dependencies.iter().map(String::as_str).collect(),
+          )
+        })
+        .collect(),
+    )?;
   }
   Ok(())
 }
@@ -650,35 +689,6 @@ fn claim_unique(
     bail!("{label} must be unique across release units: {value}");
   }
   owners.insert(value.to_owned(), unit.to_owned());
-  Ok(())
-}
-
-fn validate_release_unit_cycles(units: &BTreeMap<String, ReleaseUnitConfig>) -> Result<()> {
-  fn visit<'a>(
-    id: &'a str,
-    units: &'a BTreeMap<String, ReleaseUnitConfig>,
-    visiting: &mut BTreeSet<&'a str>,
-    visited: &mut BTreeSet<&'a str>,
-  ) -> Result<()> {
-    if visiting.contains(id) {
-      bail!("release unit dependency cycle includes {id}.");
-    }
-    if visited.contains(id) {
-      return Ok(());
-    }
-    visiting.insert(id);
-    for dependency in &units[id].dependencies {
-      visit(dependency, units, visiting, visited)?;
-    }
-    visiting.remove(id);
-    visited.insert(id);
-    Ok(())
-  }
-  let mut visiting = BTreeSet::new();
-  let mut visited = BTreeSet::new();
-  for id in units.keys() {
-    visit(id, units, &mut visiting, &mut visited)?;
-  }
   Ok(())
 }
 
@@ -708,34 +718,27 @@ fn valid_component_id(id: &str) -> bool {
   first && parts.next().is_none_or(valid_part) && parts.next().is_none()
 }
 
-fn validate_dependency_cycles(sources: &BTreeMap<String, RawSourceConfig>) -> Result<()> {
-  fn visit<'a>(
-    id: &'a str,
-    sources: &'a BTreeMap<String, RawSourceConfig>,
-    visiting: &mut BTreeSet<&'a str>,
-    visited: &mut BTreeSet<&'a str>,
-  ) -> Result<()> {
-    if visiting.contains(id) {
-      bail!("source dependency cycle includes {id}.");
+fn validate_cycles(edges: &BTreeMap<&str, Vec<&str>>) -> Result<()> {
+  let mut pending: BTreeSet<_> = edges.keys().copied().collect();
+  while !pending.is_empty() {
+    let ready: Vec<_> = pending
+      .iter()
+      .copied()
+      .filter(|id| {
+        edges[id]
+          .iter()
+          .all(|dependency| !pending.contains(dependency))
+      })
+      .collect();
+    if ready.is_empty() {
+      bail!(
+        "dependency cycle includes {}.",
+        pending.into_iter().collect::<Vec<_>>().join(", ")
+      );
     }
-    if visited.contains(id) {
-      return Ok(());
+    for id in ready {
+      pending.remove(id);
     }
-    visiting.insert(id);
-    if let Some(source) = sources.get(id) {
-      for dependency in &source.from {
-        visit(dependency, sources, visiting, visited)?;
-      }
-    }
-    visiting.remove(id);
-    visited.insert(id);
-    Ok(())
-  }
-
-  let mut visiting = BTreeSet::new();
-  let mut visited = BTreeSet::new();
-  for id in sources.keys() {
-    visit(id, sources, &mut visiting, &mut visited)?;
   }
   Ok(())
 }

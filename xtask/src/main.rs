@@ -1,7 +1,6 @@
 mod binary;
 mod catalog;
 mod ci_setup;
-mod coverage;
 mod docs_output;
 mod generate;
 mod installer_smoke;
@@ -39,20 +38,6 @@ enum Task {
   },
   /// Expose Nub's pinned Node runtime to later GitHub Actions steps.
   CiSetup,
-  /// Collect and verify branch-aware coverage for the Rust workspace.
-  RustCoverage {
-    #[arg(long, default_value = ".")]
-    root: PathBuf,
-  },
-  /// Verify LCOV evidence against the per-file Rust coverage policy.
-  VerifyCoverage {
-    #[arg(default_value = "target/rust-coverage.lcov")]
-    report: PathBuf,
-    #[arg(default_value = "contracts/rust-coverage-policy.json")]
-    policy: PathBuf,
-    #[arg(long, default_value = ".")]
-    root: PathBuf,
-  },
   /// Verify the built documentation origin and generated asset layout.
   DocsOutput {
     #[arg(long, default_value = ".")]
@@ -166,12 +151,6 @@ fn main() -> Result<()> {
   match Arguments::parse().command {
     Task::CatalogValidate { root } => catalog::validate(&root),
     Task::CiSetup => ci_setup::configure(),
-    Task::RustCoverage { root } => coverage::run(&root),
-    Task::VerifyCoverage {
-      report,
-      policy,
-      root,
-    } => coverage::verify(&root, &report, &policy),
     Task::DocsOutput { root } => docs_output::verify(&root),
     Task::Generate {
       root,

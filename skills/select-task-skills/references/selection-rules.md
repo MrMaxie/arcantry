@@ -19,6 +19,6 @@
 
 - Default to zero skills for trivial work.
 - Default to one skill for a focused task.
-- Use two or three only when the task crosses distinct domains or needs an independent safety or validation workflow.
+- Add complementary skills only when the task crosses distinct domains or needs an independent safety or validation workflow.
 - Treat disabled skills as unavailable. Map a relevant disabled skill to `install_first` only when its project pack is available. Otherwise exclude it from the selected list and report that an explicit enablement decision is required; never bypass configuration.
 

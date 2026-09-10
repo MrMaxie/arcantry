@@ -1,6 +1,6 @@
 ---
 name: maintain-agent-guidance
-description: Audit and update universal AGENTS.md guidance at the narrowest user, repository, nested, or private scope through exact approval-gated proposals.
+description: Audit and update universal AGENTS.md guidance at the narrowest user, repository, nested, or private scope using concrete, reviewable changes.
 ---
 
 # Maintain Agent Guidance
@@ -22,10 +22,10 @@ Do not move private paths, credentials, personal service setup, or machine-speci
 
 1. Read the applicable guidance chain and the evidence for the requested change.
 2. Identify overlaps, conflicts, stale facts, and the exact decision point the rule must influence.
-3. Draft independently numbered proposals. Each proposal must state the audience, target, exact add, replace, or delete diff, expected behavior, and context-cost tradeoff.
-4. Wait for item-level approval. Apply only accepted proposal IDs and do not bundle adjacent cleanup.
+3. Prepare a concrete diff that replaces stale rules and removes duplication at the appropriate scope.
+4. Apply changes already authorized by the request. If authority is missing, present the exact diff for approval. Do not repeat an existing approval.
 5. Re-read each target before editing. If its preimage changed, revise the proposal instead of applying a stale diff.
 6. Validate nesting, language, commands, privacy boundaries, managed-section ownership, and any requested compatibility import.
-7. Report applied IDs and leave rejected or undecided proposals unchanged.
+7. Report the resulting guidance and leave rejected or unrelated content unchanged.
 
 When an operation reads or changes `.local/AGENTS.md`, use `protect-local-boundary` first. It owns the private directory and Git exclusion boundary; this skill owns guidance scope and content.

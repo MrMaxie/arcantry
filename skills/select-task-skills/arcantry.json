@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
-  "summary": "Choose at most three available skills whose non-overlapping workflows materially improve a complex task.",
+  "summary": "Choose a small set of available skills whose non-overlapping workflows materially improve a complex task.",
   "scenarios": [
     {
       "title": "Route a multi-domain task",

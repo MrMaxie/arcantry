@@ -59,6 +59,9 @@ pub fn execute(
         source.visibility,
       )?);
       add_private_exclude_operation(&inspection.root, source.visibility, &mut plan)?;
+      if let Some(path) = &inspection.config_path {
+        plan.watch(&path.to_string_lossy())?;
+      }
       handle_plan(plan, apply, false, output)
     }
     TodoCommand::Complete {
@@ -79,6 +82,9 @@ pub fn execute(
           desired,
           source.visibility,
         )?);
+      }
+      if let Some(path) = &inspection.config_path {
+        plan.watch(&path.to_string_lossy())?;
       }
       handle_plan(plan, apply, false, output)
     }
@@ -120,6 +126,9 @@ pub fn execute(
         target.visibility,
       )?);
       add_private_exclude_operation(&inspection.root, target.visibility, &mut plan)?;
+      if let Some(path) = &inspection.config_path {
+        plan.watch(&path.to_string_lossy())?;
+      }
       handle_plan(plan, apply, false, output)
     }
   }

@@ -3,6 +3,57 @@ import { Icon } from '@astrojs/starlight/components';
 import ArcantryKnowledgeGraph from './ArcantryKnowledgeGraph.astro';
 ---
 
+<section class="work-example" aria-labelledby="work-example-title">
+  <h2 id="work-example-title">Resume a task without repeating the briefing</h2>
+  <p>Example: a project has an accepted change with one unfinished task. Open each step to follow the workflow.</p>
+  <details open>
+    <summary>1. Find the project context</summary>
+    <pre><code>arcantry context</code></pre>
+    <p>
+      See the project sources, active changes and whether optional tools are available. Nothing is initialized or
+      changed.
+    </p>
+  </details>
+  <details>
+    <summary>2. Choose the next task</summary>
+    <pre><code>arcantry next --change improve-setup</code></pre>
+    <p>
+      Read the first pending task, its dependencies and the next command. Blocked work stays visible. Existing
+      conversational approval remains unknown to the CLI.
+    </p>
+  </details>
+  <details>
+    <summary>3. Use the project's format</summary>
+    <pre><code>arcantry explain tasks</code></pre>
+    <p>
+      Use the checklist example and actual schema template. Follow the project instructions, implement the authorized
+      task and run its checks. Commit, deployment and release remain separate decisions.
+    </p>
+  </details>
+  <p>
+    <a href="/getting-started/">Try it in your project</a>
+    or <a href="/getting-started/#work-without-the-cli">work directly from files</a>.
+  </p>
+</section>
+<style>
+.work-example {
+  margin-block: 3rem;
+  max-width: 58rem;
+}
+.work-example details {
+  border-bottom: 1px solid var(--ar-border);
+  padding: 1rem 0;
+}
+.work-example summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+.work-example pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+</style>
+
 <section class="value" aria-labelledby="value-title">
   <div class="value-heading">
     <p>Why Arcantry</p>
@@ -255,10 +306,10 @@ import ArcantryKnowledgeGraph from './ArcantryKnowledgeGraph.astro';
   <div class="journey-heading">
     <p>Adoption strategies</p>
     <div>
-      <h2 id="quickstart-title">Prefer complete integration, keep selective use available</h2>
+      <h2 id="quickstart-title">Start with one useful part of the project</h2>
       <p>
-        Arcantry is most valuable when it can describe the complete project knowledge stack. That is the recommended
-        destination for both new and existing projects, but every source and capability remains independently adoptable.
+        Use context discovery first. Add a shared or private source only when it helps the work you actually do. Each
+        source and capability remains independently adoptable.
       </p>
     </div>
   </div>

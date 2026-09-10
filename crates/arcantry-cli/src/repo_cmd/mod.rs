@@ -22,10 +22,20 @@ pub fn execute(
   output: Option<&Path>,
 ) -> Result<i32> {
   match command {
-    RepoCommand::Recover { acknowledge } => {
+    RepoCommand::Recover {
+      acknowledge,
+      allow_outside,
+    } => {
+      let mut authority = ApplyAuthority::new(cwd)?;
+      for path in allow_outside {
+        authority = authority.allow_exact(&cwd.join(path))?;
+      }
       println!(
         "{}",
-        serde_json::to_string_pretty(&arcantry_core::project_plan::recover(cwd, acknowledge)?)?
+        serde_json::to_string_pretty(&arcantry_core::project_plan::recover_with_authority(
+          &authority,
+          acknowledge
+        )?)?
       );
       Ok(0)
     }
