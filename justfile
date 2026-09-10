@@ -11,20 +11,29 @@ setup:
 ci-setup: setup
   cargo run -p xtask -- ci-setup
 
-check:
+check: check-fast
   cargo run -p xtask -- typescript-boundary
   cargo run -p xtask -- generate --check
   cargo run -p xtask -- generate --docs-only
   nub exec biome check
   nub exec --cwd apps/docs astro sync
   cargo run -p xtask -- catalog-validate
-  cargo run -p xtask -- repository-release check
   nub exec --cwd apps/docs astro check
+  cargo clippy --workspace --all-targets --locked -- -D warnings
+  cargo test --workspace --locked
+  mise exec -- cargo deny check
+
+check-fast:
   just --fmt --check
   cargo fmt --all -- --check
-  cargo clippy --workspace --all-targets -- -D warnings
-  cargo test --workspace
-  mise exec -- cargo deny check
+  cargo check --workspace --locked
+
+check-host: check build native-conformance package-check
+
+docs-build:
+  cargo run -p xtask -- generate --docs-only
+  nub exec --cwd apps/docs astro build
+  cargo run -p xtask -- docs-output
 
 build:
   cargo run -p xtask -- generate --docs-only
@@ -168,4 +177,4 @@ openspec-validate:
   nub exec openspec schema validate arcantry
   nub exec openspec validate --all --strict --no-interactive
 
-ci: openspec-validate check build native-conformance rust-coverage linux-system-test dist-plan package-check arcantry-init arcantry-validate arcantry-skills-doctor
+ci: openspec-validate check-host linux-system-test

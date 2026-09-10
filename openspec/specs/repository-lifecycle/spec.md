@@ -183,7 +183,7 @@ The repository MUST keep a root `justfile` as the only task runner and expose st
 - **WHEN** a GitHub-hosted runner checks out the repository
 - **THEN** mise provisions the pinned `just` and Nub versions
 - **AND** `just ci-setup` uses Nub to provision the repository's Node version, expose it to later workflow steps and install the frozen workspace lockfile
-- **AND** CI runs the same `just ci` quality gate used by contributors
+- **AND** local contributors run `just check-host` and `just linux-system-test`; the only active remote workflow builds and deploys documentation
 
 ### Requirement: External publication consumes sealed release state
 

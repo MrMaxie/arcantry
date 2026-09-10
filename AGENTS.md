@@ -9,13 +9,13 @@ Read `.local/arcantry.toml` when present for private operational configuration.
 
 When an OpenSpec requirement applies to a class of files, components, or pages, inventory the matching candidates from the repository before implementation and again before completion. Mark each candidate compliant or explicitly out of scope; do not treat named examples as the complete surface unless the requirement limits them.
 
-## Branches and pull requests
+## Local delivery
 
-- Name branches `<type>/<english-kebab-case-description>`, for example `feat/ship-native-rust-cli`, `fix/validate-release-seal`, or `chore/update-github-actions`.
-- Use a Conventional Commit type such as `feat`, `fix`, `chore`, `docs`, `refactor`, or `test`. The description must identify the concrete outcome or content of the branch. Do not use workflow-state or catch-all names such as `current-master-updates`, `changes`, or `misc`.
-- Title pull requests `<type>: <English description>`, using the same type as the branch. The title must describe the concrete outcome rather than the act of opening, updating, or preparing a pull request.
-- Keep each branch and pull request focused on one coherent outcome. The pull request description must explain what changes, why it is needed, and how it was verified. It must match the actual diff and must not consist only of a restated title or generic wording such as "updates" or "improvements".
-- Use `.github/pull_request_template.md` for every pull request. Remove placeholder guidance and record skipped verification as `Not run: <reason>`.
+- Implement and commit coherent, verified increments directly on `master`. Do not create branches or pull requests for this workflow.
+- Keep existing local commits and unrelated work intact. Pushes and remote settings changes require separate authorization.
+- Only the documentation Pages workflow runs remotely. Use `just check-fast`, `just check-host`, and `just linux-system-test` locally.
+- Coverage is an optional diagnostic, not an implementation or publication gate.
+- Prefer concrete Rust code and established dependencies over new frameworks. Compare the total maintenance cost before adding infrastructure.
 
 ## Continuous 1.0 delivery and release authorization
 

@@ -1,6 +1,5 @@
 # Arcantry
 
-[![CI](https://github.com/MrMaxie/arcantry/actions/workflows/ci.yml/badge.svg)](https://github.com/MrMaxie/arcantry/actions/workflows/ci.yml)
 [![Documentation](https://img.shields.io/badge/docs-arcantry.dev-6a4cc7)](https://arcantry.dev/)
 [![License](https://img.shields.io/github/license/MrMaxie/arcantry)](LICENSE)
 
@@ -21,7 +20,7 @@ arcantry repo apply --plan plan.json
 - Keep accepted intent, consumer release meaning, hot thoughts, private state, and reusable procedures in distinct layers.
 - Use focused skills for self-improvement, repository safety, and audience-safe content.
 - Preview structural changes as serializable plans and reject changed inputs before writing.
-- Use the same deterministic checks locally and in CI.
+- Verify work locally on the host and in disposable Linux containers.
 
 ## Documentation
 
