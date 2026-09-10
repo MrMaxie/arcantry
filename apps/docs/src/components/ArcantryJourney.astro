@@ -1,5 +1,5 @@
 ---
-import { Icon } from '@astrojs/starlight/components';
+import { Code, Icon } from '@astrojs/starlight/components';
 import ArcantryKnowledgeGraph from './ArcantryKnowledgeGraph.astro';
 ---
 
@@ -8,7 +8,7 @@ import ArcantryKnowledgeGraph from './ArcantryKnowledgeGraph.astro';
   <p>Example: a project has an accepted change with one unfinished task. Open each step to follow the workflow.</p>
   <details open>
     <summary>1. Find the project context</summary>
-    <pre><code>arcantry context</code></pre>
+    <Code code="arcantry context" lang="sh" />
     <p>
       See the project sources, active changes and whether optional tools are available. Nothing is initialized or
       changed.
@@ -16,7 +16,7 @@ import ArcantryKnowledgeGraph from './ArcantryKnowledgeGraph.astro';
   </details>
   <details>
     <summary>2. Choose the next task</summary>
-    <pre><code>arcantry next --change improve-setup</code></pre>
+    <Code code="arcantry next --change improve-setup" lang="sh" />
     <p>
       Read the first pending task, its dependencies and the next command. Blocked work stays visible. Existing
       conversational approval remains unknown to the CLI.
@@ -24,7 +24,7 @@ import ArcantryKnowledgeGraph from './ArcantryKnowledgeGraph.astro';
   </details>
   <details>
     <summary>3. Use the project's format</summary>
-    <pre><code>arcantry explain tasks</code></pre>
+    <Code code="arcantry explain tasks" lang="sh" />
     <p>
       Use the checklist example and actual schema template. Follow the project instructions, implement the authorized
       task and run its checks. Commit, deployment and release remain separate decisions.
@@ -47,10 +47,6 @@ import ArcantryKnowledgeGraph from './ArcantryKnowledgeGraph.astro';
 .work-example summary {
   cursor: pointer;
   font-weight: 650;
-}
-.work-example pre {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
 }
 </style>
 

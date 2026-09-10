@@ -10,4 +10,25 @@ import { Content as ProjectChangelog } from '../../../../CHANGELOG.md';
 .project-changelog :global(h1:first-child) {
   display: none;
 }
+.project-changelog :global(h2) {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--ar-border);
+  font-size: 1.75rem;
+  line-height: 1.4;
+}
+.project-changelog :global(h3) {
+  margin-top: 1.5rem;
+  color: var(--ar-text-muted);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.project-changelog :global(h4) {
+  margin-top: 1.25rem;
+  font-size: 1.125rem;
+  line-height: 1.5;
+}
+.project-changelog :global(h4 + p) {
+  margin-top: 0.5rem;
+}
 </style>

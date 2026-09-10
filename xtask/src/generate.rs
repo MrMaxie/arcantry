@@ -258,7 +258,7 @@ fn render_skill_page(
     });
   let summary = serde_json::to_string(&metadata.summary)?;
   Ok(format!(
-    "---\ntitle: {}\ndescription: {summary}\n---\n\n<!-- {GENERATED_NOTICE} -->\n\n<p class=\"skill-reference-meta\"><span>Arcantry {version}</span><code>{}</code></p>\n\n{}\n\n## When to use\n\n{description}\n\n## Link this skill\n\n```text\narcantry skills link {} --scope user\n```\n\nThe standard destination is `~/.agents/skills`. Codex reads this universal Agent Skills location directly.\n\n### Claude compatibility\n\n```text\narcantry skills link {} --scope user --compat claude\n```\n\nThis keeps the universal link and adds a Claude alias to the same canonical package.\n\n{compatibility}{learning}## Examples\n\n{scenarios}\n",
+    "---\ntitle: {}\ndescription: {summary}\n---\n\n<!-- {GENERATED_NOTICE} -->\n\n<p class=\"skill-reference-meta\"><span>Arcantry {version}</span><code>{}</code></p>\n\n{}\n\n## When to use\n\n{description}\n\n## Link this skill\n\n```sh\narcantry skills link {} --scope user\n```\n\nThe standard destination is `~/.agents/skills`. Codex reads this universal Agent Skills location directly.\n\n### Claude compatibility\n\n```sh\narcantry skills link {} --scope user --compat claude\n```\n\nThis keeps the universal link and adds a Claude alias to the same canonical package.\n\n{compatibility}{learning}## Examples\n\n{scenarios}\n",
     agent.display_name, entry.name, metadata.summary, entry.name, entry.name
   ))
 }

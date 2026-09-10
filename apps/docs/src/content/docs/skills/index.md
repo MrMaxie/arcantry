@@ -17,7 +17,7 @@ No family is a router skill. Every catalog entry performs one focused job.
 
 ## Inspect and link one skill
 
-```text
+```sh
 arcantry skills list
 arcantry skills inspect <name>
 arcantry skills link <name> --scope user
@@ -36,7 +36,7 @@ Arcantry recommends the universal Agent Skills locations:
 
 Codex reads the universal surface directly. Claude Code compatibility is an additional alias to the same canonical package:
 
-```text
+```sh
 arcantry skills link <name> --scope repo --compat claude
 ```
 
@@ -48,7 +48,7 @@ Linking is idempotent when the target already points to the canonical package. A
 
 A repository can keep a canonical skill under `.local/skills/<name>` and expose it through locally excluded links:
 
-```text
+```sh
 arcantry skills list --scope private
 arcantry skills inspect <name> --scope private
 arcantry skills link <name> --scope private
@@ -61,7 +61,7 @@ Private and public packages cannot reuse the same skill name. `.agents` and `.cl
 
 The repository exposes the same `skills/` tree through optional package manifests:
 
-```text
+```sh
 claude --plugin-dir ./arcantry
 ```
 
@@ -71,7 +71,7 @@ Claude Code namespaces plugin skills as `/arcantry:<name>`. Codex can use `.code
 
 The packages use the open Agent Skills directory format, so compatible independent installers can discover them from `skills/*/SKILL.md`:
 
-```text
+```sh
 gh skill install MrMaxie/arcantry <name> --agent codex --scope user
 npx skills add MrMaxie/arcantry --skill <name> -a codex -g
 ```

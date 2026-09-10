@@ -71,7 +71,6 @@ const questions = [
 
 <arcantry-configurator class="not-content">
   <header class="setup-intro">
-    <p><a href="/">Arcantry</a> / Project setup</p>
     <h1>Give your agent a useful starting point.</h1>
     <p>Choose your situation. Review the request, then copy it into your agent. Nothing here changes your project.</p>
   </header>
@@ -257,9 +256,9 @@ if (!customElements.get('arcantry-configurator')) customElements.define('arcantr
 <style>
 arcantry-configurator {
   display: block;
-  max-width: 76rem;
+  max-width: var(--ar-setup-width);
   margin: auto;
-  padding: clamp(1.25rem, 4vw, 3rem);
+  padding: var(--ar-setup-gutter);
   color: var(--ar-text);
 }
 h1,

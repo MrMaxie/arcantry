@@ -40,7 +40,7 @@
   --sl-color-hairline-light: var(--ar-border-soft);
   --sl-color-hairline: var(--ar-border);
   --sl-color-hairline-shade: var(--ar-border);
-  --sl-color-text-accent: var(--ar-text);
+  --sl-color-text-accent: var(--ar-accent-violet);
   --sl-color-text-invert: var(--ar-invert);
   --sl-font-system: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif;
   --__sl-font: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif;
@@ -83,7 +83,7 @@
   --sl-color-hairline-light: var(--ar-border-soft);
   --sl-color-hairline: var(--ar-border);
   --sl-color-hairline-shade: var(--ar-border);
-  --sl-color-text-accent: var(--ar-text);
+  --sl-color-text-accent: var(--ar-accent-violet);
   --sl-color-text-invert: var(--ar-invert);
 }
 
@@ -113,6 +113,17 @@ textarea {
 .sl-markdown-content h2,
 .sl-markdown-content h3 {
   color: var(--ar-text);
+}
+
+.sl-markdown-content a:not(:where(.not-content *)):not(.sl-anchor-link),
+arcantry-configurator .request-notes a {
+  color: var(--ar-accent-violet);
+  text-underline-offset: 0.18em;
+}
+
+.sl-markdown-content a:not(:where(.not-content *)):not(.sl-anchor-link):hover,
+arcantry-configurator .request-notes a:hover {
+  color: var(--ar-accent-blue);
 }
 
 .sl-markdown-content code:not(:where(.not-content *)) {
