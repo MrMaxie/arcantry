@@ -40,7 +40,7 @@ Each level-two heading is one standard changelog category: `Added`, `Changed`, `
 
 Existing release artifacts may retain the legacy `category` frontmatter with one level-one title and body. New artifacts use the categorized body shown above. One file cannot mix the two structures.
 
-Completed changes record `patch`, `minor`, or `major` impact. When a release is authorized, planning rejects an unassigned `none` change and uses the highest impact in the release set. Recording impact does not authorize a version change.
+SemVer changes record `patch`, `minor`, or `major` impact. Integer and calendar projects can omit it. When a release is authorized, planning rejects an unassigned `none` change and uses the highest impact in the release set. Recording impact does not authorize a version change.
 
 `visibility: public` publishes the entry in `CHANGELOG.md`. `internal` keeps the change in release state without publishing its prose.
 
@@ -98,7 +98,7 @@ A composed parent plan reports newer child releases as pending. The parent adopt
 
 `release-cut` creates the manifest from the computed plan. It does not ask commits what changed and is run only as part of an explicitly authorized release.
 
-Normal `release check` validates persisted release consistency while allowing active and unassigned work. `release check --sealed` is the final gate: it also rejects active changes, unassigned archives, uncommitted work, and commits after the latest release manifest. `just check` runs the normal consistency check automatically.
+Normal `release check` validates persisted release consistency while allowing active and unassigned work. `release check --sealed` is the final gate: it also rejects active changes, unassigned archives, uncommitted work, and commits after the latest release manifest. Ordinary host checks do not require a release; run release checks when preparing one.
 
 {/* cli-evidence: release-local-only */}
 
@@ -106,7 +106,7 @@ The commit that introduces an authorized release manifest is the Arcantry releas
 
 ## Changelog provenance
 
-Arcantry's public release adapter renders Keep a Changelog 2.0 with its preamble, `Unreleased`, dated bracketed versions, and standard categories. It can compose archived meaning from one or several explicit OpenSpec paths in a monorepo. Existing release prose is never reconstructed from Git.
+By default, Arcantry's public release adapter renders Keep a Changelog 2.0 with its preamble, `Unreleased`, dated bracketed versions, and standard categories. It can compose archived meaning from one or several explicit OpenSpec paths in a monorepo. Existing release prose is never reconstructed from Git.
 
 Every published outcome carries an invisible OpenSpec source marker:
 
@@ -144,3 +144,5 @@ The first publication is a one-time bootstrap because npm requires a package to 
 5. Require 2FA and disallow token-based publication after the trusted publisher has been verified.
 
 Do not create the first version tag before bootstrap is complete. Automated tag publication starts with the next sealed version.
+
+Projects can select integer or calendar versions and a MiniJinja changelog template. See [Release conventions](/reference/configuration/#release-conventions) for compatible version sources and preserved history.

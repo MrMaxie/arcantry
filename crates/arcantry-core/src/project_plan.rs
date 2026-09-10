@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -38,6 +38,8 @@ pub struct ProjectPlan {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub target_adapter: Option<String>,
   pub operations: Vec<PlanOperation>,
+  #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+  pub inputs: BTreeMap<String, Option<String>>,
   pub notes: Vec<String>,
   pub conflicts: Vec<String>,
 }
@@ -87,9 +89,21 @@ impl ProjectPlan {
       adapter: adapter.into(),
       target_adapter: None,
       operations: Vec::new(),
+      inputs: BTreeMap::new(),
       notes: Vec::new(),
       conflicts: Vec::new(),
     }
+  }
+
+  pub fn watch(&mut self, path: &str) -> Result<()> {
+    if relative_path_escapes(path) {
+      bail!("Plan input must stay within its source root.");
+    }
+    self.inputs.insert(
+      path.to_owned(),
+      hash_path(&resolve_plan_path(&self.root, path))?,
+    );
+    Ok(())
   }
 }
 
@@ -139,6 +153,46 @@ pub fn create_delete_tree_operation(
 pub fn serialize(plan: &ProjectPlan) -> Result<String> {
   Ok(format!("{}\n", serde_json::to_string_pretty(plan)?))
 }
+
+pub fn save(plan: &ProjectPlan, path: &Path) -> Result<()> {
+  let absolute = canonicalize_candidate(path)?;
+  if plan.operations.iter().any(|op| {
+    canonicalize_candidate(&resolve_plan_path(&plan.root, &op.path))
+      .ok()
+      .as_ref()
+      == Some(&absolute)
+  }) {
+    bail!("Plan output cannot overwrite a planned target.");
+  }
+  write_new(&absolute, &serialize(plan)?)?;
+  eprintln!(
+    "Saved plan: {}{}",
+    path.display(),
+    if plan
+      .operations
+      .iter()
+      .any(|o| o.visibility == crate::config::Visibility::Private)
+    {
+      " (contains private content)"
+    } else {
+      ""
+    }
+  );
+  Ok(())
+}
+pub fn write_new(path: &Path, content: &str) -> Result<()> {
+  use std::io::Write;
+  let absolute = canonicalize_candidate(path)?;
+  let parent = absolute
+    .parent()
+    .context("Output has no parent directory.")?;
+  let mut output = tempfile::NamedTempFile::new_in(parent)?;
+  output.write_all(content.as_bytes())?;
+  output.as_file().sync_all()?;
+  output.persist_noclobber(&absolute).map_err(|e| e.error)?;
+  Ok(())
+}
+
 pub fn parse(content: &str) -> Result<ProjectPlan> {
   let plan: ProjectPlan = serde_json::from_str(content)?;
   validate(&plan)?;
@@ -183,7 +237,122 @@ pub fn render(plan: &ProjectPlan) -> String {
 }
 
 pub fn apply(plan: &ProjectPlan, authority: &ApplyAuthority) -> Result<ApplyOutcome> {
+  let _lock = lock_root(&authority.root)?;
+  if journal_path(&authority.root)?.exists() {
+    bail!("An interrupted transaction needs review. Run arcantry repo recover.");
+  }
   apply_with_hooks(plan, authority, |_, _| Ok(()), remove_any)
+}
+
+fn journal_path(root: &Path) -> Result<PathBuf> {
+  let directory = directories::ProjectDirs::from("dev", "MrMaxie", "Arcantry")
+    .context("Cannot resolve local transaction storage")?
+    .data_local_dir()
+    .join("transactions");
+  Ok(directory.join(format!(
+    "{}.json",
+    hash_content(&canonicalize_candidate(root)?.to_string_lossy())
+  )))
+}
+
+pub fn lock_root(root: &Path) -> Result<fs::File> {
+  let path = journal_path(root)?.with_extension("lock");
+  fs::create_dir_all(path.parent().context("Missing lock directory")?)?;
+  let file = fs::OpenOptions::new()
+    .create(true)
+    .truncate(false)
+    .read(true)
+    .write(true)
+    .open(path)?;
+  file
+    .try_lock()
+    .context("Another Arcantry operation owns this project. Retry after it finishes.")?;
+  Ok(file)
+}
+
+fn write_journal(path: &Path, value: &serde_json::Value) -> Result<()> {
+  use std::io::Write;
+  fs::create_dir_all(path.parent().context("Missing transaction directory")?)?;
+  let mut file =
+    tempfile::NamedTempFile::new_in(path.parent().context("Missing transaction directory")?)?;
+  file.write_all(serde_json::to_string(value)?.as_bytes())?;
+  file.as_file().sync_all()?;
+  file.persist(path).map_err(|e| e.error)?;
+  Ok(())
+}
+
+/// Report interrupted work; acknowledge only a completely restored or applied tree.
+pub fn recover(root: &Path, acknowledge: bool) -> Result<serde_json::Value> {
+  let path = journal_path(root)?;
+  if !path.exists() {
+    return Ok(serde_json::json!({"status":"clean"}));
+  }
+  let _lock = lock_root(root)?;
+  let journal: serde_json::Value = serde_json::from_str(&fs::read_to_string(&path)?)?;
+  let plan: ProjectPlan = serde_json::from_value(journal["plan"].clone())?;
+  ensure_plan_authority(&plan, &ApplyAuthority::new(root)?)?;
+  validate(&plan)?;
+  let staged: Vec<Staged> = serde_json::from_value(journal["staged"].clone())?;
+  if staged.len() != plan.operations.len() {
+    bail!("Recovery journal does not match its plan.");
+  }
+  for (item, operation) in staged.iter().zip(&plan.operations) {
+    if serde_json::to_value(&item.operation)? != serde_json::to_value(operation)?
+      || canonicalize_candidate(&item.target)?
+        != canonicalize_candidate(&resolve_plan_path(&plan.root, &operation.path))?
+    {
+      bail!("Recovery journal does not match its plan.");
+    }
+  }
+  if !acknowledge {
+    return Ok(
+      serde_json::json!({"status":"interrupted","journal":path,"operations":staged,"action":"Review original backups and targets. Restore every original or verify every planned result, then run repo recover --acknowledge. Never delete an unrecognized file."}),
+    );
+  }
+  let hashes = plan
+    .operations
+    .iter()
+    .map(|op| hash_path(&resolve_plan_path(&plan.root, &op.path)))
+    .collect::<Result<Vec<_>>>()?;
+  let restored = plan
+    .operations
+    .iter()
+    .zip(&hashes)
+    .all(|(op, hash)| op.expected_hash == *hash);
+  let applied = plan
+    .operations
+    .iter()
+    .zip(&hashes)
+    .all(|(op, hash)| op.content_hash == *hash);
+  if !restored && !applied {
+    bail!("Recovery is mixed or has unrelated edits. Review the journal; no files were removed.");
+  }
+  let mut cleanup = Vec::new();
+  for item in &staged {
+    let target = canonicalize_candidate(&resolve_plan_path(&plan.root, &item.operation.path))?;
+    for (candidate, expected) in [
+      (&item.backup, &item.operation.expected_hash),
+      (&item.staged, &item.operation.content_hash),
+    ] {
+      if let Some(candidate) = candidate.as_ref().filter(|p| p.exists()) {
+        if candidate.parent().map(canonicalize_candidate).transpose()?
+          != target.parent().map(Path::to_owned)
+          || !candidate
+            .file_name()
+            .is_some_and(|n| n.to_string_lossy().starts_with(".arcantry-"))
+          || hash_path(candidate)? != *expected
+        {
+          bail!("Recovery encountered an unrecognized transaction file.");
+        }
+        cleanup.push(candidate.clone());
+      }
+    }
+  }
+  for candidate in cleanup {
+    remove_any(&candidate)?;
+  }
+  fs::remove_file(path)?;
+  Ok(serde_json::json!({"status":if restored {"restored"} else {"applied"}}))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -194,6 +363,7 @@ pub(crate) enum TransactionPhase {
   Finalize,
 }
 
+#[derive(Serialize, Deserialize)]
 struct Staged {
   operation: PlanOperation,
   target: PathBuf,
@@ -228,6 +398,11 @@ fn apply_with_hooks(
   }
   if !plan.conflicts.is_empty() {
     bail!("Cannot apply plan: {}", plan.conflicts.join("; "));
+  }
+  for (path, expected) in &plan.inputs {
+    if hash_path(&resolve_plan_path(&plan.root, path))? != *expected {
+      bail!("Plan input changed after preview: {path}.");
+    }
   }
   for operation in &plan.operations {
     if hash_path(&resolve_plan_path(&plan.root, &operation.path))? != operation.expected_hash {
@@ -318,6 +493,10 @@ fn apply_with_hooks(
     return Err(error);
   }
 
+  let journal_path = journal_path(&plan.root)?;
+  let mut journal = serde_json::json!({"plan":plan,"staged":staged});
+  write_journal(&journal_path, &journal)?;
+
   let commit = (|| -> Result<()> {
     for (index, item) in staged.iter_mut().enumerate() {
       checkpoint(TransactionPhase::Commit, index)?;
@@ -335,8 +514,10 @@ fn apply_with_hooks(
           .tempfile_in(parent)?;
         let backup = placeholder.path().to_path_buf();
         placeholder.close()?;
+        item.backup = Some(backup.clone());
+        journal["staged"][index] = serde_json::to_value(&*item)?;
+        write_journal(&journal_path, &journal)?;
         fs::rename(&item.target, &backup)?;
-        item.backup = Some(backup);
       }
       if matches!(item.operation.action, Action::Write) {
         let staged_path = item
@@ -364,6 +545,7 @@ fn apply_with_hooks(
     rollback_staged(&staged, &created_directories).with_context(|| {
       format!("Transaction commit failed and could not be rolled back: {error:#}")
     })?;
+    fs::remove_file(&journal_path)?;
     return Err(error);
   }
 
@@ -372,6 +554,7 @@ fn apply_with_hooks(
       rollback_staged(&staged, &created_directories).with_context(|| {
         format!("Transaction finalization failed and could not be rolled back: {error:#}")
       })?;
+      fs::remove_file(&journal_path)?;
       return Err(error);
     }
   }
@@ -387,6 +570,9 @@ fn apply_with_hooks(
         backup.display()
       ));
     }
+  }
+  if warnings.is_empty() {
+    fs::remove_file(&journal_path)?;
   }
   Ok(ApplyOutcome {
     operations: plan.operations.clone(),
@@ -425,7 +611,7 @@ fn rollback_staged(staged: &[Staged], created_directories: &[PathBuf]) -> Result
     if let Some(path) = &item.staged {
       remove_any(path)?;
     }
-    if let Some(backup) = &item.backup {
+    if let Some(backup) = item.backup.as_ref().filter(|path| path.exists()) {
       remove_any(&item.target)?;
       fs::rename(backup, &item.target)?;
     } else if item.committed && matches!(item.operation.action, Action::Write) {
@@ -548,15 +734,20 @@ fn ensure_plan_authority(plan: &ProjectPlan, authority: &ApplyAuthority) -> Resu
       authority.root.display()
     );
   }
-  for operation in &plan.operations {
-    let target = canonicalize_candidate(&resolve_plan_path(&plan.root, &operation.path))?;
+  for path in plan
+    .operations
+    .iter()
+    .map(|op| &op.path)
+    .chain(plan.inputs.keys())
+  {
+    let target = canonicalize_candidate(&resolve_plan_path(&plan.root, path))?;
     if target.starts_with(&authority.root) {
       continue;
     }
     if !authority.allowed_external_paths.contains(&target) {
       bail!(
         "Plan operation path requires an exact --allow-outside authorization: {}",
-        operation.path
+        path
       );
     }
   }
@@ -902,4 +1093,39 @@ mod tests {
       prop_assert_eq!(snapshot(directory.path()), before);
     }
   }
+}
+#[test]
+fn interrupted_commit_blocks_apply_until_verified_recovery() {
+  let root = tempfile::tempdir().unwrap();
+  fs::write(root.path().join("one.txt"), "original").unwrap();
+  let mut plan = ProjectPlan::new(root.path().to_owned(), "test", "adopt", "todo-txt@1");
+  plan.operations.push(
+    create_write_operation(
+      root.path(),
+      "one.txt",
+      "updated".to_owned(),
+      crate::config::Visibility::Shared,
+    )
+    .unwrap(),
+  );
+  let authority = ApplyAuthority::new(root.path()).unwrap();
+  let interrupted = std::panic::catch_unwind(|| {
+    apply_with_checkpoint(&plan, &authority, |phase, _| {
+      if phase == TransactionPhase::Verify {
+        panic!("simulated process interruption");
+      }
+      Ok(())
+    })
+    .unwrap();
+  });
+  assert!(interrupted.is_err());
+  assert!(apply(&plan, &authority).is_err());
+  let report = recover(root.path(), false).unwrap();
+  assert_eq!(report["status"], "interrupted");
+  fs::write(root.path().join("one.txt"), "unrelated edit").unwrap();
+  assert!(recover(root.path(), true).is_err());
+  fs::write(root.path().join("one.txt"), "updated").unwrap();
+  assert_eq!(recover(root.path(), true).unwrap()["status"], "applied");
+  assert_eq!(recover(root.path(), false).unwrap()["status"], "clean");
+  assert_eq!(fs::read_dir(root.path()).unwrap().count(), 1);
 }

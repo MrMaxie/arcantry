@@ -142,6 +142,8 @@ pub(crate) fn project(root: &Path) -> Result<ResolvedProject> {
       project: None,
       sources,
       release: Some(ReleaseConfig {
+        version_strategy: Default::default(),
+        changelog_template: None,
         adapter: "openspec-release@1".to_owned(),
         topology: ReleaseTopology::Single,
         manifests_path: Some("releases".to_owned()),

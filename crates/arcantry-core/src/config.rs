@@ -37,6 +37,7 @@ pub enum SourceKind {
   Openspec,
   Changelog,
   TodoTxt,
+  EnvironmentSchema,
 }
 impl SourceKind {
   pub fn name(&self) -> &'static str {
@@ -44,6 +45,7 @@ impl SourceKind {
       Self::Openspec => "openspec",
       Self::Changelog => "changelog",
       Self::TodoTxt => "todo-txt",
+      Self::EnvironmentSchema => "environment-schema",
     }
   }
 }
@@ -108,6 +110,10 @@ pub struct ReleaseUnitSelector {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ReleaseUnitConfig {
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub version_strategy: Option<crate::versioning::VersionStrategy>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub changelog_template: Option<String>,
   pub manifests_path: String,
   pub changelog_source: String,
   pub tag_prefix: String,
@@ -120,6 +126,10 @@ pub struct ReleaseUnitConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ReleaseConfig {
+  #[serde(default)]
+  pub version_strategy: crate::versioning::VersionStrategy,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub changelog_template: Option<String>,
   pub adapter: String,
   #[serde(default, skip_serializing_if = "is_single_topology")]
   pub topology: ReleaseTopology,
@@ -290,6 +300,11 @@ pub fn parse_project_config(
     if !valid_adapter(&source.adapter) {
       bail!("adapter must use <name>@<integer-version>.");
     }
+    if source.kind == SourceKind::EnvironmentSchema
+      && !matches!(source.management, Management::Ignore | Management::Observe)
+    {
+      bail!("Environment schemas are observation-only.");
+    }
     if source.path.trim().is_empty() {
       bail!("Source {id} path must not be empty.");
     }
@@ -355,6 +370,32 @@ pub fn parse_project_config(
     }
   }
   if let Some(release) = &config.release {
+    for path in release.changelog_template.iter().chain(
+      release
+        .units
+        .values()
+        .filter_map(|u| u.changelog_template.as_ref()),
+    ) {
+      validate_release_path(path, "changelog template", allow_absolute_paths)?;
+    }
+    for (strategy, sources) in std::iter::once((release.version_strategy, &release.version_sources))
+      .chain(release.units.values().map(|u| {
+        (
+          u.version_strategy.unwrap_or(release.version_strategy),
+          &u.version_sources,
+        )
+      }))
+    {
+      if strategy != crate::versioning::VersionStrategy::Semver
+        && sources
+          .iter()
+          .any(|s| matches!(s.adapter.as_str(), "json-package@1" | "cargo-workspace@1"))
+      {
+        bail!(
+          "Package version sources require SemVer; use text-version@1 or json-version@1 for project identifiers."
+        );
+      }
+    }
     if !matches!(
       release.adapter.as_str(),
       "openspec-release@1" | "openspec-release@2"
@@ -436,7 +477,7 @@ fn validate_release_paths(
     }
     if !matches!(
       source.adapter.as_str(),
-      "json-package@1" | "cargo-workspace@1"
+      "json-package@1" | "cargo-workspace@1" | "json-version@1" | "text-version@1"
     ) {
       bail!(
         "release version source adapter is not supported: {}",
@@ -721,6 +762,21 @@ fn scopes_overlap(left: &str, right: &str) -> bool {
 
 pub fn render_project_config(config: &ProjectConfig) -> Result<String> {
   toml_edit::ser::to_string_pretty(config).context("Could not render Arcantry TOML configuration.")
+}
+
+pub fn remove_project_source(
+  content: &str,
+  id: &str,
+  allow_absolute_paths: bool,
+) -> Result<String> {
+  let mut document = content.parse::<DocumentMut>()?;
+  document["sources"]
+    .as_table_like_mut()
+    .context("Missing source table")?
+    .remove(id);
+  let desired = document.to_string();
+  parse_project_config(&desired, Some(crate::VERSION), allow_absolute_paths)?;
+  Ok(desired)
 }
 
 pub struct ProjectSourcePatch<'a> {

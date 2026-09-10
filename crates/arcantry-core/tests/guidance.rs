@@ -63,3 +63,25 @@ fn empty_project_needs_no_configuration_and_unknown_change_is_not_invented() {
   assert!(guidance::explain(&project, "invented-format").is_err());
   assert_eq!(fs::read_dir(root.path()).unwrap().count(), 0);
 }
+
+#[test]
+fn environment_observation_and_diagnostics_do_not_read_values() {
+  let root = tempfile::tempdir().unwrap();
+  // Invalid UTF-8 proves schema observation never parses environment contents.
+  fs::write(root.path().join(".env.schema"), [0xff, 0xfe]).unwrap();
+  fs::create_dir(root.path().join(".local")).unwrap();
+  fs::write(root.path().join(".local/AGENTS.md"), "PRIVATE-SENTINEL").unwrap();
+  let project = resolve_project(root.path(), None, true, None).unwrap();
+  let context = guidance::context(&project).unwrap();
+  assert!(
+    context["sources"]
+      .as_array()
+      .unwrap()
+      .iter()
+      .any(|s| s["kind"] == "environment-schema" && s["exists"] == true)
+  );
+  let report = guidance::diagnostics(root.path(), None, true).to_string();
+  assert!(!report.contains("PRIVATE-SENTINEL"));
+  assert!(!report.contains(&root.path().to_string_lossy().to_string()));
+  assert!(context["rules"].to_string().contains("PRIVATE-SENTINEL"));
+}

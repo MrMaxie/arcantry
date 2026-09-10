@@ -40,7 +40,7 @@ description = "One independently managed project knowledge source."
 
 [types.source.kind]
 type = "string"
-allowedvalues = ["openspec", "changelog", "todo-txt"]
+allowedvalues = ["openspec", "changelog", "todo-txt", "environment-schema"]
 
 [types.source.path]
 type = "string"
@@ -225,4 +225,19 @@ type = "array"
 arraytype = "string"
 [elements.workflow]
 type = "types.workflow"
+optional = true
+
+[types.release.version_strategy]
+type = "string"
+allowedvalues = ["semver", "integer", "calendar"]
+optional = true
+[types.release.changelog_template]
+type = "string"
+optional = true
+[types.release_unit.version_strategy]
+type = "string"
+allowedvalues = ["semver", "integer", "calendar"]
+optional = true
+[types.release_unit.changelog_template]
+type = "string"
 optional = true

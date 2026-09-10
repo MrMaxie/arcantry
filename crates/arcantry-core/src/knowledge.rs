@@ -74,6 +74,22 @@ pub fn inspect(project: &ResolvedProject) -> Result<KnowledgeInspection> {
   }
   for (id, kind, path, visibility, directory, default_adapter) in [
     (
+      "environment",
+      SourceKind::EnvironmentSchema,
+      ".env.schema",
+      Visibility::Shared,
+      false,
+      "env-spec@1",
+    ),
+    (
+      "environment-local",
+      SourceKind::EnvironmentSchema,
+      ".local/.env.schema",
+      Visibility::Private,
+      false,
+      "env-spec@1",
+    ),
+    (
       "openspec",
       SourceKind::Openspec,
       "openspec",
@@ -211,7 +227,8 @@ pub fn adapter_status(kind: &SourceKind, adapter: &str) -> &'static str {
   match (kind, adapter) {
     (SourceKind::Openspec, "openspec@1")
     | (SourceKind::Changelog, "keep-a-changelog@1" | "keep-a-changelog@2")
-    | (SourceKind::TodoTxt, "todo-txt@1") => "supported",
+    | (SourceKind::TodoTxt, "todo-txt@1")
+    | (SourceKind::EnvironmentSchema, "env-spec@1") => "supported",
     (_, "openspec@1" | "keep-a-changelog@1" | "keep-a-changelog@2" | "todo-txt@1") => "wrong-kind",
     _ => "unsupported",
   }
@@ -267,6 +284,7 @@ fn append_diagnostic(source: &ProjectSource, diagnostics: &mut Vec<String>) {
 fn detect_adapter(kind: &SourceKind, path: &Path) -> Result<(String, &'static str)> {
   match kind {
     SourceKind::Openspec => Ok(("openspec@1".to_owned(), "high")),
+    SourceKind::EnvironmentSchema => Ok(("env-spec@1".to_owned(), "high")),
     SourceKind::TodoTxt => Ok(("todo-txt@1".to_owned(), "high")),
     SourceKind::Changelog => {
       let content = fs::read_to_string(path)?
@@ -341,7 +359,7 @@ mod tests {
     let inspection = inspect(&project).unwrap();
 
     assert_eq!(inspection.schema_version, 1);
-    assert_eq!(inspection.sources.len(), 6);
+    assert_eq!(inspection.sources.len(), 8);
     assert!(inspection.sources.iter().all(|source| !source.exists));
     assert!(
       inspection

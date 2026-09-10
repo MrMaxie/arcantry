@@ -31,7 +31,7 @@ pub(super) fn plan_transition(
   } = args;
   if !matches!(
     transition.as_str(),
-    "preserve" | "adopt" | "rebind" | "cutover" | "migrate" | "relocate"
+    "preserve" | "adopt" | "rebind" | "cutover" | "migrate" | "relocate" | "detach"
   ) {
     bail!("Invalid transition: {transition}");
   }
@@ -48,12 +48,84 @@ pub(super) fn plan_transition(
       }
     })
     .with_context(|| format!("Unknown source: {source_id}"))?;
+  if source.kind == SourceKind::EnvironmentSchema
+    && !matches!(transition.as_str(), "preserve" | "adopt")
+  {
+    bail!("Environment schemas are observation-only.");
+  }
   let mut plan = ProjectPlan::new(
     inspection.root.clone(),
     &source.id,
     &transition,
     &source.adapter,
   );
+  if transition == "detach" {
+    if to_path.is_some() || delete_source {
+      bail!("Detachment retains files in place; relocate them in a separate preview if needed.");
+    }
+    let config_path = inspection
+      .config_path
+      .as_ref()
+      .context("Detachment requires an explicitly configured source.")?;
+    let current = fs::read_to_string(config_path)?;
+    let mut config = parse_project_config(
+      &current,
+      Some(arcantry_core::VERSION),
+      inspection.config_scope == Some("external"),
+    )?;
+    if config.sources.values().any(|s| s.from.contains(&source.id))
+      || config.release.as_ref().is_some_and(|r| {
+        r.changelog_source.as_deref() == Some(&source.id)
+          || r.units.values().any(|u| {
+            u.changelog_source == source.id || u.selectors.iter().any(|s| s.source == source.id)
+          })
+      })
+    {
+      bail!(
+        "Detach dependent release and source configuration first; ownership cannot be partially transferred."
+      );
+    }
+    if config.sources.remove(&source.id).is_none() {
+      bail!("Source is not configured for Arcantry management.");
+    }
+    let desired = arcantry_core::config::remove_project_source(
+      &current,
+      &source.id,
+      inspection.config_scope == Some("external"),
+    )?;
+    plan.operations.push(create_write_operation(
+      &inspection.root,
+      &plan_path(&inspection.root, config_path),
+      desired,
+      if inspection.config_scope == Some("private") {
+        Visibility::Private
+      } else {
+        Visibility::Shared
+      },
+    )?);
+    let ownership_path = format!(
+      "{}arcantry-detached-{}.md",
+      if source.visibility == Visibility::Private {
+        ".local/"
+      } else {
+        ""
+      },
+      source.id
+    );
+    let ownership = format!(
+      "# Project-owned source\n\nSource: `{}`.\n\nThis project owns the retained files and their maintenance. Arcantry no longer manages or updates this source. Re-adoption requires a new reviewed transition. Existing licenses and attribution remain applicable. The retained source can be used directly without the Arcantry executable.\n",
+      source.path
+    );
+    plan.operations.push(create_write_operation(
+      &inspection.root,
+      &ownership_path,
+      ownership,
+      source.visibility,
+    )?);
+    plan.watch(&source.path)?;
+    plan.notes.push("Files and attribution are preserved in place. Detachment transfers source maintenance, not an Arcantry distribution or runtime.".to_owned());
+    return Ok(plan);
+  }
   let mut desired_path = source.path.clone();
   let mut desired_adapter = to_adapter.unwrap_or_else(|| source.adapter.clone());
   let mut desired_management = source.management.clone();
@@ -65,7 +137,11 @@ pub(super) fn plan_transition(
       .notes
       .push("The source remains unchanged and keeps its current management policy.".to_owned()),
     "adopt" => {
-      desired_management = Management::Manage;
+      desired_management = if source.kind == SourceKind::EnvironmentSchema {
+        Management::Observe
+      } else {
+        Management::Manage
+      };
       if !from.is_empty() {
         desired_from = from;
       }

@@ -186,7 +186,7 @@ The CLI contract is executable.
 fn inventory_is_complete_unique_and_evidenced() {
   let contract = contract();
   assert_eq!(contract.version, 1);
-  assert_eq!(contract.global_options.len(), 4);
+  assert_eq!(contract.global_options.len(), 5);
   assert_eq!(
     contract
       .global_options
@@ -195,6 +195,7 @@ fn inventory_is_complete_unique_and_evidenced() {
       .collect::<BTreeSet<_>>(),
     BTreeSet::from([
       "--config <path>",
+      "--output <path>",
       "--cwd <path>",
       "-V, --version",
       "-h, --help",
@@ -311,6 +312,32 @@ fn every_registered_scenario_executes_through_the_native_contract_dispatcher() {
 
 fn execute_scenario(id: &str, command: &str) {
   match (id, command) {
+    ("diagnostics", "diagnostics") => {
+      let root = repository();
+      success(root.path(), &["diagnostics"]);
+    }
+    ("repo-recover", "repo recover") => {
+      let root = repository();
+      success(root.path(), &["repo", "recover"]);
+    }
+    ("saved-plan", "repo plan") => {
+      let root = repository();
+      success(
+        root.path(),
+        &[
+          "repo",
+          "plan",
+          "--source",
+          "todo-root",
+          "--transition",
+          "preserve",
+          "--output",
+          "plan.json",
+        ],
+      );
+      assert!(root.path().join("plan.json").is_file());
+    }
+
     ("context", "context") | ("next", "next") => {
       let root = repository();
       success(root.path(), &[command, "--json"]);
@@ -1003,7 +1030,7 @@ fn repository_inspection_reports_absent_sources_and_detailed_context() {
   let (json, _) = success(directory.path(), &["repo", "inspect", "--json"]);
   let inspection: serde_json::Value = serde_json::from_str(&json).unwrap();
   assert_eq!(inspection["schemaVersion"], 1);
-  assert_eq!(inspection["sources"].as_array().unwrap().len(), 6);
+  assert_eq!(inspection["sources"].as_array().unwrap().len(), 8);
   assert!(
     inspection["sources"]
       .as_array()
@@ -1015,7 +1042,7 @@ fn repository_inspection_reports_absent_sources_and_detailed_context() {
   assert_eq!(inspection["methodologies"].as_array().unwrap().len(), 5);
 
   let (detailed, _) = success(directory.path(), &["repo", "inspect", "--detailed"]);
-  assert!(detailed.contains("Sources: 0 present, 6 absent"));
+  assert!(detailed.contains("Sources: 0 present, 8 absent"));
   assert!(detailed.contains("Source openspec:"));
   assert!(detailed.contains("Methodology agent-guidance: state=absent"));
   assert!(detailed.contains(".local details: git=false"));

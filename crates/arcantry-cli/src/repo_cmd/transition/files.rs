@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, bail};
 use arcantry_core::config::{Management, SourceKind, Visibility, is_private_project_path};
 use arcantry_core::knowledge::{KnowledgeInspection, ProjectSource};
 use arcantry_core::project_plan::{
@@ -73,6 +73,7 @@ pub(super) fn plan_source_initialization(
   operations: &mut Vec<PlanOperation>,
 ) -> Result<()> {
   match source.kind {
+    SourceKind::EnvironmentSchema => bail!("Environment schemas are observation-only."),
     SourceKind::Openspec => {
       let source_root = resolve_source_path(&inspection.root, &source.path);
       operations.push(create_write_operation(

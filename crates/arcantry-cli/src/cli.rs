@@ -25,12 +25,21 @@ pub struct Cli {
     help = "Use one explicit arcantry.toml file without config merging."
   )]
   pub config: Option<PathBuf>,
+  #[arg(
+    long,
+    global = true,
+    value_name = "path",
+    help = "Save a preview plan to a new file instead of stdout."
+  )]
+  pub output: Option<PathBuf>,
   #[command(subcommand)]
   pub command: Command,
 }
 
 #[derive(Subcommand)]
 pub enum Command {
+  #[command(about = "Report allowlisted diagnostics without source contents or private paths.")]
+  Diagnostics,
   #[command(about = "Serve read-only project answers over MCP stdio.")]
   Mcp,
   #[command(about = "Show bounded project context without changing files.")]
@@ -50,6 +59,8 @@ pub enum Command {
   #[command(about = "Explain a format or workflow using project sources.")]
   Explain {
     topic: String,
+    #[arg(long)]
+    detailed: bool,
     #[arg(long)]
     json: bool,
   },
@@ -77,6 +88,11 @@ pub enum Command {
 
 #[derive(Subcommand)]
 pub enum RepoCommand {
+  #[command(about = "Inspect an interrupted transaction and acknowledge verified recovery.")]
+  Recover {
+    #[arg(long)]
+    acknowledge: bool,
+  },
   #[command(about = "Discover project knowledge sources without changing them.")]
   Inspect {
     #[arg(long, help = "Write the complete machine-readable inspection.")]

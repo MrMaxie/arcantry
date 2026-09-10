@@ -29,19 +29,15 @@ When Arcantry manages a changelog, it MUST derive release meaning from configure
 - **WHEN** implementation exists before its OpenSpec record
 - **THEN** the managed release state cannot become complete until a normal OpenSpec change describes, verifies and archives the delivered behavior
 
-### Requirement: Archive is the delivery boundary
+### Requirement: Implementation and release have separate boundaries
 
-A completed change MUST NOT pass final repository validation or appear in release history until its OpenSpec change is archived and assigned to a release manifest.
+Ordinary implementation, validation, commits and deployment MUST NOT require a release manifest. Release preparation MUST use archived changes. Release sealing and publication require explicit authorization and MAY impose stricter completeness checks.
 
-#### Scenario: An active change exists
+#### Scenario: Work continues without a release
 
-- **WHEN** release history is generated before the change is archived
-- **THEN** the active change is absent from that history and final repository validation does not treat the state as complete
-
-#### Scenario: An active or unassigned change exists
-
-- **WHEN** final repository validation runs with an active change or an archived change that is not assigned to the newest release
-- **THEN** validation fails instead of treating the repository state as complete
+- **WHEN** active or unassigned work exists
+- **THEN** ordinary host validation remains available without cutting a release
+- **AND** unarchived work stays out of rendered release history
 
 ### Requirement: Release manifests only group changes
 
@@ -66,7 +62,7 @@ A release manifest MUST contain its format, release unit, version, release date 
 
 ### Requirement: SemVer impact belongs to the change
 
-Every release-bearing change MUST declare `patch`, `minor` or `major` impact and MAY declare `unit_impacts` overrides for matched release units. `openspec-release@2` MUST reject `impact: none`. A unit release version MUST be computed from the highest effective impact for that unit. A change MAY acknowledge direct dependency adoption through `dependency_updates`, but dependency movement alone MUST NOT create or bump a parent release.
+Every SemVer release-bearing change MUST declare `patch`, `minor` or `major` impact and MAY declare `unit_impacts` overrides for matched release units. `openspec-release@2` MUST reject `impact: none`. A SemVer unit release version MUST be computed from the highest effective impact for that unit. Integer and calendar strategies MAY omit impact and MUST advance monotonically using their configured strategy. A change MAY acknowledge direct dependency adoption through `dependency_updates`, but dependency movement alone MUST NOT create or bump a parent release.
 
 #### Scenario: A release contains mixed impacts
 
@@ -76,7 +72,7 @@ Every release-bearing change MUST declare `patch`, `minor` or `major` impact and
 #### Scenario: A release is not published
 
 - **WHEN** completed changes are retained only in the repository
-- **THEN** they still produce a new SemVer manifest, aligned unit version sources and a unit changelog version section
+- **THEN** they MAY remain unassigned until a release is explicitly requested
 
 #### Scenario: One outcome has different unit impacts
 
@@ -100,7 +96,7 @@ Every releasable change MUST list affected components in its release artifact us
 
 ### Requirement: Generated changelog is reproducible
 
-New managed changelogs MUST follow Keep a Changelog 2.0 structure with a fixed preamble, an Unreleased section, the six standard change categories, ISO dates and optional comparison links when a repository URL is explicitly available. Rendering MUST be deterministic and MUST preserve configured legacy history.
+New managed changelogs MUST use either the Keep a Changelog preset or an explicit project MiniJinja template. The preset provides its preamble, Unreleased section, standard categories, ISO dates and optional comparison links when a repository URL is explicitly available. Rendering MUST be deterministic and MUST preserve configured legacy history.
 
 #### Scenario: No repository URL is available
 
@@ -227,7 +223,7 @@ An adopted project MAY configure the OpenSpec release adapter, release manifest 
 
 ### Requirement: Brownfield baselines preserve unknown history
 
-A baseline release manifest MUST identify an existing SemVer version and ISO date, MUST declare `baseline: true`, and MAY contain no changes. A baseline MUST NOT invent release prose or make historical internal change artifacts public.
+A baseline release manifest MUST identify an existing version valid for the selected strategy and ISO date, MUST declare `baseline: true`, and MAY contain no changes. A baseline MUST NOT invent release prose or make historical internal change artifacts public.
 
 #### Scenario: An existing release becomes the baseline
 
