@@ -11,3 +11,7 @@ Starting commit: 3b84c40. Master is 31 commits ahead of origin/master. Rust sour
 ## Context verification
 
 Two core scenarios cover empty projects, schema templates and dependency order. CLI contract tests, documentation command parsing and an open-stdin MCP subprocess scenario pass on Windows. Git discovery disconnects stdin so MCP input cannot block child creation.
+
+## Final evidence
+
+See [verification.md](verification.md) for platform checks, acceptance scenarios, source-line measurements, test-cost observations and explicit limits. See [backlog.md](backlog.md) for per-item scope decisions.

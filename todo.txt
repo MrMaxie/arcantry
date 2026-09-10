@@ -1,1 +1,1 @@
-2026-09-10 Implement the accepted practical MVP in openspec/changes/deliver-practical-mvp; original queue entries and decisions are retained in backlog.md.
+x 2026-09-10 2026-09-10 Implement the accepted practical MVP in openspec/changes/deliver-practical-mvp; original queue entries and decisions are retained in backlog.md.
