@@ -233,3 +233,22 @@ The compact mobile brand symbol MUST remain readable in both themes. Header sear
 - **THEN** the request follows the questions in document order
 - **AND** the full request is readable through ordinary page scrolling
 - **AND** labels and controls stay within the page width
+
+### Requirement: Documentation formatting is consistent across content sources
+
+Prose links MUST use the same theme-aware accent treatment on authored pages, generated references, imported changelog content and configurator guidance. Executable shell examples MUST declare a shell language and use the shared code renderer, including generated skill pages and interactive examples. Plain-text data, command grammar and agent prose MAY remain unhighlighted.
+
+The changelog MUST preserve the canonical history while clearly separating release headings, change categories and entry titles through spacing and typography. The configurator header, content and project footer MUST share horizontal bounds and gutters at each viewport. The configurator MUST NOT introduce a standalone breadcrumb absent from the rest of the documentation.
+
+#### Scenario: A reader moves between content pages
+
+- **WHEN** they read getting started, skills, a generated skill reference and the changelog
+- **THEN** prose links share one theme-aware appearance
+- **AND** executable code examples share syntax highlighting and code-frame treatment
+- **AND** changelog releases and entries remain visually distinct
+
+#### Scenario: A visitor reads the configurator
+
+- **WHEN** they view the introduction or scroll to the project footer on desktop or mobile
+- **THEN** the navigation, content and footer use the same horizontal alignment
+- **AND** no breadcrumb occupies the introduction
