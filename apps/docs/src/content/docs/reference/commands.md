@@ -27,6 +27,6 @@ mise provisions the pinned contributor toolchain. The root `justfile` is the doc
 | `just release-seal` | Require complete assignment, clean Git state and the final Git release seal. |
 | `just publish-check vX.Y.Z` | Verify that an npm release tag matches the sealed release and package identity. |
 
-CI installs the pinned toolchain through mise and runs `just ci`.
+Use `just check-fast` while editing, `just check-host` before a local commit, and `just linux-system-test` for Linux evidence. Coverage is optional diagnostic evidence. Only Pages runs remotely, using `just docs-build`; CI and release workflows are disabled.
 
 `just --list` contains stable contributor entrypoints. Workflow-only helpers remain callable by automation without appearing in that list.
