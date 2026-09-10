@@ -14,6 +14,18 @@ arcantry repo plan --source todo-root --transition relocate --to-path .local/tod
 arcantry repo apply --plan plan.json
 ```
 
+## Start with the next useful action
+
+Arcantry helps an agent resume a project without asking you to repeat its rules. It finds the sources, recommends an executable next step and explains the required format.
+
+```sh
+arcantry context
+arcantry next
+arcantry explain tasks
+```
+
+Add `--json` for tool integrations. `arcantry mcp` exposes the same reads and release planning over stdio; changes stay in the CLI. Missing optional tools do not block direct work on project files. See the [getting started guide](https://arcantry.dev/getting-started/) for source-based use without installation.
+
 ## Why Arcantry
 
 - Inspect empty directories, mature repositories and monorepos without requiring Git or configuration.

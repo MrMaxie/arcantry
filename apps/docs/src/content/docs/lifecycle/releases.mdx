@@ -140,9 +140,11 @@ The first publication is a one-time bootstrap because npm requires a package to 
 1. Build and verify the release archive from the exact seal commit.
 2. As an authorized npm maintainer with 2FA, run `npm publish <archive>`.
 3. Assign organization governance for the unscoped package when required.
-4. In the package settings on npmjs.com, add the GitHub Actions trusted publisher for repository `MrMaxie/arcantry`, workflow `release.yml`, environment `npm`, and the `npm publish` action.
+4. In the package settings on npmjs.com, add the GitHub Actions trusted publisher for repository `MrMaxie/arcantry`, disabled workflow `release.yml.disabled`, environment `npm`, and the `npm publish` action.
 5. Require 2FA and disallow token-based publication after the trusted publisher has been verified.
 
 Do not create the first version tag before bootstrap is complete. Automated tag publication starts with the next sealed version.
 
 Projects can select integer or calendar versions and a MiniJinja changelog template. See [Release conventions](/reference/configuration/#release-conventions) for compatible version sources and preserved history.
+
+The release workflow is retained as a reference and is not active. Only documentation deployment runs on GitHub during MVP development.

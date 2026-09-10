@@ -43,6 +43,27 @@ adapter = "text-version@1"
     let history = "# Previous project notes\r\n\r\nKeep these exact bytes.\r\n";
     fs::write(root.path().join("CHANGELOG.md"), history).unwrap();
     fs::write(root.path().join("changelog.jinja"), "# Releases\n{% for release in releases %}## {{ release.version }}\n{% for change in release.changes %}{% for outcome in change.outcomes %}- {{ outcome.title }}\n{% endfor %}{% endfor %}{% endfor %}").unwrap();
+    let config_path = root.path().join("arcantry.toml");
+    let configuration = fs::read_to_string(&config_path).unwrap();
+    fs::write(
+      &config_path,
+      configuration.replace("text-version@1", "cargo-workspace@1"),
+    )
+    .unwrap();
+    assert!(resolve_project(root.path(), None, true, None).is_err());
+    fs::write(
+      &config_path,
+      configuration.replace("changelog.jinja", ".local/private.jinja"),
+    )
+    .unwrap();
+    let private_template_project = resolve_project(root.path(), None, true, None).unwrap();
+    assert!(
+      !release::baseline(&private_template_project, current, "2026-09-01", None)
+        .unwrap()
+        .conflicts
+        .is_empty()
+    );
+    fs::write(&config_path, configuration).unwrap();
     let project = resolve_project(root.path(), None, true, None).unwrap();
     let authority = ApplyAuthority::new(root.path()).unwrap();
     let baseline = release::baseline(&project, current, "2026-09-01", None).unwrap();

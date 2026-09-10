@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
-  "summary": "Align accepted OpenSpec outcomes, unit-aware SemVer, distributable versions, dependency pins, and consumer-facing changelog prose without publishing.",
+  "summary": "Align accepted OpenSpec outcomes, project version conventions, distributable versions, dependency pins, and consumer-facing changelog prose without publishing.",
   "compatibility": {
     "sourceKinds": ["openspec", "changelog"]
   },
@@ -14,7 +14,7 @@
     {
       "title": "Prepare a product release",
       "prompt": "Use the maintain-release-story skill to prepare the next release unit from completed OpenSpec changes without publishing it.",
-      "outcome": "A verified release set aligns effective SemVer, manifests, dependency pins, components, and consumer-facing changelog entries."
+      "outcome": "A verified release set aligns the configured version strategy, manifests, dependency pins, components, and consumer-facing changelog entries."
     },
     {
       "title": "Audit release consistency",

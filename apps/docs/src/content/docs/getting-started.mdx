@@ -8,6 +8,20 @@ import ArcantryAgentPrompt from '../../components/ArcantryAgentPrompt.astro';
 
 Arcantry can describe an empty directory or an established project without creating files. Choose an installation path, inspect the project, then decide which sources Arcantry should only read and which it should manage.
 
+## Resume work in three commands
+
+```sh
+arcantry context
+arcantry next
+arcantry explain tasks
+```
+
+`context` finds your sources and active work. `next` recommends an unblocked task; use `--change` to select one. `explain` supplies the format, example and project sources. Add `--json` for integrations or `--detailed` for the complete context and rules. These commands do not change files or infer approval from earlier conversations.
+
+## Work without the CLI
+
+Read `AGENTS.md`, the selected `arcantry.toml` (private configuration takes precedence), and `openspec/config.yaml`. Open the chosen change's `proposal.md` and `tasks.md`, then its selected schema template under `openspec/schemas/`. Follow the first unfinished task after its dependencies, using the current request as authority. Read only relevant private files, and keep them private. Edit ordinary source files directly and use the project's existing checks. Neither CLI installation nor a release is required for that work.
+
 ## Install Arcantry
 
 Choose a persistent installation or use the package launcher already available on your computer:

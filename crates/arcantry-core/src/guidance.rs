@@ -27,6 +27,7 @@ pub fn context(project: &ResolvedProject) -> Result<Value> {
   let inspection = crate::knowledge::inspect(project)?;
   let profile = project.config.as_ref().and_then(|c| c.context.as_ref());
   let mut changes = Vec::new();
+  let mut archived = Vec::new();
   let mut rules = Vec::new();
   for relative in ["AGENTS.md", ".local/AGENTS.md"] {
     if let Some(content) = read(&project.root.join(relative))? {
@@ -41,6 +42,20 @@ pub fn context(project: &ResolvedProject) -> Result<Value> {
       continue;
     }
     let directory = source.absolute_path.join("changes");
+    if let Ok(entries) = fs::read_dir(directory.join("archive")) {
+      for entry in entries {
+        let entry = entry?;
+        if entry.file_type()?.is_dir() {
+          let name = entry.file_name().to_string_lossy().into_owned();
+          if let Some(id) = name
+            .get(11..)
+            .filter(|_| name.as_bytes().get(10) == Some(&b'-'))
+          {
+            archived.push(id.to_owned());
+          }
+        }
+      }
+    }
     if !directory.is_dir() {
       continue;
     }
@@ -77,7 +92,7 @@ pub fn context(project: &ResolvedProject) -> Result<Value> {
   let configured = project.config.as_ref();
   Ok(
     json!({"schemaVersion":1,"root":project.root,"mode":project.mode,
-    "sources":inspection.sources,"changes":changes,"rules":rules,
+    "sources":inspection.sources,"changes":changes,"archived":archived,"rules":rules,
     "workflow":configured.and_then(|c| c.workflow.as_ref()),
     "profile":configured.and_then(|c| c.context.as_ref()),
     "tools": (["git","cargo","just","openspec","varlock"].map(|name| json!({"name":name,"available":on_path(name)}))),
@@ -92,6 +107,9 @@ pub fn next(project: &ResolvedProject, selected: Option<&str>) -> Result<Value> 
     .as_array()
     .context("Missing change inventory")?;
   let workflow = project.config.as_ref().and_then(|c| c.workflow.as_ref());
+  let completed = state["archived"]
+    .as_array()
+    .context("Missing archive inventory")?;
   let mut candidates: Vec<_> = changes
     .iter()
     .filter(|change| !change["pending"].as_array().is_none_or(Vec::is_empty))
@@ -125,11 +143,11 @@ pub fn next(project: &ResolvedProject, selected: Option<&str>) -> Result<Value> 
     candidates
       .iter()
       .copied()
-      .find(|change| blockers(change, changes, workflow).is_empty())
+      .find(|change| blockers(change, changes, completed, workflow).is_empty())
       .or_else(|| candidates.first().copied())
   };
   if let Some(change) = chosen {
-    let blocked = blockers(change, changes, workflow);
+    let blocked = blockers(change, changes, completed, workflow);
     let action = if !blocked.is_empty() {
       "Resolve the listed dependencies before implementation.".to_owned()
     } else if let Some(task) = change["pending"]
@@ -155,6 +173,7 @@ pub fn next(project: &ResolvedProject, selected: Option<&str>) -> Result<Value> 
 fn blockers(
   change: &Value,
   changes: &[Value],
+  completed: &[Value],
   workflow: Option<&crate::config::WorkflowConfig>,
 ) -> Vec<String> {
   workflow
@@ -165,9 +184,13 @@ fn blockers(
     .into_iter()
     .flatten()
     .filter(|id| {
-      !changes.iter().any(|c| {
-        c["id"].as_str() == Some(id.as_str()) && c["pending"].as_array().is_some_and(Vec::is_empty)
-      })
+      !completed
+        .iter()
+        .any(|value| value.as_str() == Some(id.as_str()))
+        && !changes.iter().any(|c| {
+          c["id"].as_str() == Some(id.as_str())
+            && c["pending"].as_array().is_some_and(Vec::is_empty)
+        })
     })
     .map(|id| {
       format!("Dependency {id} is missing or has pending tasks; review its completion evidence.")
@@ -223,7 +246,7 @@ pub fn explain(project: &ResolvedProject, topic: &str) -> Result<Value> {
     .as_array()
     .into_iter()
     .flatten()
-    .filter(|s| s["kind"] == "openspec" && s["exists"] == true)
+    .filter(|s| s["kind"] == "openspec" && s["exists"] == true && s["management"] != "ignore")
   {
     let base = Path::new(source["absolutePath"].as_str().unwrap_or_default());
     if let Some(content) = read(&base.join("config.yaml"))? {

@@ -24,3 +24,7 @@ When an OpenSpec requirement applies to a class of files, components, or pages, 
 - Keep every Arcantry product and distributable version value at `1.0.0` until the user explicitly authorizes a version change. Continue improving the product under that unchanged version; readiness, elapsed work, merged changes, or successful validation never imply permission to bump it.
 - Do not cut or seal a release, change release manifests or release changelog headings, create or push a version tag, create a GitHub Release, or publish packages or versioned release artifacts without explicit user authorization for that release action.
 - Treat updates to the `master` branch and deployments to GitHub Pages as normal continuous delivery, not as release, tagging, or package-publication actions. Once the underlying commit, push, or merge is authorized, update `master` and Pages whenever the product or documentation requires it; no separate release approval is needed.
+
+## MVP complexity budget
+
+Prefer concrete functions, types and existing project conventions. Before adding infrastructure, inspect maintained ecosystem tools and compare dependency plus integration against custom implementation, tests and ongoing maintenance. Remove a replaced mechanism instead of adding a parallel one. Compare meaningful alternatives without mandatory option counts, scores or a fixed presentation template. Report measurements with their conditions. A missing CLI does not block direct work on source files. Current user authorization overrides older process advice; do not ask for it again.

@@ -183,9 +183,24 @@ fn renders_every_consumer_outcome_with_shared_change_provenance() {
 #[test]
 fn plans_the_highest_semver_impact() {
   assert_eq!(highest_impact(&["patch", "major", "minor"]), "major");
-  assert_eq!(bump("1.4.7", "patch").unwrap(), "1.4.8");
-  assert_eq!(bump("1.4.7", "minor").unwrap(), "1.5.0");
-  assert_eq!(bump("1.4.7", "major").unwrap(), "2.0.0");
+  assert_eq!(
+    VersionStrategy::Semver
+      .next("1.4.7", "patch", "2026-09-10", true)
+      .unwrap(),
+    "1.4.8"
+  );
+  assert_eq!(
+    VersionStrategy::Semver
+      .next("1.4.7", "minor", "2026-09-10", true)
+      .unwrap(),
+    "1.5.0"
+  );
+  assert_eq!(
+    VersionStrategy::Semver
+      .next("1.4.7", "major", "2026-09-10", true)
+      .unwrap(),
+    "2.0.0"
+  );
 }
 
 #[test]

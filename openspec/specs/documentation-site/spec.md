@@ -116,3 +116,13 @@ Claims about read-only behavior, network behavior, repository writes, removal bo
 
 - **WHEN** its mapped executable scenario is removed or renamed
 - **THEN** documentation verification fails until the claim is narrowed or evidence is restored
+
+### Requirement: MVP setup follows the visitor outcome
+
+The configurator MUST distinguish evaluation, new adoption and existing setup repair. It MUST allow source-based work without CLI installation, preserve private boundaries, restore applicable URL choices and require explicit approval only for a requested later apply. The layout MUST reflow without horizontal overflow on phone and desktop widths. Interactive examples MUST explain the context, next and explain workflow without claiming to execute commands in the browser.
+
+#### Scenario: CLI is missing
+
+- **WHEN** a visitor selects source-based work
+- **THEN** the generated request reads project instructions, configuration, change tasks and templates directly
+- **AND** does not block on installation

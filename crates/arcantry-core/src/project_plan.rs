@@ -283,6 +283,13 @@ fn write_journal(path: &Path, value: &serde_json::Value) -> Result<()> {
 
 /// Report interrupted work; acknowledge only a completely restored or applied tree.
 pub fn recover(root: &Path, acknowledge: bool) -> Result<serde_json::Value> {
+  recover_with_authority(&ApplyAuthority::new(root)?, acknowledge)
+}
+pub fn recover_with_authority(
+  authority: &ApplyAuthority,
+  acknowledge: bool,
+) -> Result<serde_json::Value> {
+  let root = &authority.root;
   let path = journal_path(root)?;
   if !path.exists() {
     return Ok(serde_json::json!({"status":"clean"}));
@@ -290,7 +297,7 @@ pub fn recover(root: &Path, acknowledge: bool) -> Result<serde_json::Value> {
   let _lock = lock_root(root)?;
   let journal: serde_json::Value = serde_json::from_str(&fs::read_to_string(&path)?)?;
   let plan: ProjectPlan = serde_json::from_value(journal["plan"].clone())?;
-  ensure_plan_authority(&plan, &ApplyAuthority::new(root)?)?;
+  ensure_plan_authority(&plan, authority)?;
   validate(&plan)?;
   let staged: Vec<Staged> = serde_json::from_value(journal["staged"].clone())?;
   if staged.len() != plan.operations.len() {
@@ -460,6 +467,7 @@ fn apply_with_hooks(
           .context("Prepared write operation is missing its staged content.")?;
         fs::copy(prepared_path, &path)?;
         preserve_permissions(&target, &path)?;
+        placeholder.as_file().sync_all()?;
         let (_file, persisted) = placeholder.keep()?;
         match hash_path(&persisted) {
           Ok(hash) if hash == operation.content_hash => {}

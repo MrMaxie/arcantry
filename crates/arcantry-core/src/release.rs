@@ -6,8 +6,6 @@ use crate::project_plan::{ProjectPlan, create_write_operation};
 use crate::versioning::VersionStrategy;
 use anyhow::{Context, Result, bail};
 use chrono::NaiveDate;
-#[cfg(test)]
-use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -1519,6 +1517,17 @@ fn render_manifest(manifest: &ReleaseManifest) -> Result<String> {
 }
 
 fn render_changelog(configuration: &Configuration, state: &State) -> Result<String> {
+  if configuration.changelog_visibility != Visibility::Private
+    && configuration
+      .template
+      .as_ref()
+      .is_some_and(|path| path_visibility(&configuration.root, path) == Visibility::Private)
+  {
+    bail!(
+      "A shared changelog cannot render a private template. Select a shared template explicitly."
+    );
+  }
+
   let rendered = if let Some(path) = &configuration.template {
     let path = configuration.root.join(path);
     if fs::metadata(&path)?.len() > 32768 {
@@ -1842,16 +1851,6 @@ fn latest_dependency_version(configuration: &Configuration, dependency: &str) ->
   Ok(latest)
 }
 
-#[cfg(test)]
-fn parse_stable_version(value: &str) -> Result<Version> {
-  let version = Version::parse(value)
-    .with_context(|| format!("Release version must be full stable SemVer: {value}."))?;
-  if !version.pre.is_empty() || !version.build.is_empty() {
-    bail!("Release version must be full stable SemVer: {value}.");
-  }
-  Ok(version)
-}
-
 fn json_indentation(content: &str) -> String {
   content
     .lines()
@@ -1878,24 +1877,6 @@ fn highest_impact(values: &[&str]) -> &'static str {
     }
   }
   "none"
-}
-#[cfg(test)]
-fn bump(current: &str, impact: &str) -> Result<String> {
-  let mut version = Version::parse(current)?;
-  match impact {
-    "major" => {
-      version.major += 1;
-      version.minor = 0;
-      version.patch = 0;
-    }
-    "minor" => {
-      version.minor += 1;
-      version.patch = 0;
-    }
-    "patch" => version.patch += 1,
-    _ => {}
-  }
-  Ok(version.to_string())
 }
 fn path_visibility(root: &Path, path: &str) -> Visibility {
   let path = Path::new(path);
@@ -1967,7 +1948,8 @@ mod tests {
   fn rejects_non_stable_release_versions() {
     for version in ["1.0.0-alpha", "1.0.0+build"] {
       assert!(
-        parse_stable_version(version)
+        VersionStrategy::Semver
+          .key(version)
           .unwrap_err()
           .to_string()
           .contains("full stable SemVer")

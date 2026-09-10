@@ -59,6 +59,9 @@ pub(super) fn plan_transition(
     &transition,
     &source.adapter,
   );
+  if let Some(path) = &inspection.config_path {
+    plan.watch(&path.to_string_lossy())?;
+  }
   if transition == "detach" {
     if to_path.is_some() || delete_source {
       bail!("Detachment retains files in place; relocate them in a separate preview if needed.");

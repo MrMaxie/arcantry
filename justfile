@@ -28,7 +28,7 @@ check-fast:
   cargo fmt --all -- --check
   cargo check --workspace --locked
 
-check-host: check build native-conformance package-check
+check-host: check build package-check
 
 docs-build:
   cargo run -p xtask -- generate --docs-only
@@ -74,7 +74,7 @@ native-target-check target tag="v1.0.0":
   just package-target-smoke {{ quote(target) }}
 
 rust-coverage:
-  mise exec rust@nightly-2026-08-24 -- cargo run --target-dir target/xtask-runner -p xtask -- rust-coverage
+  mise exec rust@nightly-2026-08-24 -- cargo llvm-cov --workspace --locked --branch --lcov --output-path target/rust-coverage.lcov
 
 linux-system-test:
   cargo run -p xtask -- linux-system-test
