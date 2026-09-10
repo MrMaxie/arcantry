@@ -87,6 +87,8 @@ Use `audience-scope-discipline` when deciding the audience and layer for a propo
 
 Classify each finding using the decision matrix in `references/decision-rules.md`. Assign one primary diagnosis per finding; split materially different causes into separate findings. Do not equate a bad outcome with a bad skill.
 
+When the supplied problem concerns a multi-surface artifact, inventory every user-visible surface evidenced by the task, such as a pull request title and description or an email subject and body. A correction in one surface does not clear adjacent surfaces; inspect each before closing the finding.
+
 Before using `execution_lapse`, run the operational effectiveness test from the decision rules. The mere existence of a semantically correct sentence does not prove that the setup is adequate. Use `guidance_effectiveness_gap` when placement, routing, trigger wording, actor ambiguity, precedence, or a missing decision checkpoint makes a rule unreliable in practice.
 
 Treat a failure as a pattern when the same underlying rule fails in multiple selected conversations, recurs after a user correction in one conversation, or causes several related wrong decisions in one workflow. A single failure may still expose a `guidance_effectiveness_gap` when it demonstrates a structurally missing trigger, actor distinction, or decision checkpoint and the proposed change adds that mechanism rather than repeating the rule. Reserve `execution_lapse` for an isolated failure where the guidance was available, actionable, actor-specific, correctly routed, and not in conflict, and where no placement, routing, or workflow change would improve reliability without merely repeating the rule.
