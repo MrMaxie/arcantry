@@ -20,11 +20,14 @@ duct = "=1.1.1"
 dunce = "=1.0.5"
 fs4 = "=1.1.0"
 junction = "=2.0.0"
+rmcp = { version = "=3.2.0", default-features = false, features = ["server", "macros", "transport-io"] }
 rust-embed = "=8.12.0"
+schemars = "=1.2.2"
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.151"
 sha2 = "=0.11.0"
 tempfile = "=3.27.0"
+tokio = { version = "=1.53.1", features = ["rt", "io-std"] }
 walkdir = "=2.5.0"
 
 [dev-dependencies]

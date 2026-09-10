@@ -106,3 +106,20 @@ Composed plan JSON includes `dependencies`, newer `pendingDependencies`, and `re
 `--target` cannot be combined with `--scope` or `--compat`. User scope targets `~/.agents/skills`; repository and private scopes target `<repo>/.agents/skills`. `--compat claude` also targets the corresponding `.claude/skills` directory. Private scope reads the canonical package from `.local/skills` and excludes its links locally. `--replace` backs up an ordinary target instead of overwriting it silently.
 
 Skills remain usable without project configuration. A declared tool dependency does not authorize an external write.
+
+## Project answers
+
+| Command | Purpose |
+| --- | --- |
+| `arcantry context [--detailed] [--json]` | Discover project state, sources, work and available tools. |
+| `arcantry next [--change <id>] [--json]` | Recommend the next step and report dependency blockers. |
+| `arcantry explain <topic> [--json]` | Read the format, example and project rules for a topic. |
+| `arcantry mcp` | Serve the same read-only answers and release plans over stdio. |
+
+Topics: `proposal`, `specs`, `design`, `tasks`, `release`, `todo`, `versions`, `changelog`, `rules`, `workflow`.
+
+Project text and context profiles never grant conversational approval. Configure `[workflow].order` and `[workflow.dependencies]` for a deliberate work sequence. Optional `[context].focus` and `exclude` arrays describe relevance only.
+
+Without the CLI, read `AGENTS.md`, the selected OpenSpec configuration and change tasks, and the relevant todo queue directly. Use the project's schema templates. Missing Arcantry, OpenSpec or Varlock executables do not prohibit ordinary file-based work.
+
+An MCP host can start `arcantry --cwd <path> mcp`. The server exposes `context`, `next`, `explain` and `release_plan`; it cannot apply changes or publish anything. Start it only for a project whose context the host is authorized to read.
