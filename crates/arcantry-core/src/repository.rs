@@ -88,6 +88,7 @@ const PRIVATE_GUIDANCE: &str = "## Arcantry local context\n\nTreat `.local/` as 
 
 pub fn resolve_repository_root(cwd: &Path) -> Result<PathBuf> {
   let output = duct::cmd("git", ["rev-parse", "--show-toplevel"])
+    .stdin_null()
     .dir(cwd)
     .stderr_null()
     .read()
@@ -112,6 +113,7 @@ pub fn inspect_local_boundary(root: &Path) -> Result<LocalBoundaryInspection> {
     "git",
     ["check-ignore", "--quiet", "--no-index", "--", ".local/"],
   )
+  .stdin_null()
   .dir(root)
   .stderr_null()
   .unchecked()
@@ -435,6 +437,7 @@ fn plan_git_exclude(
   changes: &mut Vec<PlannedChange>,
 ) -> Result<()> {
   let output = duct::cmd("git", ["rev-parse", "--git-path", "info/exclude"])
+    .stdin_null()
     .dir(root)
     .read()?;
   let path = {
@@ -517,6 +520,7 @@ fn configured_default_remote_reference(root: &Path) -> Result<Option<String>> {
   for remote in remotes {
     let candidate = format!("refs/remotes/{remote}/HEAD");
     let reference = duct::cmd("git", ["symbolic-ref", "--quiet", &candidate])
+      .stdin_null()
       .dir(root)
       .stderr_null()
       .unchecked()
@@ -530,6 +534,7 @@ fn configured_default_remote_reference(root: &Path) -> Result<Option<String>> {
 
 fn git_read(root: &Path, arguments: &[&str]) -> Result<String> {
   duct::cmd("git", arguments)
+    .stdin_null()
     .dir(root)
     .read()
     .map_err(Into::into)
@@ -619,6 +624,7 @@ fn validate_git_exclude(
     LocalTrackingPolicy::Private => {}
   }
   let output = duct::cmd("git", ["rev-parse", "--git-path", "info/exclude"])
+    .stdin_null()
     .dir(root)
     .read()?;
   let candidate = PathBuf::from(output.trim());
@@ -707,7 +713,11 @@ mod tests {
   use super::*;
 
   fn git(root: &Path, arguments: &[&str]) {
-    duct::cmd("git", arguments).dir(root).run().unwrap();
+    duct::cmd("git", arguments)
+      .stdin_null()
+      .dir(root)
+      .run()
+      .unwrap();
   }
 
   fn repository() -> tempfile::TempDir {

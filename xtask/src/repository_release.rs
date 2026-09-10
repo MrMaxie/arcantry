@@ -135,6 +135,8 @@ pub(crate) fn project(root: &Path) -> Result<ResolvedProject> {
     config_path: None,
     config: Some(ProjectConfig {
       config_version: PROJECT_CONFIG_VERSION,
+      workflow: None,
+      context: None,
       schema_reference: None,
       tool: None,
       project: None,

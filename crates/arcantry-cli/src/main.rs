@@ -1,6 +1,5 @@
 mod embedded;
-mod help;
-mod parse_error;
+mod mcp;
 mod release_cmd;
 mod repo_cmd;
 mod skills_cmd;
@@ -17,25 +16,6 @@ use std::process::ExitCode;
 
 fn main() -> ExitCode {
   let raw = std::env::args_os().collect::<Vec<_>>();
-  let arguments = raw
-    .iter()
-    .skip(1)
-    .map(|value| value.to_str().map(str::to_owned))
-    .collect::<Option<Vec<_>>>();
-  if raw.len() == 1 {
-    eprint!("{}", help::root());
-    return ExitCode::FAILURE;
-  }
-  if let Some(arguments) = &arguments {
-    if let Some(error) = parse_error::render(arguments) {
-      eprint!("{error}");
-      return ExitCode::FAILURE;
-    }
-    if let Some(output) = help::render(arguments) {
-      print!("{output}");
-      return ExitCode::SUCCESS;
-    }
-  }
   if raw.len() == 2 && matches!(raw[1].to_str(), Some("--version" | "-V")) {
     println!("{}", arcantry_core::VERSION);
     return ExitCode::SUCCESS;
@@ -66,6 +46,69 @@ fn execute(cli: Cli) -> Result<i32> {
   let cwd_explicit = cli.cwd.is_some();
   let cwd = absolutize(cli.cwd.as_deref().unwrap_or(Path::new(".")))?;
   match cli.command {
+    Command::Mcp => {
+      mcp::run(&cwd, cli.config.as_deref())?;
+      Ok(0)
+    }
+    command @ (Command::Context { .. } | Command::Next { .. } | Command::Explain { .. }) => {
+      let project = arcantry_core::config::resolve_project(
+        &cwd,
+        cli.config.as_deref(),
+        cwd_explicit,
+        Some(arcantry_core::VERSION),
+      )?;
+      let (value, json, detailed) = match command {
+        Command::Context { json, detailed } => {
+          (arcantry_core::guidance::context(&project)?, json, detailed)
+        }
+        Command::Next { change, json } => (
+          arcantry_core::guidance::next(&project, change.as_deref())?,
+          json,
+          false,
+        ),
+        Command::Explain { topic, json } => (
+          arcantry_core::guidance::explain(&project, &topic)?,
+          json,
+          true,
+        ),
+        _ => unreachable!(),
+      };
+      if json || detailed {
+        println!("{}", serde_json::to_string_pretty(&value)?);
+      } else if let Some(action) = value["action"].as_str() {
+        println!(
+          "{action}\nNext: {}",
+          value["command"].as_str().unwrap_or_default()
+        );
+        for blocker in value["blockers"].as_array().into_iter().flatten() {
+          println!("Blocked: {}", blocker.as_str().unwrap_or_default());
+        }
+      } else {
+        println!(
+          "Project: {}\nMode: {}",
+          project.root.display(),
+          project.mode
+        );
+        for source in value["sources"]
+          .as_array()
+          .into_iter()
+          .flatten()
+          .filter(|s| s["exists"] == true)
+        {
+          println!(
+            "Source: {} ({})",
+            source["path"].as_str().unwrap_or_default(),
+            source["visibility"].as_str().unwrap_or_default()
+          );
+        }
+        println!(
+          "Active changes: {}\nNext: arcantry next\nRules and examples: arcantry explain rules",
+          value["changes"].as_array().map_or(0, Vec::len)
+        );
+      }
+      Ok(0)
+    }
+
     Command::Repo { command } => {
       repo_cmd::execute(command, &cwd, cli.config.as_deref(), cwd_explicit)
     }

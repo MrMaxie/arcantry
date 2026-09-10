@@ -195,3 +195,34 @@ optional = true
 [elements.release]
 type = "types.release"
 optional = true
+
+[types.context_profile]
+type = "table"
+description = "Optional relevance hints, never authorization or source visibility rules."
+[types.context_profile.focus]
+type = "array"
+arraytype = "string"
+optional = true
+[types.context_profile.exclude]
+type = "array"
+arraytype = "string"
+optional = true
+[elements.context]
+type = "types.context_profile"
+optional = true
+[types.workflow]
+type = "table"
+[types.workflow.order]
+type = "array"
+arraytype = "string"
+optional = true
+[types.workflow.dependencies]
+type = "collection"
+itemtype = "types.change_dependencies"
+optional = true
+[types.change_dependencies]
+type = "array"
+arraytype = "string"
+[elements.workflow]
+type = "types.workflow"
+optional = true

@@ -123,7 +123,7 @@ fn keeps_native_target_metadata_aligned_with_platform_packages() {
 
 #[test]
 fn covers_the_declared_release_matrix_and_native_gates() {
-  let workflow = text(".github/workflows/release.yml");
+  let workflow = text(".github/release.yml.disabled");
   for target in TARGETS {
     assert!(
       workflow.contains(&format!("target: {}", target.triple)),

@@ -79,9 +79,11 @@ fn normalize_syntax(value: &str) -> String {
 }
 
 fn is_command_syntax(value: &str) -> bool {
-  ["repo ", "todo ", "release ", "skills "]
-    .iter()
-    .any(|prefix| value.starts_with(prefix))
+  [
+    "repo ", "todo ", "release ", "skills ", "context", "next", "explain ", "mcp",
+  ]
+  .iter()
+  .any(|prefix| value.starts_with(prefix))
 }
 
 fn code_block_commands(block: &str) -> Vec<String> {
@@ -232,6 +234,7 @@ fn materialize(documented: &str) -> Vec<String> {
     ("<line>", "1"),
     ("<date>", "2026-08-25"),
     ("<id>", "root"),
+    ("<topic>", "tasks"),
   ] {
     command = command.replace(source, value);
   }

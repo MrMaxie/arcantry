@@ -5,6 +5,7 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(
   name = "arcantry",
+  bin_name = "arcantry",
   version = arcantry_core::VERSION,
   about = "Manage Arcantry project sources, local releases, and skill links.",
   arg_required_else_help = true
@@ -30,6 +31,28 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Command {
+  #[command(about = "Serve read-only project answers over MCP stdio.")]
+  Mcp,
+  #[command(about = "Show bounded project context without changing files.")]
+  Context {
+    #[arg(long)]
+    json: bool,
+    #[arg(long)]
+    detailed: bool,
+  },
+  #[command(about = "Recommend the next project step without inferring approval.")]
+  Next {
+    #[arg(long)]
+    change: Option<String>,
+    #[arg(long)]
+    json: bool,
+  },
+  #[command(about = "Explain a format or workflow using project sources.")]
+  Explain {
+    topic: String,
+    #[arg(long)]
+    json: bool,
+  },
   #[command(about = "Manage repository adoption.")]
   Repo {
     #[command(subcommand)]

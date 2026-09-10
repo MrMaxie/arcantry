@@ -157,9 +157,31 @@ pub struct RawSourceConfig {
   pub scope: String,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WorkflowConfig {
+  #[serde(default)]
+  pub order: Vec<String>,
+  #[serde(default)]
+  pub dependencies: BTreeMap<String, Vec<String>>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ContextProfile {
+  #[serde(default)]
+  pub focus: Vec<String>,
+  #[serde(default)]
+  pub exclude: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectConfig {
   pub config_version: u8,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub workflow: Option<WorkflowConfig>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub context: Option<ContextProfile>,
   #[serde(rename = "toml-schema", skip_serializing_if = "Option::is_none")]
   pub schema_reference: Option<SchemaReference>,
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -178,6 +200,8 @@ impl ProjectConfig {
   pub fn empty() -> Self {
     Self {
       config_version: PROJECT_CONFIG_VERSION,
+      workflow: None,
+      context: None,
       schema_reference: Some(SchemaReference {
         location: PROJECT_CONFIG_SCHEMA_LOCATION.to_owned(),
         version: Some("1.0.0".to_owned()),

@@ -20,6 +20,63 @@ fn arcantry() -> Command {
   cargo_bin_cmd!("arcantry")
 }
 
+#[test]
+fn mcp_answers_while_stdin_remains_open_without_writing_project_files() {
+  use std::io::{BufRead, BufReader, Write};
+  use std::process::Stdio;
+  use std::sync::mpsc;
+  use std::time::Duration;
+  let root = tempfile::tempdir().unwrap();
+  let mut child = ProcessCommand::new(env!("CARGO_BIN_EXE_arcantry"))
+    .arg("--cwd")
+    .arg(root.path())
+    .arg("mcp")
+    .stdin(Stdio::piped())
+    .stdout(Stdio::piped())
+    .stderr(Stdio::null())
+    .spawn()
+    .unwrap();
+  let stdout = child.stdout.take().unwrap();
+  let (send, receive) = mpsc::channel();
+  let reader = std::thread::spawn(move || {
+    for line in BufReader::new(stdout).lines() {
+      if send.send(line).is_err() {
+        break;
+      }
+    }
+  });
+  let result = (|| -> Result<(), String> {
+    let input = child.stdin.as_mut().unwrap();
+    for message in [
+      serde_json::json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"contract-test","version":"1"}}}),
+      serde_json::json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+      serde_json::json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"next","arguments":{}}}),
+    ] {
+      writeln!(input, "{message}").map_err(|e| e.to_string())?;
+      input.flush().map_err(|e| e.to_string())?;
+      if message.get("id").is_some() {
+        let line = receive
+          .recv_timeout(Duration::from_secs(10))
+          .map_err(|e| e.to_string())?
+          .map_err(|e| e.to_string())?;
+        let response: serde_json::Value = serde_json::from_str(&line).map_err(|e| e.to_string())?;
+        if response.get("error").is_some() || response["result"]["isError"] == true {
+          return Err(line);
+        }
+        if message["id"] == 2 && !line.contains("arcantry explain proposal") {
+          return Err(line);
+        }
+      }
+    }
+    Ok(())
+  })();
+  let _ = child.kill();
+  let _ = child.wait();
+  reader.join().unwrap();
+  assert!(result.is_ok(), "{result:?}");
+  assert_eq!(fs::read_dir(root.path()).unwrap().count(), 0);
+}
+
 fn private_skill(repository: &tempfile::TempDir, name: &str) {
   let directory = repository.path().join(".local").join("skills").join(name);
   fs::create_dir_all(&directory).unwrap();
