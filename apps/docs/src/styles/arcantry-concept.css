@@ -43,53 +43,22 @@
   background-clip: padding-box;
 }
 
-html[data-has-hero] .main-pane,
-html[data-has-hero] main {
+.arcantry-page:not(.has-sidebar) .main-pane,
+.arcantry-page:not(.has-sidebar) main {
   max-width: none;
 }
 html[data-has-hero],
 html[data-has-hero] body {
   overflow-x: clip;
 }
-html[data-has-hero] .content-panel {
+.arcantry-page:not(.has-sidebar) .content-panel {
   border-top: 0;
 }
-html[data-has-hero] .content-panel > .sl-container {
+.arcantry-page:not(.has-sidebar) .content-panel > .sl-container {
   max-width: 72rem;
 }
-body:has(arcantry-configurator) .content-panel > .sl-container > h1:first-child {
+body:has(arcantry-configurator) .content-panel:has(> .sl-container > h1:first-child) {
   display: none;
-}
-
-body:has(arcantry-configurator) .content-panel > .sl-container {
-  width: 100%;
-  max-width: none;
-  padding-inline: 0;
-}
-
-body:has(arcantry-configurator) .content-panel {
-  padding: 0;
-}
-
-body:has(arcantry-configurator) main {
-  padding-bottom: 0;
-}
-
-body:has(arcantry-configurator) .content-panel > .sl-container > * + * {
-  margin-top: 0;
-}
-
-body:has(arcantry-configurator) {
-  --ar-setup-width: 76rem;
-  --ar-setup-gutter: clamp(1.25rem, 4vw, 3rem);
-}
-
-body:has(arcantry-configurator) :is(.header-shell, .page-footer) {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: var(--ar-setup-width);
-  margin-inline: auto;
-  padding-inline: var(--ar-setup-gutter);
 }
 
 html[data-has-hero] .pagination-transition {
