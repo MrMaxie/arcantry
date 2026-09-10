@@ -70,30 +70,44 @@ const questions = [
 ---
 
 <arcantry-configurator class="not-content">
-  <header>
+  <header class="setup-intro">
     <p><a href="/">Arcantry</a> / Project setup</p>
     <h1>Give your agent a useful starting point.</h1>
     <p>Choose your situation. Review the request, then copy it into your agent. Nothing here changes your project.</p>
   </header>
   <div class="setup-columns">
     <form>
+      <div class="section-heading">
+        <h2>Your setup</h2>
+        <button type="reset">Reset choices</button>
+      </div>
       {questions.map((question, index) => (
         <fieldset data-question={question.key} hidden={index > 0}>
           <legend>{question.title}</legend>
-          {question.options.map(([value, label]) => (
-            <label><input type="radio" name={question.key} value={value} />{label}</label>
-          ))}
+          <div class="options">
+            {question.options.map(([value, label]) => (
+              <label><input type="radio" name={question.key} value={value} />{label}</label>
+            ))}
+          </div>
         </fieldset>
       ))}
-      <button type="reset">Reset choices</button>
     </form>
     <section class="request" aria-labelledby="request-title">
-      <h2 id="request-title">Your agent request</h2>
-      <p data-status role="status">Choose your goal to start.</p>
-      <pre data-prompt>Your request will appear here.</pre>
-      <button type="button" data-copy disabled>Copy request</button>
-      <p>Choices stay in this page's URL. No account, cookies or upload.</p>
-      <a href="/getting-started/">Read the three-command workflow</a>
+      <div class="request-heading">
+        <h2 id="request-title">Your agent request</h2>
+        <p data-status role="status">Choose your goal to start.</p>
+      </div>
+      <!-- biome-ignore lint/a11y/noNoninteractiveTabindex: The scrollable request must be reachable for keyboard scrolling. -->
+      <section class="request-body" aria-label="Generated agent request" tabindex="0">
+        <pre data-prompt>Your request will appear here.</pre>
+      </section>
+      <div class="request-actions">
+        <button type="button" data-copy disabled>Copy request</button>
+      </div>
+      <div class="request-notes">
+        <p>Choices stay in this page's URL. No account, cookies or upload.</p>
+        <a href="/getting-started/">Read the three-command workflow</a>
+      </div>
     </section>
   </div>
 </arcantry-configurator>
@@ -245,69 +259,118 @@ arcantry-configurator {
   display: block;
   max-width: 76rem;
   margin: auto;
-  padding: clamp(1rem, 4vw, 3rem);
+  padding: clamp(1.25rem, 4vw, 3rem);
   color: var(--ar-text);
 }
-header {
-  max-width: 46rem;
-  margin-bottom: 2rem;
+h1,
+h2,
+p,
+pre {
+  margin: 0;
+}
+.setup-intro {
+  display: grid;
+  gap: 1rem;
+  max-width: 50rem;
+  margin-bottom: 2.5rem;
 }
 h1 {
-  font-size: clamp(2rem, 4vw, 3.5rem);
-  line-height: 1.1;
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  line-height: 1.2;
   letter-spacing: -0.035em;
 }
-header p,
-.request > p {
+h2 {
+  font-size: 1.25rem;
+  line-height: 1.4;
+}
+p {
   color: var(--ar-text-muted);
   line-height: 1.6;
 }
 .setup-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: clamp(1.5rem, 4vw, 4rem);
+  gap: clamp(2rem, 4vw, 3rem);
   align-items: start;
 }
 form,
 .request {
   min-width: 0;
 }
+form {
+  display: grid;
+  gap: 2rem;
+  padding-top: clamp(1.25rem, 2.5vw, 2rem);
+}
+.section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
 fieldset {
-  margin: 0 0 1.5rem;
-  padding: 1rem;
-  border: 1px solid var(--ar-border);
-  border-radius: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 fieldset[hidden] {
   display: none;
 }
 legend {
+  padding: 0;
+  margin-bottom: 0.75rem;
   font-weight: 650;
-  padding: 0 0.4rem;
+  line-height: 1.5;
+}
+.options {
+  display: grid;
+  gap: 0.5rem;
 }
 label {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  min-height: 2.75rem;
-  padding: 0.4rem;
+  gap: 0.75rem;
+  min-height: 3rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--ar-border);
+  border-radius: 0.4rem;
+  line-height: 1.5;
   cursor: pointer;
 }
 input {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
   accent-color: var(--ar-accent-blue);
+}
+label:hover,
+button:not(:disabled):hover {
+  background: var(--ar-surface);
+  border-color: var(--ar-text-muted);
 }
 label:has(input:checked) {
   background: var(--ar-surface);
-  border-radius: 0.25rem;
+  border-color: var(--ar-accent-blue);
 }
 button {
-  padding: 0.7rem 1rem;
+  min-height: 2.75rem;
+  padding: 0.65rem 1rem;
   border: 1px solid var(--ar-border);
   border-radius: 0.4rem;
   background: var(--ar-surface);
   color: var(--ar-text);
   font: inherit;
+  font-weight: 650;
+  line-height: 1.4;
   cursor: pointer;
+}
+button[type='reset'] {
+  background: transparent;
+  font-size: 0.85rem;
+  font-weight: 400;
 }
 button:disabled {
   opacity: 0.5;
@@ -315,30 +378,58 @@ button:disabled {
 }
 button:focus-visible,
 input:focus-visible,
-pre:focus-visible {
+.request-body:focus-visible {
   outline: 2px solid var(--ar-accent-blue);
   outline-offset: 3px;
 }
 .request {
-  padding: 1.25rem;
+  position: sticky;
+  top: 5.5rem;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  max-height: calc(100dvh - 15rem);
+  gap: 1.5rem;
+  padding: clamp(1.25rem, 2.5vw, 2rem);
   border: 1px solid var(--ar-border);
   border-radius: 0.5rem;
   background: var(--ar-bg-subtle);
 }
-.request h2 {
-  margin-top: 0;
+.request-heading,
+.request-notes {
+  display: grid;
+  gap: 0.75rem;
+}
+.request-heading h2 {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+.request-body {
+  overflow: auto;
+  padding-block: 1.5rem;
+  border-block: 1px solid var(--ar-border);
 }
 pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font: 0.9rem / 1.65 var(--ar-font-sans);
+  font: 0.9rem / 1.75 var(--ar-font-sans);
 }
-@media (max-width: 60rem) {
+.request-notes {
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+@media (max-width: 60rem), (max-height: 42rem) {
+  .request {
+    position: static;
+    max-height: none;
+    grid-template-rows: auto;
+  }
+  form {
+    padding-top: 0;
+  }
   .setup-columns {
     grid-template-columns: minmax(0, 1fr);
-  }
-  pre {
-    max-height: none;
+    gap: 2.5rem;
   }
 }
 </style>
