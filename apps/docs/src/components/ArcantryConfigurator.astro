@@ -2,35 +2,35 @@
 const questions = [
   {
     key: 'm',
-    title: 'What do you need?',
+    title: 'What do you want the agent to do?',
     options: [
-      ['evaluate', 'Evaluate without changes'],
-      ['new', 'Set up this project'],
-      ['existing', 'Adapt an existing setup'],
+      ['evaluate', 'Check whether Arcantry fits my project'],
+      ['new', 'Start using Arcantry in my project'],
+      ['existing', 'Review my existing Arcantry setup'],
     ],
   },
   {
     key: 'i',
-    title: 'Is the CLI available?',
+    title: 'Can the agent run the Arcantry CLI?',
     options: [
-      ['yes', 'Yes'],
-      ['no', 'No, work from source files'],
-      ['unsure', 'Let the agent check'],
+      ['yes', 'Yes, it is installed'],
+      ['no', 'No, use the project files directly'],
+      ['unsure', "I don't know - let the agent check"],
     ],
   },
   {
     key: 'r',
-    title: 'Does the project use Git?',
+    title: 'Is the project already in Git?',
     options: [
-      ['yes', 'Yes'],
-      ['no', 'No'],
-      ['no-github', 'No GitHub remote'],
-      ['unsure', 'Let the agent check'],
+      ['yes', 'Yes, with a remote'],
+      ['no-github', 'Yes, without a remote'],
+      ['no', 'No, it does not use Git'],
+      ['unsure', "I don't know - let the agent check"],
     ],
   },
   {
     key: 'g',
-    title: 'Would local Git help?',
+    title: 'Would local Git history help?',
     options: [
       ['no', 'Continue without Git'],
       ['explain', 'Explain it before I decide'],
@@ -39,11 +39,11 @@ const questions = [
   },
   {
     key: 's',
-    title: 'Who needs the configuration?',
+    title: 'Where should Arcantry keep project-specific setup?',
     options: [
-      ['private', 'Only me'],
-      ['shared', 'Project collaborators'],
-      ['external', 'Keep the project unchanged'],
+      ['private', 'Privately for me'],
+      ['shared', 'In the project for collaborators'],
+      ['external', 'Outside the project'],
       ['recommend', 'Recommend the smallest useful setup'],
     ],
   },
@@ -71,14 +71,17 @@ const questions = [
 
 <arcantry-configurator class="not-content">
   <header class="setup-intro">
-    <h1>Give your agent a useful starting point.</h1>
-    <p>Choose your situation. Review the request, then copy it into your agent. Nothing here changes your project.</p>
+    <h1>Create instructions for your coding agent.</h1>
+    <p>
+      Open the project you want to work on in a coding agent. Then choose a goal here and copy the generated
+      instructions into that agent. This page does not access or change your files.
+    </p>
   </header>
   <div class="setup-columns">
     <form>
       <div class="section-heading">
         <h2>Your setup</h2>
-        <button type="reset">Reset choices</button>
+        <button type="reset" hidden>Reset choices</button>
       </div>
       {questions.map((question, index) => (
         <fieldset data-question={question.key} hidden={index > 0}>
@@ -93,18 +96,17 @@ const questions = [
     </form>
     <section class="request" aria-labelledby="request-title">
       <div class="request-heading">
-        <h2 id="request-title">Your agent request</h2>
+        <h2 id="request-title">Instructions for your agent</h2>
         <p data-status role="status">Choose your goal to start.</p>
       </div>
       <!-- biome-ignore lint/a11y/noNoninteractiveTabindex: The scrollable request must be reachable for keyboard scrolling. -->
-      <section class="request-body" aria-label="Generated agent request" tabindex="0">
-        <pre data-prompt>Your request will appear here.</pre>
+      <section class="request-body" aria-label="Generated agent instructions" tabindex="0">
+        <pre data-prompt>Your instructions will appear here.</pre>
       </section>
       <div class="request-actions">
-        <button type="button" data-copy disabled>Copy request</button>
+        <button type="button" data-copy disabled>Copy instructions</button>
       </div>
       <div class="request-notes">
-        <p>Choices stay in this page's URL. No account, cookies or upload.</p>
         <a href="/getting-started/">Read the three-command workflow</a>
       </div>
     </section>
@@ -139,9 +141,9 @@ class ArcantryConfigurator extends HTMLElement {
         const prompt = this.querySelector('[data-prompt]')?.textContent ?? '';
         try {
           await navigator.clipboard.writeText(prompt);
-          this.status('Request copied.');
+          this.status('Instructions copied.');
         } catch {
-          this.status('Copy is unavailable. Select and copy the request below.');
+          this.status('Copy is unavailable. Select and copy the instructions below.');
         }
       },
       options,
@@ -186,7 +188,7 @@ class ArcantryConfigurator extends HTMLElement {
     for (const field of this.querySelectorAll<HTMLFieldSetElement>('fieldset')) {
       const key = field.dataset.question ?? '';
       const relevant =
-        (key !== 'g' || ['no', 'no-github'].includes(this.value('r'))) &&
+        (key !== 'g' || this.value('r') === 'no') &&
         (key !== 'c' || mode === 'existing') &&
         (key !== 'x' || mode !== 'evaluate');
       field.hidden = !reachable || !relevant;
@@ -204,18 +206,21 @@ class ArcantryConfigurator extends HTMLElement {
     const scope = this.value('s');
     const lines = [
       mode === 'existing'
-        ? 'Inspect the existing Arcantry setup before proposing changes.'
+        ? 'Review the existing Arcantry setup in the project currently open in your workspace before proposing changes.'
         : mode === 'new'
-          ? 'Help me adopt only the useful parts of Arcantry in this project.'
-          : 'Evaluate whether Arcantry would help this project. Do not change files.',
+          ? 'Help me start using only the useful parts of Arcantry in the project currently open in your workspace.'
+          : 'Evaluate whether Arcantry would help the project currently open in your workspace. Do not change files.',
       installed === 'no'
         ? 'Work directly from project source files. CLI installation is not a prerequisite.'
-        : 'If Arcantry is available, run arcantry context, arcantry next, and arcantry explain tasks. If it is missing, continue from project source files.',
+        : installed === 'yes'
+          ? 'Run arcantry context, arcantry next, and arcantry explain tasks to understand the project and its next step.'
+          : 'Check whether the arcantry command is available. If it is, run arcantry context, arcantry next, and arcantry explain tasks. If it is missing, continue from project source files.',
       'Read AGENTS.md, the selected Arcantry configuration, OpenSpec configuration and the selected change tasks and schema templates. Preserve existing work and project conventions. Report conflicts and missing facts without inventing permission.',
     ];
     if (this.value('r') === 'yes')
       lines.push('Preserve the existing Git repository and all tracked and untracked work.');
-    if (this.value('r') === 'no-github') lines.push('Do not create or connect a remote. GitHub is not required.');
+    if (this.value('r') === 'no-github')
+      lines.push('Preserve the existing local Git repository. Do not create or connect a remote.');
     if (this.value('g') === 'no') lines.push('Continue without Git.');
     if (['yes', 'explain'].includes(this.value('g')))
       lines.push('Explain the value of local Git and propose initialization separately; do not initialize it yet.');
@@ -238,14 +243,16 @@ class ArcantryConfigurator extends HTMLElement {
       'Implementation, commit, deployment and release are separate decisions. Finish with the next useful action and its required format.',
     );
     const prompt = this.querySelector('[data-prompt]');
-    if (prompt) prompt.textContent = mode ? lines.join('\n\n') : 'Your request will appear here.';
+    if (prompt) prompt.textContent = mode ? lines.join('\n\n') : 'Your instructions will appear here.';
     const copy = this.querySelector<HTMLButtonElement>('[data-copy]');
     if (copy) copy.disabled = !mode;
+    const reset = this.querySelector<HTMLButtonElement>('button[type="reset"]');
+    if (reset) reset.hidden = !this.querySelector('input:checked');
     this.status(
       reachable
-        ? 'Ready to copy. Review the request below.'
+        ? 'Ready to copy. Review the instructions below.'
         : mode
-          ? 'Answer the next question. The current request permits inspection only.'
+          ? 'Answer the next question. Until then, the instructions only allow inspection.'
           : 'Choose your goal to start.',
     );
   }
@@ -367,6 +374,9 @@ button[type='reset'] {
   background: transparent;
   font-size: 0.85rem;
   font-weight: 400;
+}
+button[hidden] {
+  display: none;
 }
 button:disabled {
   opacity: 0.5;

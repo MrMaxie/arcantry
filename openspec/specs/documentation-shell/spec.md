@@ -204,7 +204,11 @@ The generated request MUST follow the outcome and source-based workflow defined 
 
 ### Requirement: The configurator presents an audience-appropriate setup surface
 
-The configurator MUST describe its outcome as instructions for the visitor's agent. It MUST NOT imply that an agent operates inside the page. Related answers MUST share alignment, spacing, selection treatment and comfortable pointer targets. Question groups MUST have more separation than answers within one group. Reset MUST remain with the setup controls; copying and its feedback MUST remain with the request. Privacy information and the workflow link MUST be visually secondary.
+The configurator MUST describe its outcome as instructions for the visitor's agent. It MUST NOT imply that an agent operates inside the page. Related answers MUST share alignment, spacing, selection treatment and comfortable pointer targets. Question groups MUST have more separation than answers within one group. Reset MUST remain with the setup controls and stay out of layout and focus order until a choice exists; copying and its feedback MUST remain with the request. The workflow link MUST be visually secondary. Default copy MUST NOT explain URL persistence, cookies or other implementation details.
+
+The introduction MUST tell a first-time visitor to open the target project in a coding agent before copying the generated instructions. Goal choices MUST name the outcome without using deictic wording such as "this project". Generated instructions MUST identify the target as the project open in the agent's workspace.
+
+Questions MUST use terms a first-time visitor can act on. Git choices MUST be mutually exclusive, CLI availability MUST explain that the agent can check it, and setup scope choices MUST describe where project-specific setup will live.
 
 The scrollable request MUST remain reachable by keyboard with a visible focus indicator. Documentation scrollbars MUST use the site's themed treatment.
 
