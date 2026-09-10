@@ -186,53 +186,50 @@ When a visitor enters the empty configurator and makes at least one selection, t
 
 ### Requirement: Prompt changes remain understandable and safe
 
-The configurator MUST present a compact live prompt preview beside the questions on wide screens and after the form on narrow screens. Its header MUST show the answered count with a gently animated gradient progress indicator before naming the preview, and MUST provide a compact circular-arrow reset control without a separate answers-left badge. Preview entries MUST use the darker content surface while the header uses the lighter sidebar surface, and their generated content MUST use Fira Code with monospace fallbacks to distinguish it as copyable material. Changing an answer MUST visually identify the affected prompt sections through transform or opacity-based motion, with a reduced-motion fallback. A full-width white copy action labelled "Copy generated prompt" with a sparkles icon MUST remain available at every stage, MUST provide visible hover feedback, and MUST gain the product gradient when all applicable questions are answered.
+The configurator MUST group the preview title and status, generated request, copy action, and supporting information separately. Its typography and controls MUST use the documentation theme. Copy MUST be disabled before the first answer and enabled once a request exists. Changing an answer MUST update the applicable request and URL without moving controls through decorative animation.
 
-The generated prompt MUST tell an agent to install Arcantry through an official route when needed, inspect the project without mutation, explain whether adoption or a requested change makes sense, preserve existing project ownership, keep shared and private sources independent, obtain approval before material changes, validate approved work, and explain how to use the selected setup. It MUST NOT imply that repository initialization creates OpenSpec, changelog, todo.txt, or skill sources.
+The generated request MUST follow the outcome and source-based workflow defined in documentation-site. It MUST preserve project ownership and private boundaries and distinguish inspection from a later approved apply. Missing CLI installation MUST NOT block source-based work.
 
-#### Scenario: A user completes a new adoption scenario
+#### Scenario: A user completes an adoption scenario
 
 - **WHEN** every applicable answer is present
-- **THEN** the copy action provides one prompt covering installation if needed, read-only inspection, recommendation, approved adoption, validation, and practical usage guidance
-- **AND** the prompt distinguishes selected knowledge sources from repository initialization
+- **THEN** the preview identifies the request as ready to copy
+- **AND** the request respects the selected execution boundary
 
 #### Scenario: A user changes one answer
 
-- **WHEN** an answer changes the installation, inspection, adoption, source, compatibility, or execution guidance
-- **THEN** the corresponding preview sections receive a brief visual update
-- **AND** the URL and copied prompt reflect the new answer
+- **WHEN** an answer changes the scenario
+- **THEN** the preview and URL reflect the applicable answers
+- **AND** the request remains available for review before copying
 
 ### Requirement: The configurator presents an audience-appropriate setup surface
 
-The configurator MUST describe its outcome as ready-to-copy Arcantry setup instructions for the visitor's agent. It MUST NOT imply that an agent is present or operating inside the configurator. Default copy MUST NOT explain URL persistence, prompt construction, or other implementation details. Explanations MUST add a distinction that is not already evident from the available answers. Simple choices SHOULD include a short consequence when it helps the visitor compare them. The interface MUST present the continuation cue as muted information, MUST place reset with the preview controls and remove it from layout and focus order until a selection exists, and MUST avoid empty status rows, unnecessary separators, trailing borders, or shell spacing that resembles broken content.
+The configurator MUST describe its outcome as instructions for the visitor's agent. It MUST NOT imply that an agent operates inside the page. Related answers MUST share alignment, spacing, selection treatment and comfortable pointer targets. Question groups MUST have more separation than answers within one group. Reset MUST remain with the setup controls; copying and its feedback MUST remain with the request. Privacy information and the workflow link MUST be visually secondary.
 
-Documentation scrollbars, including the compact instructions preview, MUST use the site's themed low-profile treatment instead of the platform's unstyled default while remaining scrollable by pointer, keyboard, and touch.
+The scrollable request MUST remain reachable by keyboard with a visible focus indicator. Documentation scrollbars MUST use the site's themed treatment.
 
 #### Scenario: A visitor has not answered the first question
 
 - **WHEN** the configurator first appears
-- **THEN** the heading explains that the result is a set of Arcantry setup instructions for the visitor's agent
-- **AND** a centered muted continuation cue explains that answering it reveals the next question
-- **AND** reset is absent from layout and focus order until a selection exists
+- **THEN** only the first question is available
+- **AND** the request status explains how to begin
+- **AND** copying is disabled
 
 ### Requirement: The configurator uses the documentation application shell
 
-On wide screens, the configurator MUST use a full-width three-region layout aligned with the global header and fitted to the viewport below it. The document itself MUST NOT scroll while that workspace fits; any overflow MUST remain within the relevant center or preview panel. The left region MUST provide links to the homepage and documentation, MUST list every configuration stage, MUST mark unavailable follow-ups, and MUST track the visible stage while scrolling. The center region MUST contain the setup introduction and progressive questions without an additional text column. The right region MUST keep the live instructions preview available in the position normally used for documentation context.
+The configurator MUST retain the established header and footer. On sufficiently wide and tall screens, questions and the request MUST form two aligned columns. The request MUST remain available while answering later questions, with long generated text scrolling inside its preview while the copy action stays outside that scroll area. On narrow or short screens, the request MUST follow the questions and expand naturally with its content. The document MUST remain scrollable, without horizontal overflow or clipped controls.
 
-The configurator MUST reuse the documentation sidebar's link treatment and credit footer in the left region on wide screens instead of approximating their spacing, width, typography, or content. On narrow screens, the left navigation MUST collapse into a compact setup navigation control, the questions MUST remain the primary column, the preview MUST follow the questions, and the normal project footer MUST remain available.
+The compact mobile brand symbol MUST remain readable in both themes. Header search, repository, and theme icons MUST retain the common documentation treatment.
 
-The compact mobile brand symbol MUST remain readable in both light and dark themes. Header search, repository, and theme icons MUST use a moderate common visual size, and the search control MUST NOT display a keyboard-shortcut badge on any page. The full-width configurator header and workspace MUST use the same outer alignment instead of independently centered maximum widths.
+#### Scenario: A visitor answers the last question on a wide screen
 
-#### Scenario: A visitor uses the configurator on a wide screen
+- **WHEN** a long scenario reaches its last question
+- **THEN** the request title, status and copy action remain visible beside the form
+- **AND** keyboard users can scroll through the complete request
 
-- **WHEN** the viewport can display the documentation application shell
-- **THEN** setup navigation, questions, and the instructions preview appear as left, center, and right regions
-- **AND** the header aligns to the same full-width grid
-- **AND** selecting an answer enables its applicable follow-up stage link
+#### Scenario: A visitor uses a narrow or short viewport
 
-#### Scenario: A visitor uses the configurator below the documentation sidebar breakpoint
-
-- **WHEN** the viewport is narrower than the documentation sidebar breakpoint
-- **THEN** the stage navigation is available through a compact control above the questions
-- **AND** the instructions preview follows the question flow
-- **AND** the compact Arcantry symbol has sufficient contrast for the active theme
+- **WHEN** two columns cannot retain readable controls and preview content
+- **THEN** the request follows the questions in document order
+- **AND** the full request is readable through ordinary page scrolling
+- **AND** labels and controls stay within the page width
