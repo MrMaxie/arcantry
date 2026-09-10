@@ -25,6 +25,7 @@ fn read(path: &Path) -> Result<Option<String>> {
 
 pub fn context(project: &ResolvedProject) -> Result<Value> {
   let inspection = crate::knowledge::inspect(project)?;
+  let profile = project.config.as_ref().and_then(|c| c.context.as_ref());
   let mut changes = Vec::new();
   let mut rules = Vec::new();
   for relative in ["AGENTS.md", ".local/AGENTS.md"] {
@@ -33,7 +34,10 @@ pub fn context(project: &ResolvedProject) -> Result<Value> {
     }
   }
   for source in &inspection.sources {
-    if source.kind != SourceKind::Openspec || !source.exists {
+    if source.kind != SourceKind::Openspec
+      || !source.exists
+      || source.management == crate::config::Management::Ignore
+    {
       continue;
     }
     let directory = source.absolute_path.join("changes");
@@ -50,6 +54,14 @@ pub fn context(project: &ResolvedProject) -> Result<Value> {
         bail!("More than 100 active changes; narrow the configured OpenSpec sources.");
       }
       let id = entry.file_name().to_string_lossy().into_owned();
+      let relative = format!("{}/changes/{id}", source.path);
+      if profile.is_some_and(|p| {
+        p.exclude
+          .iter()
+          .any(|excluded| relative == *excluded || relative.starts_with(&format!("{excluded}/")))
+      }) {
+        continue;
+      }
       let tasks = read(&entry.path().join("tasks.md"))?.unwrap_or_default();
       let pending: Vec<_> = tasks
         .lines()
@@ -84,6 +96,16 @@ pub fn next(project: &ResolvedProject, selected: Option<&str>) -> Result<Value> 
     .iter()
     .filter(|change| !change["pending"].as_array().is_none_or(Vec::is_empty))
     .collect();
+  if let Some(profile) = project.config.as_ref().and_then(|c| c.context.as_ref()) {
+    candidates.sort_by_key(|change| {
+      !profile.focus.iter().any(|focus| {
+        change
+          .to_string()
+          .to_lowercase()
+          .contains(&focus.to_lowercase())
+      })
+    });
+  }
   if let Some(workflow) = workflow {
     candidates.sort_by_key(|change| {
       workflow
@@ -189,7 +211,7 @@ pub fn explain(project: &ResolvedProject, topic: &str) -> Result<Value> {
     ),
     "release" => (
       "Release notes describe consumer outcomes. A release is optional for ordinary work; use the configured project schema when preparing one.",
-      "category: Changed\nsemver: patch\nvisibility: public\ncomponents: [cli]\ntitle: Clearer project guidance",
+      "category: changed\nimpact: patch\nvisibility: public\ncomponents: [cli]\ntitle: Clearer project guidance",
     ),
     _ => bail!(
       "Unknown topic '{topic}'. Topics: proposal, tasks, specs, design, release, todo, versions, changelog, rules, workflow."
@@ -239,4 +261,17 @@ fn on_path(name: &str) -> bool {
       }
     })
   })
+}
+
+pub fn diagnostics(cwd: &Path, config: Option<&Path>, explicit: bool) -> Value {
+  let project = crate::config::resolve_project(cwd, config, explicit, Some(crate::VERSION));
+  let inspection = project
+    .as_ref()
+    .ok()
+    .and_then(|p| crate::knowledge::inspect(p).ok());
+  json!({"schemaVersion":1,"version":crate::VERSION,"platform":std::env::consts::OS,
+    "configurationReadable":project.is_ok(),"inspectionAvailable":inspection.is_some(),
+    "sources":inspection.as_ref().map(|i| i.sources.iter().map(|s| json!({"kind":s.kind,"management":s.management,"visibility":s.visibility,"exists":s.exists,"adapterStatus":s.adapter_status})).collect::<Vec<_>>()).unwrap_or_default(),
+    "tools":(["git","cargo","just","openspec","varlock"].map(|name| json!({"name":name,"available":on_path(name)}))),
+    "privacy":"Allowlisted metadata only. No paths, source contents, environment values or automatic upload."})
 }

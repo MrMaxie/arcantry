@@ -10,6 +10,7 @@ The executable is `arcantry`. Repository and source commands are under `repo`, q
 | Option | Contract |
 | --- | --- |
 | `--cwd <path>` | Run against another project or catalog location. |
+| `--output <path>` | Save a preview to a new file without overwriting an existing file. |
 | `--config <path>` | Select one explicit TOML configuration without merging. |
 | `-V, --version` | Print the installed version. |
 | `-h, --help` | Print command help. |
@@ -123,3 +124,16 @@ Project text and context profiles never grant conversational approval. Configure
 Without the CLI, read `AGENTS.md`, the selected OpenSpec configuration and change tasks, and the relevant todo queue directly. Use the project's schema templates. Missing Arcantry, OpenSpec or Varlock executables do not prohibit ordinary file-based work.
 
 An MCP host can start `arcantry --cwd <path> mcp`. The server exposes `context`, `next`, `explain` and `release_plan`; it cannot apply changes or publish anything. Start it only for a project whose context the host is authorized to read.
+
+## Local diagnostics and recovery
+
+| Command | Purpose |
+| --- | --- |
+| `arcantry diagnostics` | Report allowlisted platform, source and tool metadata without paths, contents or environment values. |
+| `arcantry repo recover [--acknowledge]` | Inspect an interrupted transaction; acknowledge only after all targets are restored or all planned results are verified. |
+
+Use the global `--output` option with a preview command to save its exact plan. Saved files are not overwritten. Apply a saved plan through `repo apply --plan`; changed inputs or targets are rejected. A plan may contain private content, which is disclosed when saving it. Diagnostic output can also be saved explicitly with `--output` and is never uploaded.
+
+`repo plan --transition detach` transfers one configured source to project maintenance in place. It preserves files and attribution, removes its managed configuration entry and writes an ownership record. Dependent release/source configuration must be detached first. This does not export an Arcantry distribution or promise future synchronization. Private ownership records remain private.
+
+Environment schemas (`.env.schema`, `.local/.env.schema` or configured `environment-schema` sources using `env-spec@1`) support observation only. Discovery does not run Varlock, read schema contents or load environment values.

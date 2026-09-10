@@ -9,6 +9,7 @@ pub fn execute(
   cwd: &Path,
   config: Option<&Path>,
   cwd_explicit: bool,
+  output: Option<&Path>,
 ) -> Result<i32> {
   let project = resolve_project(cwd, config, cwd_explicit, Some(arcantry_core::VERSION))?;
   match command {
@@ -22,6 +23,7 @@ pub fn execute(
       arcantry_core::release::baseline(&project, &version, &date, unit.as_deref())?,
       apply,
       json,
+      output,
     ),
     ReleaseCommand::Plan { unit, json } => {
       let plan = arcantry_core::release::inspect(&project, unit.as_deref())?;
@@ -82,11 +84,13 @@ pub fn execute(
       arcantry_core::release::cut(&project, &date, unit.as_deref())?,
       apply,
       json,
+      output,
     ),
     ReleaseCommand::Render { unit, apply, json } => handle_plan(
       arcantry_core::release::render(&project, unit.as_deref())?,
       apply,
       json,
+      output,
     ),
     ReleaseCommand::Check { unit, sealed } => {
       let pull_request_head = arcantry_core::release::github_pull_request_head();

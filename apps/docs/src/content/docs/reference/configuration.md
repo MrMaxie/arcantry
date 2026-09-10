@@ -168,3 +168,24 @@ Version source adapters are `json-package@1` for a top-level JSON `version` and 
 A baseline manifest anchors an existing version without reconstructing unknown history. Later versions are computed from archived OpenSpec release artifacts. Internal artifacts stay in manifests and SemVer planning but are omitted from the public changelog. In composed projects, each parent manifest pins exact direct-dependency versions. A child release never bumps its parent automatically.
 
 The editor contract is [arcantry-config-v1.tosd](/schemas/arcantry-config-v1.tosd). Runtime validation also enforces SemVer compatibility, graph cycles, authority overlap, path privacy, and changelog dependencies.
+
+## Project release conventions
+
+`[release].version_strategy` selects `semver` (default), `integer` or `calendar`. Units can override it with `[release.units.<id>].version_strategy`. Calendar identifiers use `YYYY.MM.DD.N`, starting at revision 1 and incrementing for additional releases on the same day. A release date cannot move backward.
+
+`json-package@1` and `cargo-workspace@1` retain SemVer restrictions. Use `text-version@1` for a single identifier in a text file or `json-version@1` for a project JSON `version` string with a different convention. SemVer changes declare `impact`; integer and calendar projects can omit it.
+
+Set `changelog_template` to a project-relative MiniJinja template, at release or unit level. The template receives `releases` (newest first), `unit` and `strategy`. Each release has `version`, `date` and public `changes`; each change has `id` and `outcomes` containing `category`, `title` and `body`. No filesystem loader or executable callbacks are provided. Missing template variables are errors.
+
+```jinja
+# Project changes
+{% for release in releases %}
+## {{ release.version }} - {{ release.date }}
+{% for change in release.changes %}{% for outcome in change.outcomes %}
+- {{ outcome.title }}: {{ outcome.body }}
+{% endfor %}{% endfor %}{% endfor %}
+```
+
+Without a template, Arcantry uses its standard changelog preset. New managed blocks preserve existing project history outside their markers. Baseline, cut and render remain preview-first; ordinary implementation and commits do not require a release.
+
+`[context].focus` contains terms used to prioritize pending changes after explicit workflow order. `[context].exclude` contains exact project-relative change paths or directory prefixes to omit from contextual discovery. Excluding a dependency never proves it complete. Agent instructions are always retained. This optional relevance profile controls reads, not permission or publication.

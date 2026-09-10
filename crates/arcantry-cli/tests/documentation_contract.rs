@@ -80,7 +80,15 @@ fn normalize_syntax(value: &str) -> String {
 
 fn is_command_syntax(value: &str) -> bool {
   [
-    "repo ", "todo ", "release ", "skills ", "context", "next", "explain ", "mcp",
+    "repo ",
+    "todo ",
+    "release ",
+    "skills ",
+    "context",
+    "next",
+    "explain ",
+    "mcp",
+    "diagnostics",
   ]
   .iter()
   .any(|prefix| value.starts_with(prefix))

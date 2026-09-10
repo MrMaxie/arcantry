@@ -19,8 +19,16 @@ pub fn execute(
   cwd: &Path,
   config: Option<&Path>,
   cwd_explicit: bool,
+  output: Option<&Path>,
 ) -> Result<i32> {
   match command {
+    RepoCommand::Recover { acknowledge } => {
+      println!(
+        "{}",
+        serde_json::to_string_pretty(&arcantry_core::project_plan::recover(cwd, acknowledge)?)?
+      );
+      Ok(0)
+    }
     RepoCommand::Inspect { json, detailed } => {
       let inspection = project_inspection(cwd, config, cwd_explicit)?;
       if json {
@@ -34,7 +42,9 @@ pub fn execute(
       let json = args.json;
       let plan = plan_transition(&project_inspection(cwd, config, cwd_explicit)?, args)?;
       let code = i32::from(!plan.conflicts.is_empty());
-      if json {
+      if let Some(path) = output {
+        arcantry_core::project_plan::save(&plan, &cwd.join(path))?;
+      } else if json {
         print!("{}", serialize_plan(&plan)?);
       } else {
         print!("{}", render_plan(&plan));
@@ -105,7 +115,21 @@ pub fn project_inspection(
   )?)
 }
 
-pub fn handle_plan(plan: ProjectPlan, apply: bool, json: bool) -> Result<i32> {
+pub fn handle_plan(
+  plan: ProjectPlan,
+  apply: bool,
+  json: bool,
+  output: Option<&Path>,
+) -> Result<i32> {
+  if let Some(path) = output {
+    if apply {
+      bail!(
+        "--output cannot be combined with --apply; save the preview and use repo apply --plan."
+      );
+    }
+    arcantry_core::project_plan::save(&plan, path)?;
+    return Ok(i32::from(!plan.conflicts.is_empty()));
+  }
   if !apply {
     if json {
       print!("{}", serialize_plan(&plan)?);
@@ -141,6 +165,13 @@ fn authority_for_generated_plan(plan: &ProjectPlan) -> Result<ApplyAuthority> {
     if path.is_absolute() {
       authority = authority.allow_exact(path)?;
     }
+  }
+  for path in plan
+    .inputs
+    .keys()
+    .filter(|path| Path::new(path).is_absolute())
+  {
+    authority = authority.allow_exact(Path::new(path))?;
   }
   Ok(authority)
 }

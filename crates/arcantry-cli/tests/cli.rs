@@ -434,3 +434,69 @@ fn repository_validation_uses_the_implicitly_configured_project_root() {
     .assert()
     .success();
 }
+
+#[test]
+fn saved_detachment_plan_preserves_source_and_refuses_stale_inputs() {
+  let root = repository();
+  fs::write(root.path().join("todo.txt"), "Keep exactly this task\r\n").unwrap();
+  fs::write(root.path().join("arcantry.toml"), "config_version = 1\n[sources.work]\nkind = 'todo-txt'\npath = 'todo.txt'\nadapter = 'todo-txt@1'\nmanagement = 'manage'\n").unwrap();
+  arcantry()
+    .arg("--cwd")
+    .arg(root.path())
+    .args([
+      "repo",
+      "plan",
+      "--source",
+      "work",
+      "--transition",
+      "detach",
+      "--output",
+      "plan.json",
+    ])
+    .assert()
+    .success();
+  assert!(!root.path().join("arcantry-detached-work.md").exists());
+  arcantry()
+    .arg("--cwd")
+    .arg(root.path())
+    .args([
+      "repo",
+      "plan",
+      "--source",
+      "work",
+      "--transition",
+      "detach",
+      "--output",
+      "plan.json",
+    ])
+    .assert()
+    .failure();
+  fs::write(root.path().join("todo.txt"), "New input\n").unwrap();
+  arcantry()
+    .arg("--cwd")
+    .arg(root.path())
+    .args(["repo", "apply", "--plan", "plan.json"])
+    .assert()
+    .failure();
+  fs::write(root.path().join("todo.txt"), "Keep exactly this task\r\n").unwrap();
+  arcantry()
+    .arg("--cwd")
+    .arg(root.path())
+    .args(["repo", "apply", "--plan", "plan.json"])
+    .assert()
+    .success();
+  assert_eq!(
+    fs::read(root.path().join("todo.txt")).unwrap(),
+    b"Keep exactly this task\r\n"
+  );
+  assert!(
+    !fs::read_to_string(root.path().join("arcantry.toml"))
+      .unwrap()
+      .contains("sources.work")
+  );
+  assert!(
+    fs::read_to_string(root.path().join("arcantry-detached-work.md"))
+      .unwrap()
+      .contains("Existing licenses")
+  );
+}

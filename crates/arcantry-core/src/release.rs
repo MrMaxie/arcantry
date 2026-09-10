@@ -3,8 +3,10 @@ use crate::config::{
   ResolvedProject, Visibility, effective_visibility, is_private_project_path,
 };
 use crate::project_plan::{ProjectPlan, create_write_operation};
+use crate::versioning::VersionStrategy;
 use anyhow::{Context, Result, bail};
 use chrono::NaiveDate;
+#[cfg(test)]
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -55,7 +57,7 @@ pub struct ReleasePlan {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub ready: Option<bool>,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 struct ReleaseOutcome {
   category: String,
   title: String,
@@ -73,6 +75,8 @@ struct Artifact {
 }
 #[derive(Debug)]
 struct Configuration {
+  strategy: VersionStrategy,
+  template: Option<String>,
   root: PathBuf,
   releases: String,
   changelog: String,
@@ -89,6 +93,7 @@ struct Configuration {
 }
 #[derive(Debug)]
 struct DependencyConfiguration {
+  strategy: VersionStrategy,
   releases: String,
   version_sources: Vec<(String, String)>,
 }
@@ -106,9 +111,9 @@ pub fn baseline(
   unit: Option<&str>,
 ) -> Result<ProjectPlan> {
   plan_result(project, || {
-    parse_stable_version(version)?;
     validate_date(date)?;
     let configuration = configuration(project, unit)?;
+    configuration.strategy.key(version)?;
     if !read_manifests(&configuration)?.is_empty() {
       bail!("Release baseline requires a project without release manifests.");
     }
@@ -149,7 +154,7 @@ pub fn baseline(
           manifests: vec![manifest],
           assigned: BTreeSet::new(),
         },
-      ),
+      )?,
       configuration.changelog_visibility,
     )?);
     Ok(plan)
@@ -174,7 +179,7 @@ pub fn cut(project: &ResolvedProject, date: &str, unit: Option<&str>) -> Result<
     validate_date(date)?;
     let configuration = configuration(project, unit)?;
     let state = state(&configuration)?;
-    let release = inspect_configuration(&configuration)?;
+    let release = inspect_configuration_on(&configuration, date)?;
     if release.changes.is_empty() {
       bail!("No unassigned archived changes to release.");
     }
@@ -236,7 +241,7 @@ pub fn cut(project: &ResolvedProject, date: &str, unit: Option<&str>) -> Result<
           manifests,
           assigned: state.assigned,
         },
-      ),
+      )?,
       configuration.changelog_visibility,
     )?);
     Ok(plan)
@@ -246,7 +251,7 @@ pub fn cut(project: &ResolvedProject, date: &str, unit: Option<&str>) -> Result<
 pub fn render(project: &ResolvedProject, unit: Option<&str>) -> Result<ProjectPlan> {
   plan_result(project, || {
     let configuration = configuration(project, unit)?;
-    let desired = render_changelog(&configuration, &state(&configuration)?);
+    let desired = render_changelog(&configuration, &state(&configuration)?)?;
     let mut plan = ProjectPlan::new(
       configuration.root.clone(),
       "release",
@@ -345,11 +350,13 @@ fn check_configuration(
     state
       .manifests
       .last()
-      .map_or("0.0.0", |manifest| &manifest.version),
+      .map_or(configuration.strategy.initial(), |manifest| {
+        &manifest.version
+      }),
   )?;
   let changelog = fs::read_to_string(configuration.root.join(&configuration.changelog))
     .context("CHANGELOG.md is missing")?;
-  if changelog != render_changelog(configuration, &state) {
+  if changelog != render_changelog(configuration, &state)? {
     bail!("CHANGELOG.md is stale; run the configured release render command");
   }
   if sealed {
@@ -417,6 +424,7 @@ fn validate_git_seal(
     .last()
     .context("release sealing requires at least one release manifest")?;
   let status = duct::cmd("git", ["status", "--porcelain=v1", "--untracked-files=all"])
+    .stdin_null()
     .dir(&configuration.root)
     .read()?;
   if !status.trim().is_empty() {
@@ -438,12 +446,14 @@ fn validate_git_seal(
       &manifest_path,
     ],
   )
+  .stdin_null()
   .dir(&configuration.root)
   .read()?;
   if manifest_commit.trim().is_empty() {
     bail!("latest release manifest is not committed: {manifest_path}");
   }
   let repository_head = duct::cmd("git", ["rev-parse", "HEAD"])
+    .stdin_null()
     .dir(&configuration.root)
     .read()?;
   let release_head = if let Some(pull_request_head) = pull_request_head {
@@ -455,6 +465,7 @@ fn validate_git_seal(
         &format!("{pull_request_head}^{{commit}}"),
       ],
     )
+    .stdin_null()
     .dir(&configuration.root)
     .read()?
   } else {
@@ -468,6 +479,7 @@ fn validate_git_seal(
   }
   if release_head.trim() != repository_head.trim() {
     let parents = duct::cmd("git", ["show", "-s", "--format=%P", repository_head.trim()])
+      .stdin_null()
       .dir(&configuration.root)
       .read()?;
     let parents = parents.split_whitespace().collect::<Vec<_>>();
@@ -483,7 +495,31 @@ fn plan_result(
   build: impl FnOnce() -> Result<ProjectPlan>,
 ) -> Result<ProjectPlan> {
   match build() {
-    Ok(plan) => Ok(plan),
+    Ok(mut plan) => {
+      if let Some(path) = &project.config_path {
+        plan.watch(&path.to_string_lossy())?;
+      }
+      if let Some(config) = &project.config {
+        for source in config
+          .sources
+          .values()
+          .filter(|s| s.kind == crate::config::SourceKind::Openspec)
+        {
+          plan.watch(&source.path)?;
+        }
+        if let Some(release) = &config.release {
+          for template in release.changelog_template.iter().chain(
+            release
+              .units
+              .values()
+              .filter_map(|u| u.changelog_template.as_ref()),
+          ) {
+            plan.watch(template)?;
+          }
+        }
+      }
+      Ok(plan)
+    }
     Err(error) => {
       let adapter = project
         .config
@@ -550,6 +586,8 @@ fn configuration(project: &ResolvedProject, unit: Option<&str>) -> Result<Config
     validate_single_coverage(project, &openspec)?;
   }
   Ok(Configuration {
+    strategy: release.version_strategy,
+    template: release.changelog_template.clone(),
     root: project.root.clone(),
     releases: release
       .manifests_path
@@ -626,6 +664,9 @@ fn unit_configuration(
       (
         dependency.clone(),
         DependencyConfiguration {
+          strategy: dependency_unit
+            .version_strategy
+            .unwrap_or(release.version_strategy),
           releases: dependency_unit.manifests_path.clone(),
           version_sources: dependency_unit
             .version_sources
@@ -637,6 +678,11 @@ fn unit_configuration(
     })
     .collect();
   Ok(Configuration {
+    strategy: unit.version_strategy.unwrap_or(release.version_strategy),
+    template: unit
+      .changelog_template
+      .clone()
+      .or_else(|| release.changelog_template.clone()),
     root: project.root.clone(),
     releases: unit.manifests_path.clone(),
     changelog: changelog.path.clone(),
@@ -818,6 +864,13 @@ fn artifact_matches_unit(unit: &ReleaseUnitConfig, artifact: &Artifact) -> bool 
 }
 
 fn inspect_configuration(configuration: &Configuration) -> Result<ReleasePlan> {
+  inspect_configuration_on(
+    configuration,
+    &chrono::Local::now().format("%Y-%m-%d").to_string(),
+  )
+}
+
+fn inspect_configuration_on(configuration: &Configuration, date: &str) -> Result<ReleasePlan> {
   let state = state(configuration)?;
   let changes: Vec<_> = state
     .archived
@@ -830,17 +883,19 @@ fn inspect_configuration(configuration: &Configuration) -> Result<ReleasePlan> {
     .map(|id| effective_impact(&state.archived[id], configuration.unit.as_deref()))
     .collect();
   let impact = highest_impact(&impacts).to_owned();
-  if impact == "none" && !changes.is_empty() {
+  if impact == "none" && !changes.is_empty() && configuration.strategy == VersionStrategy::Semver {
     bail!(
       "completed changes must declare a SemVer impact: {}",
       changes.join(", ")
     );
   }
-  let current = state
-    .manifests
-    .last()
-    .map_or_else(|| "0.0.0".to_owned(), |manifest| manifest.version.clone());
-  let next = bump(&current, &impact)?;
+  let current = state.manifests.last().map_or_else(
+    || configuration.strategy.initial().to_owned(),
+    |manifest| manifest.version.clone(),
+  );
+  let next = configuration
+    .strategy
+    .next(&current, &impact, date, !changes.is_empty())?;
   if configuration.adapter == "openspec-release@1" {
     return Ok(ReleasePlan {
       current,
@@ -975,6 +1030,7 @@ fn read_archived(configuration: &Configuration) -> Result<BTreeMap<String, Artif
 #[derive(Deserialize)]
 struct ArtifactMetadata {
   category: Option<String>,
+  #[serde(default = "unspecified_impact")]
   impact: String,
   visibility: String,
   components: Vec<String>,
@@ -983,6 +1039,10 @@ struct ArtifactMetadata {
   #[serde(default)]
   dependency_updates: BTreeMap<String, Vec<String>>,
 }
+fn unspecified_impact() -> String {
+  "unspecified".to_owned()
+}
+
 fn parse_artifact(source: &str, v2: bool) -> Result<Artifact> {
   let body = source
     .strip_prefix("---\n")
@@ -1007,7 +1067,7 @@ fn parse_artifact(source: &str, v2: bool) -> Result<Artifact> {
   }
   if !matches!(
     metadata.impact.as_str(),
-    "none" | "patch" | "minor" | "major"
+    "none" | "patch" | "minor" | "major" | "unspecified"
   ) {
     bail!("invalid release impact: {}", metadata.impact);
   }
@@ -1366,7 +1426,9 @@ fn read_manifest_directory(
     if entry.path().file_stem().and_then(|value| value.to_str()) != Some(&manifest.version) {
       bail!("release manifest filename must match version");
     }
-    let version = parse_stable_version(&manifest.version)?;
+    let version = configuration
+      .map_or(VersionStrategy::Semver, |c| c.strategy)
+      .key(&manifest.version)?;
     validate_date(&manifest.date)?;
     if manifest.baseline == Some(true) && !manifest.changes.is_empty() {
       bail!("baseline release cannot assign changes");
@@ -1456,10 +1518,92 @@ fn render_manifest(manifest: &ReleaseManifest) -> Result<String> {
   )?)
 }
 
-fn render_changelog(configuration: &Configuration, state: &State) -> String {
+fn render_changelog(configuration: &Configuration, state: &State) -> Result<String> {
+  let rendered = if let Some(path) = &configuration.template {
+    let path = configuration.root.join(path);
+    if fs::metadata(&path)?.len() > 32768 {
+      bail!("Changelog template exceeds 32 KiB.");
+    }
+    let template = fs::read_to_string(path)?;
+    let releases: Vec<_> = state
+      .manifests
+      .iter()
+      .rev()
+      .filter(|m| m.baseline != Some(true))
+      .map(|manifest| {
+        let changes: Vec<_> = manifest
+          .changes
+          .iter()
+          .filter_map(|id| {
+            state
+              .archived
+              .get(id)
+              .filter(|a| a.visibility == "public")
+              .map(|a| serde_json::json!({"id":id,"outcomes":a.outcomes}))
+          })
+          .collect();
+        serde_json::json!({"version":manifest.version,"date":manifest.date,"changes":changes})
+      })
+      .collect();
+    let mut environment = minijinja::Environment::new();
+    environment.set_undefined_behavior(minijinja::UndefinedBehavior::Strict);
+    environment.set_fuel(Some(100_000));
+    environment.render_str(&template, serde_json::json!({"releases":releases,"unit":configuration.unit,"strategy":configuration.strategy}))?
+  } else {
+    render_preset_changelog(configuration, state)
+  };
+  let existing = match fs::read_to_string(configuration.root.join(&configuration.changelog)) {
+    Ok(text) => text,
+    Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
+    Err(error) => return Err(error.into()),
+  };
+  let start = "<!-- arcantry:changelog:start -->";
+  let end = "<!-- arcantry:changelog:end -->";
+  let block = format!(
+    "{start}\n{}{end}",
+    if rendered.ends_with('\n') {
+      rendered.clone()
+    } else {
+      format!("{rendered}\n")
+    }
+  );
+  if existing.contains(start) || existing.contains(end) {
+    if existing.matches(start).count() != 1 || existing.matches(end).count() != 1 {
+      bail!("Ambiguous managed changelog markers.");
+    }
+    let first = existing.find(start).unwrap();
+    let last = existing.find(end).unwrap();
+    if first >= last {
+      bail!("Invalid managed changelog marker order.");
+    }
+    return Ok(format!(
+      "{}{}{}",
+      &existing[..first],
+      block,
+      &existing[last + end.len()..]
+    ));
+  }
+  let baseline = state
+    .manifests
+    .first()
+    .is_some_and(|m| m.baseline == Some(true));
+  if baseline && !existing.is_empty() && !existing.contains("<!-- Arcantry release baseline:") {
+    return Ok(format!("{block}\n\n{existing}"));
+  }
+  if configuration.template.is_some() || configuration.strategy != VersionStrategy::Semver {
+    return Ok(format!("{block}\n"));
+  }
+  Ok(rendered)
+}
+
+fn render_preset_changelog(configuration: &Configuration, state: &State) -> String {
   let preamble = "# Changelog\n\nAll notable changes to this project will be documented in this file.\n\nThe format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),\nand this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).";
   let mut lines = vec![
-    preamble.to_owned(),
+    if configuration.strategy == VersionStrategy::Semver {
+      preamble.to_owned()
+    } else {
+      "# Changelog".to_owned()
+    },
     String::new(),
     "## [Unreleased]".to_owned(),
     String::new(),
@@ -1557,7 +1701,10 @@ fn render_changelog(configuration: &Configuration, state: &State) -> String {
 
 fn read_version(root: &Path, path: &str, adapter: &str) -> Result<String> {
   let content = fs::read_to_string(root.join(path))?;
-  if adapter == "json-package@1" {
+  if adapter == "text-version@1" {
+    return Ok(content.trim().to_owned());
+  }
+  if matches!(adapter, "json-package@1" | "json-version@1") {
     let value: serde_json::Value = serde_json::from_str(&content)?;
     return value["version"]
       .as_str()
@@ -1579,7 +1726,20 @@ fn read_version(root: &Path, path: &str, adapter: &str) -> Result<String> {
 }
 fn update_version(root: &Path, path: &str, adapter: &str, version: &str) -> Result<String> {
   let content = fs::read_to_string(root.join(path))?;
-  if adapter == "json-package@1" {
+  if matches!(adapter, "json-package@1" | "cargo-workspace@1") {
+    VersionStrategy::Semver.key(version)?;
+  }
+  if adapter == "text-version@1" {
+    let ending = if content.ends_with("\r\n") {
+      "\r\n"
+    } else if content.ends_with('\n') {
+      "\n"
+    } else {
+      ""
+    };
+    return Ok(format!("{version}{ending}"));
+  }
+  if matches!(adapter, "json-package@1" | "json-version@1") {
     let mut value: serde_json::Value = serde_json::from_str(&content)?;
     value["version"] = serde_json::Value::String(version.to_owned());
     let indentation = json_indentation(&content);
@@ -1609,7 +1769,11 @@ fn update_version(root: &Path, path: &str, adapter: &str, version: &str) -> Resu
   bail!("Unsupported release version adapter: {adapter}")
 }
 fn validate_versions(configuration: &Configuration, expected: &str) -> Result<()> {
+  configuration.strategy.key(expected)?;
   for (path, adapter) in &configuration.version_sources {
+    if matches!(adapter.as_str(), "json-package@1" | "cargo-workspace@1") {
+      VersionStrategy::Semver.key(expected)?;
+    }
     let actual = read_version(&configuration.root, path, adapter)?;
     if actual != expected {
       bail!("Version source must match {expected}: {path} contains {actual}.");
@@ -1660,7 +1824,7 @@ fn latest_dependency_version(configuration: &Configuration, dependency: &str) ->
       }
       let manifest: ReleaseManifest = serde_saphyr::from_str(&fs::read_to_string(entry.path())?)?;
       if manifest.format == Some(2) && manifest.unit.as_deref() == Some(dependency) {
-        versions.push((parse_stable_version(&manifest.version)?, manifest.version));
+        versions.push((state.strategy.key(&manifest.version)?, manifest.version));
       }
     }
   }
@@ -1678,6 +1842,7 @@ fn latest_dependency_version(configuration: &Configuration, dependency: &str) ->
   Ok(latest)
 }
 
+#[cfg(test)]
 fn parse_stable_version(value: &str) -> Result<Version> {
   let version = Version::parse(value)
     .with_context(|| format!("Release version must be full stable SemVer: {value}."))?;
@@ -1714,6 +1879,7 @@ fn highest_impact(values: &[&str]) -> &'static str {
   }
   "none"
 }
+#[cfg(test)]
 fn bump(current: &str, impact: &str) -> Result<String> {
   let mut version = Version::parse(current)?;
   match impact {
@@ -1753,6 +1919,8 @@ mod tests {
 
   fn release_configuration(root: &Path) -> Configuration {
     Configuration {
+      strategy: VersionStrategy::Semver,
+      template: None,
       root: root.to_path_buf(),
       releases: "releases".to_owned(),
       changelog: "CHANGELOG.md".to_owned(),
@@ -1907,7 +2075,7 @@ mod tests {
       assigned: BTreeSet::from(["new-cli".to_owned()]),
     };
 
-    let changelog = render_changelog(&configuration, &state);
+    let changelog = render_changelog(&configuration, &state).unwrap();
     assert!(
       changelog.contains("[Unreleased]: https://github.com/example/project/compare/v1.1.0...HEAD")
     );

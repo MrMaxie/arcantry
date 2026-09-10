@@ -8,6 +8,8 @@ fn release_artifact(impact: &str, visibility: &str, title: &str) -> String {
 
 fn legacy_configuration(root: &Path) -> Configuration {
   Configuration {
+    strategy: VersionStrategy::Semver,
+    template: None,
     root: root.to_path_buf(),
     releases: "releases".to_owned(),
     changelog: "CHANGELOG.md".to_owned(),
@@ -160,7 +162,7 @@ fn renders_every_consumer_outcome_with_shared_change_provenance() {
   );
   write_manifest(root, "1.1.0", "2026-09-01", &["export-release-data"]);
   let configuration = legacy_configuration(root);
-  let changelog = render_changelog(&configuration, &state(&configuration).unwrap());
+  let changelog = render_changelog(&configuration, &state(&configuration).unwrap()).unwrap();
   assert!(
     changelog
       .contains("### Added\n\n<!-- openspec: export-release-data -->\n#### Add reusable exports")
@@ -288,7 +290,7 @@ fn renders_public_changes_from_every_openspec_source() {
   configuration
     .openspec
     .push(("api".to_owned(), "components/api/openspec".to_owned()));
-  let changelog = render_changelog(&configuration, &state(&configuration).unwrap());
+  let changelog = render_changelog(&configuration, &state(&configuration).unwrap()).unwrap();
 
   assert!(changelog.contains("https://keepachangelog.com/en/2.0.0/"));
   assert!(changelog.contains("## [Unreleased]"));
@@ -339,7 +341,7 @@ fn validates_distribution_versions_and_the_rendered_changelog() {
   );
   fs::write(
     root.join("CHANGELOG.md"),
-    render_changelog(&configuration, &state(&configuration).unwrap()),
+    render_changelog(&configuration, &state(&configuration).unwrap()).unwrap(),
   )
   .unwrap();
   check_configuration(&configuration, false, None).unwrap();
@@ -358,7 +360,7 @@ fn sealed_checks_reject_active_and_unassigned_changes_before_git() {
   let configuration = legacy_configuration(root);
   fs::write(
     root.join("CHANGELOG.md"),
-    render_changelog(&configuration, &state(&configuration).unwrap()),
+    render_changelog(&configuration, &state(&configuration).unwrap()).unwrap(),
   )
   .unwrap();
   assert!(
@@ -371,7 +373,7 @@ fn sealed_checks_reject_active_and_unassigned_changes_before_git() {
   write_manifest(root, "0.1.0", "2026-08-16", &["release-history"]);
   fs::write(
     root.join("CHANGELOG.md"),
-    render_changelog(&configuration, &state(&configuration).unwrap()),
+    render_changelog(&configuration, &state(&configuration).unwrap()).unwrap(),
   )
   .unwrap();
   fs::create_dir_all(root.join("openspec/changes/in-progress")).unwrap();

@@ -14,6 +14,7 @@ pub fn execute(
   cwd: &Path,
   config: Option<&Path>,
   cwd_explicit: bool,
+  output: Option<&Path>,
 ) -> Result<i32> {
   let inspection = project_inspection(cwd, config, cwd_explicit)?;
   match command {
@@ -58,7 +59,7 @@ pub fn execute(
         source.visibility,
       )?);
       add_private_exclude_operation(&inspection.root, source.visibility, &mut plan)?;
-      handle_plan(plan, apply, false)
+      handle_plan(plan, apply, false, output)
     }
     TodoCommand::Complete {
       line,
@@ -79,7 +80,7 @@ pub fn execute(
           source.visibility,
         )?);
       }
-      handle_plan(plan, apply, false)
+      handle_plan(plan, apply, false, output)
     }
     TodoCommand::Move {
       line,
@@ -119,7 +120,7 @@ pub fn execute(
         target.visibility,
       )?);
       add_private_exclude_operation(&inspection.root, target.visibility, &mut plan)?;
-      handle_plan(plan, apply, false)
+      handle_plan(plan, apply, false, output)
     }
   }
 }

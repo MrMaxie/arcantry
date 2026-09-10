@@ -44,8 +44,37 @@ fn main() -> ExitCode {
 
 fn execute(cli: Cli) -> Result<i32> {
   let cwd_explicit = cli.cwd.is_some();
+  if cli.output.is_some()
+    && !matches!(&cli.command, Command::Diagnostics)
+    && !matches!(
+      &cli.command,
+      Command::Repo {
+        command: RepoCommand::Plan(_)
+      } | Command::Todo {
+        command: TodoCommand::Add { .. } | TodoCommand::Move { .. } | TodoCommand::Complete { .. }
+      } | Command::Release {
+        command: ReleaseCommand::Baseline { .. }
+          | ReleaseCommand::Cut { .. }
+          | ReleaseCommand::Render { .. }
+      }
+    )
+  {
+    anyhow::bail!("--output is only available for preview plans.");
+  }
   let cwd = absolutize(cli.cwd.as_deref().unwrap_or(Path::new(".")))?;
+  let output = cli.output.as_ref().map(|path| cwd.join(path));
   match cli.command {
+    Command::Diagnostics => {
+      let report = arcantry_core::guidance::diagnostics(&cwd, cli.config.as_deref(), cwd_explicit);
+      let text = serde_json::to_string_pretty(&report)?;
+      if let Some(path) = output.as_deref() {
+        arcantry_core::project_plan::write_new(path, &text)?;
+        eprintln!("Saved diagnostic report.");
+      } else {
+        println!("{text}");
+      }
+      Ok(0)
+    }
     Command::Mcp => {
       mcp::run(&cwd, cli.config.as_deref())?;
       Ok(0)
@@ -66,15 +95,32 @@ fn execute(cli: Cli) -> Result<i32> {
           json,
           false,
         ),
-        Command::Explain { topic, json } => (
+        Command::Explain {
+          topic,
+          json,
+          detailed,
+        } => (
           arcantry_core::guidance::explain(&project, &topic)?,
           json,
-          true,
+          detailed,
         ),
         _ => unreachable!(),
       };
       if json || detailed {
         println!("{}", serde_json::to_string_pretty(&value)?);
+      } else if let Some(format) = value["format"].as_str() {
+        println!(
+          "{format}\n\nExample:\n{}",
+          value["example"].as_str().unwrap_or_default()
+        );
+        for source in value["projectSources"].as_array().into_iter().flatten() {
+          println!(
+            "\nProject source: {}\n{}",
+            source["source"].as_str().unwrap_or_default(),
+            source["content"].as_str().unwrap_or_default()
+          );
+        }
+        println!("\nRules: arcantry explain rules --detailed");
       } else if let Some(action) = value["action"].as_str() {
         println!(
           "{action}\nNext: {}",
@@ -109,15 +155,27 @@ fn execute(cli: Cli) -> Result<i32> {
       Ok(0)
     }
 
-    Command::Repo { command } => {
-      repo_cmd::execute(command, &cwd, cli.config.as_deref(), cwd_explicit)
-    }
-    Command::Todo { command } => {
-      todo_cmd::execute(command, &cwd, cli.config.as_deref(), cwd_explicit)
-    }
-    Command::Release { command } => {
-      release_cmd::execute(command, &cwd, cli.config.as_deref(), cwd_explicit)
-    }
+    Command::Repo { command } => repo_cmd::execute(
+      command,
+      &cwd,
+      cli.config.as_deref(),
+      cwd_explicit,
+      output.as_deref(),
+    ),
+    Command::Todo { command } => todo_cmd::execute(
+      command,
+      &cwd,
+      cli.config.as_deref(),
+      cwd_explicit,
+      output.as_deref(),
+    ),
+    Command::Release { command } => release_cmd::execute(
+      command,
+      &cwd,
+      cli.config.as_deref(),
+      cwd_explicit,
+      output.as_deref(),
+    ),
     Command::Skills { command } => skills_cmd::execute(command, &cwd),
   }
 }
