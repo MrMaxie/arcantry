@@ -238,7 +238,7 @@ The compact mobile brand symbol MUST remain readable in both themes. Header sear
 
 Prose links MUST use the same theme-aware accent treatment on authored pages, generated references, imported changelog content and configurator guidance. Executable shell examples MUST declare a shell language and use the shared code renderer, including generated skill pages and interactive examples. Plain-text data, command grammar and agent prose MAY remain unhighlighted.
 
-The changelog MUST preserve the canonical history while clearly separating release headings, change categories and entry titles through spacing and typography. The configurator header, content and project footer MUST share horizontal bounds and gutters at each viewport. The configurator MUST NOT introduce a standalone breadcrumb absent from the rest of the documentation.
+The changelog MUST preserve the canonical history while clearly separating release headings, change categories and entry titles through spacing and typography. The configurator MUST reuse the homepage layout for pages without a sidebar: the same content container, header bounds, footer bounds and responsive gutters, without a separate configurator width or inset. The configurator MUST NOT introduce a standalone breadcrumb absent from the rest of the documentation.
 
 #### Scenario: A reader moves between content pages
 
