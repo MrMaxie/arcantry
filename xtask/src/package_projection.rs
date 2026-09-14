@@ -159,6 +159,14 @@ mod tests {
       fs::read_to_string(package_root.join("assets/openspec/schema.yaml")).unwrap(),
       "openspec"
     );
+    assert_eq!(
+      fs::read_to_string(package_root.join(".claude-plugin/plugin.json")).unwrap(),
+      "claude"
+    );
+    assert_eq!(
+      fs::read_to_string(package_root.join(".codex-plugin/plugin.json")).unwrap(),
+      "codex"
+    );
     for name in PROJECTIONS {
       assert!(
         package_root.join(name).exists(),

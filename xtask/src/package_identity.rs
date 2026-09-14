@@ -116,11 +116,11 @@ fn keeps_agent_manifests_aligned_with_the_package_identity() {
 }
 
 #[test]
-fn packaged_plugin_manifests_match_the_canonical_checkout() {
-  for host in [".codex-plugin/plugin.json", ".claude-plugin/plugin.json"] {
-    let canonical = json(host);
-    let packaged = json(&format!("packages/arcantry/{host}"));
-    assert_eq!(packaged, canonical, "{host}");
+fn main_package_declares_both_plugin_manifests() {
+  let package = json("packages/arcantry/package.json");
+  let files = package["files"].as_array().unwrap();
+  for host in [".codex-plugin", ".claude-plugin"] {
+    assert!(files.iter().any(|entry| entry == host), "{host}");
   }
 }
 
