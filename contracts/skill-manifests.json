@@ -115,11 +115,11 @@
     "name": "audience-scope-discipline",
     "version": "1.0.0",
     "role": "supporting",
-    "digest": "0424fb1e2ec6eed33d83f0925c262ddcf91f28752ae951800fb8ee04c636cc12",
+    "digest": "774b156d75e7655ecdc6faa145d167469b8d5db30b8508f6aeacca319d29b547",
     "files": [
       {
         "path": "SKILL.md",
-        "sha256": "52752528372becd43e1e0ed4f135693fe2072c2eac5f7d68d9c1c14f6a2e11e1"
+        "sha256": "8d298eeb4ddddcb9209e0f983ec3f98f777ea30e6169532c25e95135183436ea"
       },
       {
         "path": "agents/openai.yaml",
@@ -217,11 +217,11 @@
     "name": "capture-project-work",
     "version": "1.0.0",
     "role": "primary",
-    "digest": "ba8422a19ecae71d8cf0d9d9b96990f6922ab42c8d78f21e512955f01f9e4bfe",
+    "digest": "23788ce6c56424ad2fa022aacd4ab4b87384a197f168cbc3ef11148656ccc2da",
     "files": [
       {
         "path": "SKILL.md",
-        "sha256": "90334f3721ad3bf4acaeb1448dc8dcab201b12e33ba3f8bd8d8958ceb4994dd6"
+        "sha256": "be0ce32f5f5c679705d21aea4d5bbb6b8414ee25168d1531e57fc759df1782d9"
       },
       {
         "path": "agents/openai.yaml",
@@ -499,11 +499,11 @@
     "name": "maintain-agent-guidance",
     "version": "1.0.0",
     "role": "primary",
-    "digest": "b225f22bc2c0951b50392a212161f4170e3e8ad6dc98b176cad4f8e89a95ba6f",
+    "digest": "55bef76a48cd5e582dce9b88d23f65189cbd3768cd23e53f592c03a6d163248f",
     "files": [
       {
         "path": "SKILL.md",
-        "sha256": "273d9ba5a543b6b92fcc8597821bd7f71e3a8e295cfe4b355c7e9ffe65415703"
+        "sha256": "d73091df1d8137aceefe95f735a7e874b5631f6a19918192edfc8f62f076aa9b"
       },
       {
         "path": "agents/openai.yaml",
@@ -527,11 +527,11 @@
     "name": "maintain-release-story",
     "version": "1.0.0",
     "role": "primary",
-    "digest": "7d2b0c01b03a6b70a60fb724e43e2f707654847bbb85a8a4548fde8538a709c5",
+    "digest": "e3b9ee3c4cfee6135ba3544bcff5fa8015af51b1effc4dbe5aec593b1000f0f6",
     "files": [
       {
         "path": "SKILL.md",
-        "sha256": "db8c8ffcfe2ff8bdbf35dd7d86d08082eb6551f1bf65c2088a1eb35c27344d1a"
+        "sha256": "a25da0e4aee5fa7fa56caeb8afe624f8210a9510c860638d4f382a9fd4cf62fd"
       },
       {
         "path": "agents/openai.yaml",
@@ -539,7 +539,7 @@
       },
       {
         "path": "arcantry.json",
-        "sha256": "ed1a5ede8a177eb3e9b25562a8d558ecdeab6f876bb302051d31972558114491"
+        "sha256": "5b2816db7d605af0014a727aeceea129c5ded5a2ec8bc55305ddec6f0dec9bb5"
       }
     ],
     "history": [
@@ -718,11 +718,11 @@
     "name": "select-task-skills",
     "version": "1.0.0",
     "role": "supporting",
-    "digest": "24d94582b7d03f3838b8e8de089a1701c6ddc465f4fb8043f0f0852a3f586f01",
+    "digest": "5fb039a39d5224484ed995756d15a45ede39698fe8adbe471bc79d83660f7f14",
     "files": [
       {
         "path": "SKILL.md",
-        "sha256": "a1a0660e8dde1140612a7659c1204886aa288b28ea7f5781d9970da98ec5958f"
+        "sha256": "0a1acb26c43efe137015816d87ba6d0407c9987e82c47d42bf5444a9e715250a"
       },
       {
         "path": "agents/openai.yaml",
@@ -730,11 +730,11 @@
       },
       {
         "path": "arcantry.json",
-        "sha256": "c61d91a3e79aa28c542fba3b2691a311cca751ab00e093c85d2a94d532443fae"
+        "sha256": "bd57b4202073ed052a7b4335575cecda7e972b44820700f593e262f849d87d91"
       },
       {
         "path": "references/selection-rules.md",
-        "sha256": "1a28c5a1bb89d601ba51d598fda190b4c60567a54193bc5cfe1b56c5f6eb6de4"
+        "sha256": "7ec2bad0bbfff4750f4ca3967b8bc20b4fe94784825fc1a8ad8341313896ddf8"
       },
       {
         "path": "scripts/index_skills.py",
