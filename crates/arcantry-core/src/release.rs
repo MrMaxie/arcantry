@@ -435,20 +435,10 @@ fn validate_git_seal(
     configuration.releases.trim_end_matches(['/', '\\']),
     latest.version
   );
-  let manifest_commit = duct::cmd(
-    "git",
-    [
-      "log",
-      "--diff-filter=A",
-      "-1",
-      "--format=%H",
-      "--",
-      &manifest_path,
-    ],
-  )
-  .stdin_null()
-  .dir(&configuration.root)
-  .read()?;
+  let manifest_commit = duct::cmd("git", ["log", "-1", "--format=%H", "--", &manifest_path])
+    .stdin_null()
+    .dir(&configuration.root)
+    .read()?;
   if manifest_commit.trim().is_empty() {
     bail!("latest release manifest is not committed: {manifest_path}");
   }
@@ -2274,7 +2264,7 @@ mod tests {
   }
 
   #[test]
-  fn requires_head_to_be_the_manifest_commit() {
+  fn requires_head_to_be_the_latest_manifest_commit() {
     let directory = tempfile::tempdir().unwrap();
     let root = directory.path();
     fs::create_dir(root.join("releases")).unwrap();
@@ -2299,6 +2289,18 @@ mod tests {
       assigned: BTreeSet::new(),
     };
     let configuration = release_configuration(root);
+    validate_git_seal(&configuration, &state, None).unwrap();
+
+    fs::write(
+      root.join("releases/1.0.0.yaml"),
+      "version: 1.0.0\ndate: 2026-09-14\n",
+    )
+    .unwrap();
+    git(root, &["add", "releases/1.0.0.yaml"]);
+    git(
+      root,
+      &["commit", "--quiet", "-m", "chore: finalize manifest"],
+    );
     validate_git_seal(&configuration, &state, None).unwrap();
 
     fs::write(root.join("later.txt"), "later\n").unwrap();

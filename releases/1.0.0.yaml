@@ -1,7 +1,36 @@
 version: 1.0.0
-date: 2026-08-18
+date: 2026-09-14
 changes:
+  - add-agent-prompt-configurator
+  - add-code-quality-skills
+  - add-design-coherent-gui-skill
+  - add-deterministic-context-discovery
+  - adopt-discovered-sources-into-config
+  - align-host-plugin-identity
+  - align-public-trust-surface-with-evidence
+  - define-managed-and-detached-adoption
+  - deliver-practical-mvp
+  - establish-arcantry-dev-public-domain
+  - establish-executable-cli-contract
+  - explain-arcantry-fit-and-adoption-tradeoffs
+  - expose-generic-release-cli
+  - extend-configurator-adoption-scenarios
+  - harden-native-cli-verification-gates
+  - improve-configurator-responsive-reflow
+  - make-cli-documentation-verifiable
+  - model-audience-based-release-projection
+  - organize-docs-and-adopt-nub
+  - preserve-cli-intent-provenance
+  - preserve-todo-queue-conventions
   - refine-documentation-navigation
   - refine-overview-product-story
+  - restore-verified-release-publishing
+  - retire-typescript-core-and-tooling
+  - ship-native-rust-cli
   - stabilize-arcantry-1-0
+  - support-composable-release-units
   - support-multiple-agent-hosts
+  - support-multiple-release-outcomes
+  - support-official-todo-txt-baseline
+  - support-private-project-artifacts-and-universal-agent-files
+  - version-and-update-skills

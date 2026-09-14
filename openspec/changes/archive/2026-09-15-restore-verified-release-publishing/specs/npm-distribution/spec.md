@@ -30,3 +30,9 @@ The `arcantry` package MUST declare exact-version optional dependencies on `@arc
 - **WHEN** a platform or main package version already exists during a retry
 - **THEN** it is skipped only when its registry integrity matches the retained verified archive
 - **AND** any mismatch fails publication before the GitHub Release becomes public
+
+#### Scenario: Publication resumes after a partial platform upload
+
+- **WHEN** a platform version already exists during a retry
+- **THEN** it is accepted only when its registry metadata and integrity match the retained verified archive
+- **AND** a mismatch fails publication instead of overwriting or reusing the version
