@@ -186,7 +186,6 @@ class ArcantryConfigurator extends HTMLElement {
       (event) => {
         if (this.startedEmpty && this.querySelector('input:checked')) {
           event.preventDefault();
-          event.returnValue = '';
         }
       },
       options,
