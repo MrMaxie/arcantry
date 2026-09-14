@@ -166,7 +166,7 @@ pub fn package_manifest_for_directory(
     }
     files.push(SkillPackageFile {
       path,
-      sha256: hex_digest(&fs::read(entry.path())?),
+      sha256: package_file_digest(entry.path())?,
     });
   }
   files.sort_by(|left, right| left.path.cmp(&right.path));
@@ -218,6 +218,17 @@ fn hex_digest(bytes: &[u8]) -> String {
     .iter()
     .map(|byte| format!("{byte:02x}"))
     .collect()
+}
+
+fn package_file_digest(path: &Path) -> Result<String> {
+  let bytes = fs::read(path)?;
+  let normalized = std::str::from_utf8(&bytes)
+    .ok()
+    .map(|text| text.replace("\r\n", "\n"));
+  Ok(match normalized {
+    Some(text) => hex_digest(text.as_bytes()),
+    None => hex_digest(&bytes),
+  })
 }
 
 pub fn inspect_private(root: &Path, name: &str) -> Result<PrivateSkillInspection> {
@@ -1201,6 +1212,20 @@ mod tests {
 
     assert!(valid, "{errors:?}");
     assert!(errors.is_empty());
+  }
+
+  #[test]
+  fn package_manifest_normalizes_utf8_line_endings() {
+    let unix = catalog_fixture();
+    let windows = catalog_fixture();
+    let skill = windows.path().join("skills/example-skill/SKILL.md");
+    let source = fs::read_to_string(&skill).unwrap();
+    fs::write(&skill, source.replace('\n', "\r\n")).unwrap();
+
+    assert_eq!(
+      package_manifest(unix.path(), "example-skill").unwrap(),
+      package_manifest(windows.path(), "example-skill").unwrap()
+    );
   }
 
   #[test]
