@@ -234,4 +234,3 @@ The GitHub Pages site MUST assign `arcantry.dev` as its custom domain, serve it 
 - **WHEN** they request HTTP or the `www` hostname
 - **THEN** they reach the corresponding HTTPS route on `https://arcantry.dev/`
 - **AND** the delivered page identifies the apex origin as canonical
-

@@ -138,4 +138,3 @@ Legacy embedded links, source-checkout links and ordinary skill directories with
 - **WHEN** no receipt proves ownership or installed bytes differ from its receipt
 - **THEN** status identifies the state and update apply refuses an implicit replacement
 - **AND** the existing files and links remain unchanged
-
