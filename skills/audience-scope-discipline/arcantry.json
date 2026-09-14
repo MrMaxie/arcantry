@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "supporting",
   "summary": "Protect the intended audience, authorized scope, privacy boundary, and established structure of an artifact.",
   "scenarios": [
     {

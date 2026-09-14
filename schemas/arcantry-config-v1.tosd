@@ -93,7 +93,7 @@ description = "Optional versioned OpenSpec release system. Runtime validation en
 
 [types.release.adapter]
 type = "string"
-allowedvalues = ["openspec-release@1", "openspec-release@2"]
+allowedvalues = ["openspec-release@1"]
 
 [types.release.topology]
 type = "string"
@@ -133,7 +133,7 @@ optional = true
 
 [types.release_unit]
 type = "table"
-description = "One independently versioned release unit in a multi-unit v2 release system."
+description = "One independently versioned release unit in a multi-unit release system."
 
 [types.release_unit.manifests_path]
 type = "string"

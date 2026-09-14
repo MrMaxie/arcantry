@@ -27,6 +27,8 @@ pub struct SkillScenario {
 pub struct SkillMetadata {
   #[serde(rename = "$schema")]
   pub schema: String,
+  pub version: String,
+  pub role: String,
   pub summary: String,
   pub scenarios: Vec<SkillScenario>,
   #[serde(default)]
@@ -83,6 +85,23 @@ pub struct LinkResult {
   created_directories: Vec<PathBuf>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillPackageFile {
+  pub path: String,
+  pub sha256: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillPackageManifest {
+  pub name: String,
+  pub version: String,
+  pub role: String,
+  pub digest: String,
+  pub files: Vec<SkillPackageFile>,
+}
+
 pub fn load(root: &Path) -> Result<Catalog> {
   let value: serde_json::Value =
     serde_json::from_str(&fs::read_to_string(root.join("catalog.json"))?)?;
@@ -108,6 +127,97 @@ pub fn inspect(root: &Path, name: &str) -> Result<SkillInspection> {
     metadata,
     directory,
   })
+}
+
+pub fn package_manifest(root: &Path, name: &str) -> Result<SkillPackageManifest> {
+  let inspection = inspect(root, name)?;
+  package_manifest_for_directory(&inspection.directory, name, &inspection.metadata)
+}
+
+pub fn package_manifest_for_directory(
+  directory: &Path,
+  name: &str,
+  metadata: &SkillMetadata,
+) -> Result<SkillPackageManifest> {
+  validate_name(name)?;
+  let mut files = Vec::new();
+  for entry in walkdir::WalkDir::new(directory).follow_links(false) {
+    let entry = entry?;
+    if entry.file_type().is_symlink() {
+      bail!(
+        "Skill packages cannot contain symbolic links: {}",
+        entry.path().display()
+      );
+    }
+    if !entry.file_type().is_file() {
+      continue;
+    }
+    let path = entry
+      .path()
+      .strip_prefix(directory)?
+      .to_string_lossy()
+      .replace('\\', "/");
+    if path.is_empty()
+      || path
+        .split('/')
+        .any(|segment| segment.is_empty() || segment == "." || segment == "..")
+    {
+      bail!("Skill package contains an invalid relative path: {path}");
+    }
+    files.push(SkillPackageFile {
+      path,
+      sha256: hex_digest(&fs::read(entry.path())?),
+    });
+  }
+  files.sort_by(|left, right| left.path.cmp(&right.path));
+  let mut digest_input = Vec::new();
+  for file in &files {
+    digest_input.extend_from_slice(file.path.as_bytes());
+    digest_input.push(0);
+    digest_input.extend_from_slice(file.sha256.as_bytes());
+    digest_input.push(b'\n');
+  }
+  Ok(SkillPackageManifest {
+    name: name.to_owned(),
+    version: metadata.version.clone(),
+    role: metadata.role.clone(),
+    digest: hex_digest(&digest_input),
+    files,
+  })
+}
+
+pub fn validate_package_directory(
+  directory: &Path,
+  name: &str,
+  schema_directory: &Path,
+) -> Result<SkillPackageManifest> {
+  validate_source(directory, name)?;
+  let metadata_path = directory.join("arcantry.json");
+  let value: serde_json::Value = serde_json::from_str(&fs::read_to_string(&metadata_path)?)?;
+  validate_json_document(
+    &schema_directory.join("skill-metadata.schema.json"),
+    &value,
+    &format!("skills/{name}/arcantry.json"),
+  )?;
+  let metadata: SkillMetadata = serde_json::from_value(value)?;
+  let agent = load_skill_agent_file(&directory.join("agents/openai.yaml"))?;
+  if !agent.default_prompt.contains(&format!("${name}")) {
+    bail!("skills/{name}/agents/openai.yaml must mention ${name}.");
+  }
+  let mut errors = Vec::new();
+  validate_markdown_links(directory, directory, &mut errors);
+  if !errors.is_empty() {
+    bail!("{}", errors.join("; "));
+  }
+  package_manifest_for_directory(directory, name, &metadata)
+}
+
+fn hex_digest(bytes: &[u8]) -> String {
+  use sha2::{Digest, Sha256};
+  Sha256::digest(bytes)
+    .iter()
+    .map(|byte| format!("{byte:02x}"))
+    .collect()
 }
 
 pub fn inspect_private(root: &Path, name: &str) -> Result<PrivateSkillInspection> {
@@ -504,6 +614,25 @@ pub fn rollback_links(results: &[LinkResult]) -> Result<()> {
   Ok(())
 }
 
+pub fn finalize_links(results: &[LinkResult]) -> Result<()> {
+  for result in results {
+    if let Some(backup) = &result.backup {
+      #[cfg(windows)]
+      if junction::exists(backup)? {
+        remove_directory_link(backup)?;
+        continue;
+      }
+      let metadata = fs::symlink_metadata(backup)?;
+      if metadata.is_dir() && !metadata.file_type().is_symlink() {
+        fs::remove_dir_all(backup)?;
+      } else {
+        fs::remove_file(backup)?;
+      }
+    }
+  }
+  Ok(())
+}
+
 pub fn unlink(source: &Path, name: &str, target_roots: &[PathBuf]) -> Result<Vec<LinkResult>> {
   unlink_with_checkpoint(source, name, target_roots, |_, _, _| Ok(()))
 }
@@ -846,6 +975,8 @@ mod tests {
       skill.join("arcantry.json"),
       serde_json::to_string_pretty(&serde_json::json!({
         "$schema": "../../schemas/skill-metadata.schema.json",
+        "version": "1.0.0",
+        "role": "primary",
         "summary": "Validate one complete skill package in the Arcantry catalog.",
         "scenarios": [
           {
@@ -1046,6 +1177,8 @@ mod tests {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let value = serde_json::json!({
       "$schema": "../../schemas/skill-metadata.schema.json",
+      "version": "1.0.0",
+      "role": "primary",
       "summary": "Too short",
       "scenarios": []
     });

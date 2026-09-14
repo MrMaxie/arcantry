@@ -81,14 +81,14 @@ struct OwnershipMarker {
 pub fn materialize_catalog() -> Result<PathBuf> {
   let directories = ProjectDirs::from("dev", "MrMaxie", "Arcantry")
     .context("Could not resolve the Arcantry data directory.")?;
-  let parent = directories.data_dir().join("catalog");
+  let parent = directories.data_dir().join("catalog-snapshots");
   materialize_in(&parent)
 }
 
 fn materialize_in(parent: &Path) -> Result<PathBuf> {
-  let target = parent.join(arcantry_core::VERSION);
+  let target = parent.join(manifest_digest());
   fs::create_dir_all(parent)?;
-  let lock_path = parent.join(format!("{}.lock", arcantry_core::VERSION));
+  let lock_path = parent.join(format!("{}.lock", manifest_digest()));
   let lock = OpenOptions::new()
     .create(true)
     .truncate(false)
@@ -115,7 +115,7 @@ fn materialize_locked(parent: &Path, target: &Path) -> Result<PathBuf> {
     fs::remove_dir_all(target)?;
   }
   let temporary = tempfile::Builder::new()
-    .prefix(&format!(".{}-", arcantry_core::VERSION))
+    .prefix(".catalog-")
     .tempdir_in(parent)?;
   write_assets(temporary.path())?;
   fs::write(temporary.path().join("asset-manifest.json"), MANIFEST)?;
@@ -264,7 +264,7 @@ mod tests {
   }
 
   #[test]
-  fn refreshes_an_owned_catalog_from_an_older_build_of_the_same_version() {
+  fn repairs_a_tampered_owned_content_addressed_catalog() {
     let temporary = tempfile::tempdir().unwrap();
     let target = materialize_in(temporary.path()).unwrap();
     let mut entries: Vec<AssetManifestEntry> =
@@ -298,7 +298,7 @@ mod tests {
   #[test]
   fn refuses_unowned_content() {
     let temporary = tempfile::tempdir().unwrap();
-    let target = temporary.path().join(arcantry_core::VERSION);
+    let target = temporary.path().join(manifest_digest());
     fs::create_dir_all(&target).unwrap();
     fs::write(target.join("foreign.txt"), "keep").unwrap();
     assert!(
@@ -310,6 +310,22 @@ mod tests {
     assert_eq!(
       fs::read_to_string(target.join("foreign.txt")).unwrap(),
       "keep"
+    );
+  }
+
+  #[test]
+  fn leaves_a_legacy_version_keyed_catalog_untouched() {
+    let temporary = tempfile::tempdir().unwrap();
+    let legacy = temporary.path().join(arcantry_core::VERSION);
+    fs::create_dir_all(&legacy).unwrap();
+    fs::write(legacy.join("owned-by-older-cli.txt"), "preserve").unwrap();
+
+    let target = materialize_in(temporary.path()).unwrap();
+
+    assert_ne!(target, legacy);
+    assert_eq!(
+      fs::read_to_string(legacy.join("owned-by-older-cli.txt")).unwrap(),
+      "preserve"
     );
   }
 
@@ -334,7 +350,7 @@ mod tests {
   #[test]
   fn ignores_an_unowned_interrupted_temporary_directory() {
     let temporary = tempfile::tempdir().unwrap();
-    let interrupted = temporary.path().join(".1.0.0-interrupted");
+    let interrupted = temporary.path().join(".catalog-interrupted");
     fs::create_dir_all(&interrupted).unwrap();
     fs::write(interrupted.join("foreign.txt"), "keep").unwrap();
 

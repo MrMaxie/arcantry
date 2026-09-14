@@ -1,91 +1,81 @@
 ---
 title: Skills
-description: Choose focused Arcantry skills for self-improvement, repository safety, and content safety.
+description: Choose and install one focused Arcantry skill.
 ---
 
-Arcantry skills are self-contained Agent Skills packages. Each one owns a focused procedure, public metadata, scenarios, and any references or scripts it needs.
+Arcantry skills are self-contained Agent Skills packages. Each skill owns one focused procedure, and every detail page is generated from its canonical package.
 
-## Three families
+## Choose a family
 
 | Family | Use it for |
 | --- | --- |
-| `self-improvement` | Capture repeated work, create and evaluate skills, maintain agent guidance, select task skills, and stage review findings. |
-| `repo-safely` | Adopt a repository, capture incoming work, promote todo work into OpenSpec, reconcile sources, maintain release meaning, and verify proportionally. |
-| `content-safely` | Protect audience and privacy, design terminal experiences, and write concrete product content without slop. |
+| Self improvement | Improve repeatable agent work, guidance, skill selection, and review. |
+| Repository safety | Adopt repositories, manage project knowledge, and verify changes without crossing ownership boundaries. |
+| Content safety | Protect audience and privacy, and design or write clear user-facing content. |
+| Code quality | Assess code, design maintainable boundaries, and perform authorized behavior-preserving refactors. |
 
-No family is a router skill. Every catalog entry performs one focused job.
+Families organize the catalog; they do not add another routing layer.
 
-## Inspect and link one skill
+Every public skill declares its own semantic version and role: `primary` for a complete user outcome, `supporting` for a companion boundary, or `advanced` for an expert workflow. These fields describe the skill package and do not change whether a host may select it automatically.
+
+## Install one skill
+
+Find the exact name, inspect it, then link only that skill:
 
 ```sh
 arcantry skills list
 arcantry skills inspect <name>
 arcantry skills link <name> --scope user
-arcantry skills link <name> --scope user --compat claude
-arcantry skills doctor --scope user
 ```
 
-Use user scope by default so the skill remains available across projects. Choose repository scope only for a shared repository requirement, and use a private package under `.local/skills` only as an explicitly selected fallback or local override.
-
-Arcantry recommends the universal Agent Skills locations:
+User scope makes the skill available across projects. Use `arcantry skills link <name> --scope repo` when one repository should own the link. Add `--compat claude` only when you also need a Claude alias.
 
 | Surface | User scope | Repository scope |
 | --- | --- | --- |
 | Universal Agent Skills | `~/.agents/skills` | `<repo>/.agents/skills` |
-| Optional Claude compatibility | `~/.claude/skills` | `<repo>/.claude/skills` |
+| Optional Claude alias | `~/.claude/skills` | `<repo>/.claude/skills` |
 
-Codex reads the universal surface directly. Claude Code compatibility is an additional alias to the same canonical package:
+Codex reads the universal `.agents/skills` surface directly. Linking is idempotent and never overwrites an ordinary directory unless you explicitly use `--replace`, which creates a backup first.
+
+## Check and update one skill
+
+Local status does not contact the network:
 
 ```sh
-arcantry skills link <name> --scope repo --compat claude
+arcantry skills status assess-code-quality --scope user
 ```
 
-Use `--target <path>` only for an advanced explicit Agent Skills directory. It cannot be combined with `--scope` or `--compat`.
+Add `--check` to compare it with the official Arcantry `master`. Save and review an exact update before applying it:
 
-Linking is idempotent when the target already points to the canonical package. Arcantry preflights the universal and compatibility destinations before writing. It does not overwrite an ordinary directory. `--replace` creates a backup first. Unlinking removes only exact links to the selected skill.
+```sh
+arcantry --output skill-update.json skills update assess-code-quality --scope user
+arcantry skills apply --plan skill-update.json
+```
 
-## Keep repository skills private
+An explicit `--catalog-root` uses a local catalog instead. Updates never match private skills to the public source or replace an unmanaged or locally modified package.
 
-A repository can keep a canonical skill under `.local/skills/<name>` and expose it through locally excluded links:
+## Keep a skill private
+
+A repository may keep a canonical package under `.local/skills/<name>` and expose only locally excluded links:
 
 ```sh
 arcantry skills list --scope private
-arcantry skills inspect <name> --scope private
 arcantry skills link <name> --scope private
-arcantry skills link <name> --scope private --compat claude
 ```
 
-Private and public packages cannot reuse the same skill name. `.agents` and `.claude` aliases that resolve to one real package remain one skill, not duplicates.
+Private and public packages cannot reuse the same skill name. Universal and Claude links to one canonical package still count as one skill.
 
-## Load the complete catalog
+## Install without the Arcantry CLI
 
-The repository exposes the same `skills/` tree through optional package manifests:
-
-```sh
-claude --plugin-dir ./arcantry
-```
-
-Claude Code namespaces plugin skills as `/arcantry:<name>`. Codex can use `.codex-plugin/plugin.json` from the same repository. Both manifests carry the current Arcantry version, but neither is required for the universal `.agents` workflow.
-
-## Other Agent Skills workflows
-
-The packages use the open Agent Skills directory format, so compatible independent installers can discover them from `skills/*/SKILL.md`:
+Compatible Agent Skills installers can install one named package directly:
 
 ```sh
 gh skill install MrMaxie/arcantry <name> --agent codex --scope user
 npx skills add MrMaxie/arcantry --skill <name> -a codex -g
 ```
 
-See the [GitHub CLI skill installer](https://cli.github.com/manual/gh_skill_install) and the [open `skills` CLI](https://github.com/vercel-labs/skills) for their current scope and host rules. They may choose host-specific destinations. Manual copying or symbolic linking also works.
+[`gh skill install`](https://cli.github.com/manual/gh_skill_install) and [`npx skills add`](https://github.com/vercel-labs/skills) are alternatives to the Arcantry linker, not runtime dependencies. Manual copying or symbolic linking also works. Use `claude --plugin-dir ./arcantry` only when you explicitly want the complete catalog instead of one skill.
 
-These workflows are alternatives to the Arcantry linker, not runtime dependencies.
-
-## Tool and write boundaries
-
-A skill may declare a connector or command-line dependency. That declaration does not authorize creating issues, posting replies, publishing content, or changing another system. External writes still require authority for the exact target and action.
-
-## Generated reference
-
-Per-skill pages are generated from canonical packages so descriptions, scenarios, family placement, and dependencies remain aligned.
+A declared tool dependency never authorizes an external write. The user still controls the exact target and action.
 
 [Browse the complete skill catalog](./catalog/)

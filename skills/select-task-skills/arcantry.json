@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "supporting",
   "summary": "Choose a small set of available skills whose non-overlapping workflows materially improve a complex task.",
   "scenarios": [
     {

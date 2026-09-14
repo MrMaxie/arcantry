@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "advanced",
   "summary": "Measure a candidate skill against its baseline on repeatable routing and behavior cases before deciding on adoption.",
   "scenarios": [
     {

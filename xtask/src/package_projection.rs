@@ -2,13 +2,14 @@ use anyhow::{Context, Result, bail};
 use std::fs;
 use std::path::Path;
 
-const PROJECTIONS: [&str; 8] = [
+const PROJECTIONS: [&str; 9] = [
   ".claude-plugin",
   ".codex-plugin",
   "assets",
   "skills",
   "schemas",
   "catalog.json",
+  "contracts",
   "LICENSE",
   "README.md",
 ];
@@ -39,6 +40,16 @@ pub fn prepare(root: &Path) -> Result<()> {
     &root.join("catalog.json"),
     &package_root.join("catalog.json"),
   )?;
+  for name in [
+    "cli-contract.json",
+    "public-trust.json",
+    "skill-manifests.json",
+  ] {
+    copy_file(
+      &root.join("contracts").join(name),
+      &package_root.join("contracts").join(name),
+    )?;
+  }
   copy_tree(&root.join("skills"), &package_root.join("skills"))?;
   copy_tree(&root.join("schemas"), &package_root.join("schemas"))?;
   copy_tree(
@@ -120,6 +131,9 @@ mod tests {
       (".claude-plugin/plugin.json", "claude"),
       (".codex-plugin/plugin.json", "codex"),
       ("catalog.json", "catalog"),
+      ("contracts/cli-contract.json", "contract"),
+      ("contracts/public-trust.json", "trust"),
+      ("contracts/skill-manifests.json", "skills"),
       ("skills/example/SKILL.md", "skill"),
       ("schemas/example.json", "schema"),
       ("openspec/schemas/arcantry/schema.yaml", "openspec"),

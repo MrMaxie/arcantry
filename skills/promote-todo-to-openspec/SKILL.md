@@ -13,6 +13,7 @@ Treat `todo.txt` as a mixed queue, not a specification backlog. Entries may desc
 - Read applicable agent guidance, Arcantry configuration, OpenSpec configuration and templates, active changes, and relevant current specs.
 - Preserve todo.txt syntax, ordering, line endings, project tags, and unrelated entries.
 - Treat todo content as private evidence. Do not send it to external services or copy sensitive details into shared artifacts.
+- Capture a deterministic snapshot before proposing transformations. Prefer `arcantry todo list --source <id> --json`; retain the queue content hash and each selected line's raw text, line number and digest. If the CLI is unavailable, compute and record equivalent hashes locally without making them part of product intent.
 
 Use `protect-local-boundary` before reading or writing a source under `.local/` and whenever a proposed transformation crosses between private and shared sources.
 
@@ -65,13 +66,21 @@ Keep each proposal in one of: `proposed`, `revising`, `accepted`, `rejected`, or
 
 ## Apply accepted transformations
 
-Re-read the source and targets before editing. If either drifted, revise the affected proposal instead of applying stale mapping.
+Re-read the source and targets before editing. Compare the queue content hash and every selected line digest with the accepted proposal. If either source or target drifted, revise the affected proposal instead of applying stale mapping.
 
 Use the project's current OpenSpec schema, templates, and validation commands. Create or update only the accepted targets. Do not implement or archive the proposed product changes.
 
-Remove a todo entry only when its accepted transformation explicitly authorizes full promotion and every target validates. For `partial`, retain the unpromoted portion using an explicit compatible source convention when one exists; otherwise use the official one-task-per-line todo.txt baseline without inventing optional priority, dates, projects, contexts, or metadata. For `relocate`, verify the private target before removing the source copy.
+Build one exact preview that includes every target write, provenance record and source replacement or removal. Use Arcantry's serializable project plan and `repo apply --plan` when available so unchanged input hashes and atomic rollback protect the apply. Direct source edits remain allowed when the CLI is unavailable, but they must preserve the same snapshot, validation and all-or-nothing boundary.
+
+Remove a todo entry only when its accepted transformation explicitly authorizes full promotion and every target validates. For `partial`, retain the explicit unpromoted remainder using an explicit compatible source convention when one exists; otherwise use the official one-task-per-line todo.txt baseline without inventing optional priority, dates, projects, contexts, or metadata. For `relocate`, verify the private target before removing the source copy.
+
+Write provenance at the target's visibility. A shared target may record source id, transformation id, mapping kind, line number and digest only when the source is shared. Private source identity, raw content and hashes stay under `.local`; a shared target may state only that private evidence was reviewed and approved. Provenance is bounded history, never a continuing synchronization link.
 
 After applying, re-read the bounded todo result, validate every changed OpenSpec target, and reconcile the coverage ledger. Report applied IDs, retained entries, validation results, and anything unresolved.
+
+## Defer without losing visibility
+
+Use `t:YYYY-MM-DD` for a date threshold and `wait:<slug>` for an opaque manual condition. A date-threshold item becomes active on that local date. A waiting item remains inactive until a user clears the marker. Use `arcantry todo defer` and `arcantry todo resume` when available. These markers affect `arcantry next` only; `todo list` continues to show the complete queue.
 
 ## Privacy boundary
 

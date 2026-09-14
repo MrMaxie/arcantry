@@ -24,7 +24,7 @@
             "maxLength": 63
           },
           "family": {
-            "enum": ["self-improvement", "repo-safely", "content-safely"]
+            "enum": ["self-improvement", "repo-safely", "content-safely", "code-quality"]
           },
           "tags": {
             "type": "array",

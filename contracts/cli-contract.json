@@ -1,5 +1,34 @@
 {
-  "version": 1,
+  "version": 2,
+  "evidencePolicy": {
+    "idFormat": "<command-evidence>:<dimension>",
+    "requiredDimensions": ["help", "invalid", "success"],
+    "mutationDimensions": ["preview", "apply", "rejection-or-rollback"],
+    "mutatingCommands": [
+      "repo apply",
+      "repo detach",
+      "repo init",
+      "repo update",
+      "repo remove",
+      "todo add",
+      "todo complete",
+      "todo move",
+      "todo defer",
+      "todo resume",
+      "release baseline",
+      "release cut",
+      "release render",
+      "skills apply",
+      "skills link",
+      "skills unlink"
+    ]
+  },
+  "provenance": {
+    "appliesTo": "all-commands-and-trust-claims",
+    "requirement": "openspec/specs/cli/spec.md",
+    "documentation": "apps/docs/src/content/docs/reference/cli.md",
+    "evidence": "crates/arcantry-cli/tests/cli_contract.rs"
+  },
   "globalOptions": [
     {
       "syntax": "--cwd <path>",
@@ -59,6 +88,11 @@
       "evidence": "repo-apply"
     },
     {
+      "path": "repo detach",
+      "syntax": "repo detach [--capability <id>...] [--apply] [--json]",
+      "evidence": "repo-detach"
+    },
+    {
       "path": "repo init",
       "syntax": "repo init --scope <shared|private> [--compat claude]",
       "evidence": "repo-init"
@@ -85,7 +119,7 @@
     },
     {
       "path": "todo list",
-      "syntax": "todo list [--source <id>]",
+      "syntax": "todo list [--source <id>] [--json]",
       "evidence": "todo-list"
     },
     {
@@ -102,6 +136,16 @@
       "path": "todo move",
       "syntax": "todo move <line> --from <id> --to <id> [--apply]",
       "evidence": "todo-move"
+    },
+    {
+      "path": "todo defer",
+      "syntax": "todo defer <line> --source <id> [--until <YYYY-MM-DD>] [--wait <slug>] [--apply]",
+      "evidence": "todo-defer"
+    },
+    {
+      "path": "todo resume",
+      "syntax": "todo resume <line> --source <id> [--apply]",
+      "evidence": "todo-resume"
     },
     {
       "path": "release baseline",
@@ -137,6 +181,21 @@
       "path": "skills inspect",
       "syntax": "skills inspect <name> [--scope <public|private>] [--catalog-root <path>]",
       "evidence": "skills-inspect"
+    },
+    {
+      "path": "skills status",
+      "syntax": "skills status [<name>] [--scope <user|repo>] [--target <path>] [--catalog-root <path>] [--check] [--json]",
+      "evidence": "skills-status"
+    },
+    {
+      "path": "skills update",
+      "syntax": "skills update <name> [--scope <user|repo>] [--target <path>] [--catalog-root <path>] [--compat claude]",
+      "evidence": "skills-update"
+    },
+    {
+      "path": "skills apply",
+      "syntax": "skills apply --plan <path|->",
+      "evidence": "skills-apply"
     },
     {
       "path": "skills link",
@@ -244,6 +303,10 @@
       "command": "repo apply"
     },
     {
+      "id": "repo-detach",
+      "command": "repo detach"
+    },
+    {
       "id": "repo-init",
       "command": "repo init"
     },
@@ -280,6 +343,14 @@
       "command": "todo move"
     },
     {
+      "id": "todo-defer",
+      "command": "todo defer"
+    },
+    {
+      "id": "todo-resume",
+      "command": "todo resume"
+    },
+    {
       "id": "release-baseline",
       "command": "release baseline"
     },
@@ -306,6 +377,18 @@
     {
       "id": "skills-inspect",
       "command": "skills inspect"
+    },
+    {
+      "id": "skills-status",
+      "command": "skills status"
+    },
+    {
+      "id": "skills-update",
+      "command": "skills update"
+    },
+    {
+      "id": "skills-apply",
+      "command": "skills apply"
     },
     {
       "id": "skills-link",

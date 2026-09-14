@@ -241,6 +241,7 @@ fn assert_main_package(package_root: &Path) -> Result<()> {
     "bin/",
     "skills/",
     "assets/",
+    "contracts/",
     "schemas/",
   ];
   let required_files = [

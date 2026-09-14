@@ -12,6 +12,7 @@ packages/arcantry/assets/
 packages/arcantry/.claude-plugin/
 packages/arcantry/.codex-plugin/
 packages/arcantry/catalog.json
+packages/arcantry/contracts/
 packages/arcantry/gemini-extension.json
 packages/arcantry/LICENSE
 packages/arcantry/README.md

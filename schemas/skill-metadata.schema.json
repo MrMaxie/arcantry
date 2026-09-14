@@ -4,10 +4,17 @@
   "title": "Arcantry skill metadata",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "summary", "scenarios"],
+  "required": ["$schema", "version", "role", "summary", "scenarios"],
   "properties": {
     "$schema": {
       "const": "../../schemas/skill-metadata.schema.json"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "role": {
+      "enum": ["primary", "supporting", "advanced"]
     },
     "summary": {
       "type": "string",

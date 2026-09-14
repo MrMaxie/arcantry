@@ -78,6 +78,19 @@ const questions = [
     </p>
   </header>
   <div class="setup-columns">
+    <nav class="setup-stages" aria-label="Setup stages">
+      <p>Setup stages</p>
+      <ol>
+        {questions.map((question, index) => (
+          <li>
+            <button type="button" data-stage={question.key} disabled={index > 0}>
+              <span class="stage-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+              <span>{question.title}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </nav>
     <form>
       <div class="section-heading">
         <h2>Your setup</h2>
@@ -85,7 +98,10 @@ const questions = [
       </div>
       {questions.map((question, index) => (
         <fieldset data-question={question.key} hidden={index > 0}>
-          <legend>{question.title}</legend>
+          <legend>
+            <span class="question-number">Question {String(index + 1).padStart(2, '0')}</span>
+            <span>{question.title}</span>
+          </legend>
           <div class="options">
             {question.options.map(([value, label]) => (
               <label><input type="radio" name={question.key} value={value} />{label}</label>
@@ -94,19 +110,23 @@ const questions = [
         </fieldset>
       ))}
     </form>
-    <section class="request" aria-labelledby="request-title">
+    <section class="request" data-state="empty" aria-labelledby="request-title">
       <div class="request-heading">
-        <h2 id="request-title">Instructions for your agent</h2>
-        <p data-status role="status">Choose your goal to start.</p>
+        <p class="request-label" data-request-label>Next step</p>
+        <h2 id="request-title" data-request-title>What happens next</h2>
+        <p data-status role="status">
+          Choose the outcome you want in the first question. We will ask only what matters, then show the exact text to
+          paste into your coding agent.
+        </p>
       </div>
       <!-- biome-ignore lint/a11y/noNoninteractiveTabindex: The scrollable request must be reachable for keyboard scrolling. -->
-      <section class="request-body" aria-label="Generated agent instructions" tabindex="0">
+      <section class="request-body" aria-label="Generated agent instructions" tabindex="0" hidden>
         <pre data-prompt>Your instructions will appear here.</pre>
       </section>
-      <div class="request-actions">
+      <div class="request-actions" hidden>
         <button type="button" data-copy disabled>Copy instructions</button>
       </div>
-      <div class="request-notes">
+      <div class="request-notes" hidden>
         <a href="/getting-started/">Read the three-command workflow</a>
       </div>
     </section>
@@ -126,6 +146,18 @@ class ArcantryConfigurator extends HTMLElement {
     this.restore();
     this.startedEmpty = !this.querySelector('input:checked');
     this.querySelector('form')?.addEventListener('change', () => this.render(), options);
+    for (const stage of this.querySelectorAll<HTMLButtonElement>('[data-stage]')) {
+      stage.addEventListener(
+        'click',
+        () => {
+          const field = this.querySelector<HTMLFieldSetElement>(`[data-question="${stage.dataset.stage}"]`);
+          const behavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+          field?.querySelector('legend')?.scrollIntoView({ behavior, block: 'center' });
+          field?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true });
+        },
+        options,
+      );
+    }
     this.querySelector('form')?.addEventListener(
       'reset',
       (event) => {
@@ -187,14 +219,21 @@ class ArcantryConfigurator extends HTMLElement {
     const mode = this.value('m');
     for (const field of this.querySelectorAll<HTMLFieldSetElement>('fieldset')) {
       const key = field.dataset.question ?? '';
-      const relevant =
-        (key !== 'g' || this.value('r') === 'no') &&
-        (key !== 'c' || mode === 'existing') &&
-        (key !== 'x' || mode !== 'evaluate');
+      const relevant = (key !== 'g' || this.value('r') === 'no') && (key !== 'c' || mode === 'existing');
       field.hidden = !reachable || !relevant;
       if (field.hidden) {
         for (const input of field.querySelectorAll<HTMLInputElement>('input')) input.checked = false;
       } else if (!this.value(key)) reachable = false;
+    }
+    const visibleFields = [...this.querySelectorAll<HTMLFieldSetElement>('fieldset:not([hidden])')];
+    for (const stage of this.querySelectorAll<HTMLButtonElement>('[data-stage]')) {
+      const field = this.querySelector<HTMLFieldSetElement>(`[data-question="${stage.dataset.stage}"]`);
+      stage.disabled = field === null || field.hasAttribute('hidden');
+      if (field && visibleFields.at(-1) === field && !this.value(field.dataset.question ?? '')) {
+        stage.setAttribute('aria-current', 'step');
+      } else {
+        stage.removeAttribute('aria-current');
+      }
     }
     const url = new URL(location.href);
     // Only known, applicable answers survive normalization, including old URLs.
@@ -234,18 +273,34 @@ class ArcantryConfigurator extends HTMLElement {
       lines.push('Keep the target project unchanged; propose external configuration only if useful.');
     if (scope === 'recommend') lines.push('Recommend the smallest useful scope based on the inspected sources.');
     if (this.value('c')) lines.push(`Focus inspection on: ${this.value('c')}.`);
+    const authority = this.value('x');
     lines.push(
-      mode === 'evaluate' || this.value('x') !== 'apply' || !reachable
+      !reachable || authority === 'inspect'
         ? 'Inspect and recommend only. Do not install, initialize or modify anything.'
-        : 'Prepare one exact preview of the proposed changes for my approval. Apply only after that approval, then verify the result.',
+        : authority === 'plan'
+          ? 'Prepare a concrete change plan with scope, dependencies, verification and unresolved decisions. Do not modify files.'
+          : 'Prepare one exact preview of the proposed changes for my approval. Apply only after that approval, then verify the result.',
     );
     lines.push(
       'Implementation, commit, deployment and release are separate decisions. Finish with the next useful action and its required format.',
     );
     const prompt = this.querySelector('[data-prompt]');
     if (prompt) prompt.textContent = mode ? lines.join('\n\n') : 'Your instructions will appear here.';
+    const request = this.querySelector<HTMLElement>('.request');
+    const hasRequest = Boolean(mode);
+    if (request) request.dataset.state = hasRequest ? (reachable ? 'ready' : 'building') : 'empty';
+    const requestTitle = this.querySelector<HTMLElement>('[data-request-title]');
+    if (requestTitle) requestTitle.textContent = hasRequest ? 'Instructions for your agent' : 'What happens next';
+    const requestLabel = this.querySelector<HTMLElement>('[data-request-label]');
+    if (requestLabel) requestLabel.textContent = hasRequest ? 'Generated request' : 'Next step';
+    const requestBody = this.querySelector<HTMLElement>('.request-body');
+    if (requestBody) requestBody.hidden = !hasRequest;
+    const requestActions = this.querySelector<HTMLElement>('.request-actions');
+    if (requestActions) requestActions.hidden = !hasRequest;
+    const requestNotes = this.querySelector<HTMLElement>('.request-notes');
+    if (requestNotes) requestNotes.hidden = !hasRequest;
     const copy = this.querySelector<HTMLButtonElement>('[data-copy]');
-    if (copy) copy.disabled = !mode;
+    if (copy) copy.disabled = !hasRequest;
     const reset = this.querySelector<HTMLButtonElement>('button[type="reset"]');
     if (reset) reset.hidden = !this.querySelector('input:checked');
     this.status(
@@ -253,7 +308,7 @@ class ArcantryConfigurator extends HTMLElement {
         ? 'Ready to copy. Review the instructions below.'
         : mode
           ? 'Answer the next question. Until then, the instructions only allow inspection.'
-          : 'Choose your goal to start.',
+          : 'Choose the outcome you want in the first question. We will ask only what matters, then show the exact text to paste into your coding agent.',
     );
   }
 }
@@ -292,13 +347,72 @@ p {
 }
 .setup-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(11rem, 0.55fr) minmax(20rem, 1fr) minmax(22rem, 1.1fr);
   gap: clamp(2rem, 4vw, 3rem);
   align-items: start;
 }
 form,
 .request {
   min-width: 0;
+}
+.setup-stages {
+  position: sticky;
+  top: 5.5rem;
+  min-width: 0;
+  padding-top: clamp(1.25rem, 2.5vw, 2rem);
+}
+.setup-stages > p {
+  margin-bottom: 0.65rem;
+  color: var(--ar-text-soft);
+  font-size: 0.64rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.setup-stages ol {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.setup-stages button {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 0.2rem;
+  background: transparent;
+  color: var(--ar-text-muted);
+  text-align: left;
+  font-size: 0.76rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+.stage-number {
+  color: var(--ar-text-soft);
+  font-size: 0.6rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+.setup-stages button:not(:disabled):hover,
+.setup-stages button[aria-current='step'] {
+  border-color: var(--ar-border);
+  background: var(--ar-bg-subtle);
+  color: var(--ar-text);
+}
+.setup-stages button[aria-current='step'] {
+  font-weight: 650;
+}
+.setup-stages button[aria-current='step'] .stage-number {
+  color: var(--ar-accent-blue);
+}
+.setup-stages button:disabled {
+  opacity: 0.45;
 }
 form {
   display: grid;
@@ -311,6 +425,12 @@ form {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--ar-border);
+}
+.section-heading h2 {
+  font-size: 1.45rem;
+  letter-spacing: -0.025em;
 }
 fieldset {
   min-width: 0;
@@ -322,10 +442,19 @@ fieldset[hidden] {
   display: none;
 }
 legend {
+  display: grid;
+  gap: 0.3rem;
   padding: 0;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.9rem;
   font-weight: 650;
-  line-height: 1.5;
+  line-height: 1.4;
+}
+.question-number {
+  color: var(--ar-accent-violet);
+  font-size: 0.62rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
 }
 .options {
   display: grid;
@@ -394,41 +523,84 @@ input:focus-visible,
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   max-height: calc(100dvh - 15rem);
-  gap: 1.5rem;
-  padding: clamp(1.25rem, 2.5vw, 2rem);
-  border: 1px solid var(--ar-border);
-  border-radius: 0.5rem;
+  gap: 1rem;
+  padding-top: clamp(1.25rem, 2.5vw, 2rem);
+}
+.request[data-state='empty'] {
+  grid-template-rows: auto;
+  max-height: none;
+}
+.request[data-state='empty'] .request-heading {
+  padding: 0.9rem 1rem;
+  border-left: 2px solid var(--ar-accent-violet);
   background: var(--ar-bg-subtle);
+}
+.request [hidden] {
+  display: none;
 }
 .request-heading,
 .request-notes {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.4rem;
 }
 .request-heading h2 {
-  display: flex;
-  align-items: center;
-  min-height: 2.75rem;
+  font-size: 1.1rem;
+}
+.request-heading .request-label {
+  color: var(--ar-accent-violet);
+  font-size: 0.62rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.request-heading p {
+  max-width: 34rem;
+  font-size: 0.88rem;
 }
 .request-body {
   overflow: auto;
-  padding-block: 1.5rem;
-  border-block: 1px solid var(--ar-border);
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--ar-border);
+  border-radius: 0.4rem;
+  background: var(--ar-bg-subtle);
 }
 pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font: 0.9rem / 1.75 var(--ar-font-sans);
+  font-family: 'Fira Code Variable', ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.9rem;
+  line-height: 1.75;
 }
 .request-notes {
   font-size: 0.85rem;
   line-height: 1.6;
+}
+@media (max-width: 78rem) and (min-width: 60.01rem) {
+  .setup-columns {
+    grid-template-columns: minmax(10rem, 0.45fr) minmax(20rem, 1fr);
+    row-gap: 2rem;
+  }
+  .setup-stages {
+    grid-row: 1 / span 2;
+  }
+  form {
+    grid-column: 2;
+  }
+  .request {
+    position: static;
+    grid-column: 2;
+    grid-row: 2;
+    max-height: none;
+    grid-template-rows: auto;
+    padding-top: 0;
+  }
 }
 @media (max-width: 60rem), (max-height: 42rem) {
   .request {
     position: static;
     max-height: none;
     grid-template-rows: auto;
+    padding-top: 0;
   }
   form {
     padding-top: 0;
@@ -436,6 +608,14 @@ pre {
   .setup-columns {
     grid-template-columns: minmax(0, 1fr);
     gap: 2.5rem;
+  }
+  .setup-stages {
+    position: static;
+    order: -1;
+    padding-top: 0;
+  }
+  .setup-stages ol {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
   }
 }
 </style>

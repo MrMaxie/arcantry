@@ -1,0 +1,24 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "primary",
+  "summary": "Assess existing code for concrete maintainability and correctness risks without changing the implementation.",
+  "learning": {
+    "outcomes": [
+      "Distinguish material code-quality risks from style preferences and harmless complexity.",
+      "Report each finding with evidence, consequence, confidence, and a proportionate response."
+    ]
+  },
+  "scenarios": [
+    {
+      "title": "Audit a difficult module",
+      "prompt": "Use the assess-code-quality skill to review this module for maintainability risks without changing any files.",
+      "outcome": "The review ranks only evidence-backed findings and preserves the read-only boundary."
+    },
+    {
+      "title": "Reject a pattern-only complaint",
+      "prompt": "Use the assess-code-quality skill to decide whether this procedural implementation is bad because it does not use design patterns.",
+      "outcome": "The review evaluates concrete consequences and does not treat a missing pattern as a defect."
+    }
+  ]
+}

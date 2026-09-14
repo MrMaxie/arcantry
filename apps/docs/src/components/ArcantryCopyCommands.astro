@@ -8,9 +8,107 @@ import packageManifest from '../../../../packages/arcantry/package.json';
 const packageName = document.querySelector<HTMLElement>('arcantry-copy-commands')?.dataset.package ?? '';
 const escapedPackageName = packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const commandPattern = new RegExp(
-  `^(?:arcantry\\b|npm\\s+(?:install|i)\\s+(?:--global|-g)\\s+${escapedPackageName}\\b|npx\\s+${escapedPackageName}\\b|pnpm\\s+dlx\\s+${escapedPackageName}\\b|bunx\\s+${escapedPackageName}\\b|nubx\\s+${escapedPackageName}\\b)`,
+  `^(?:arcantry(?=\\s|$)|cargo(?=\\s|$)|claude(?=\\s|$)|curl(?=\\s|$)|gh(?=\\s|$)|just(?=\\s|$)|mise(?=\\s|$)|powershell(?=\\s|$)|sh(?=\\s|$)|npm\\s+(?:(?:install|i)\\s+(?:--global|-g)\\s+${escapedPackageName}\\b|publish(?=\\s|$))|npx\\s+(?:${escapedPackageName}|skills)\\b|pnpm\\s+dlx\\s+${escapedPackageName}\\b|bunx\\s+${escapedPackageName}\\b|nubx\\s+${escapedPackageName}\\b)`,
   'i',
 );
+const commandTokenPattern = /("(?:\\.|[^"])*"|'(?:\\.|[^'])*'|--?[a-z][\w-]*|<[^>]+>|[a-z0-9@./:_-]+|[|=])/gi;
+const executableTokens = new Set([
+  'arcantry',
+  'bunx',
+  'cargo',
+  'claude',
+  'curl',
+  'gh',
+  'just',
+  'mise',
+  'npm',
+  'npx',
+  'nubx',
+  'pnpm',
+  'powershell',
+  'sh',
+]);
+const subcommandTokens = new Set([
+  'add',
+  'apply',
+  'baseline',
+  'check',
+  'complete',
+  'context',
+  'cut',
+  'defer',
+  'detach',
+  'diagnostics',
+  'doctor',
+  'dlx',
+  'explain',
+  'i',
+  'init',
+  'inspect',
+  'install',
+  'link',
+  'list',
+  'mcp',
+  'move',
+  'next',
+  'plan',
+  'recover',
+  'release',
+  'remove',
+  'render',
+  'repo',
+  'resume',
+  'skills',
+  'skill',
+  'todo',
+  'unlink',
+  'update',
+  'validate',
+]);
+
+function commandTokenClass(token: string, index: number, previousToken?: string): string {
+  const normalized = token.toLowerCase();
+  if (
+    executableTokens.has(normalized) &&
+    (index === 0 || (normalized === 'arcantry' && ['bunx', 'dlx', 'npx', 'nubx'].includes(previousToken ?? '')))
+  ) {
+    return 'command-token-executable';
+  }
+  if (subcommandTokens.has(normalized)) return 'command-token-subcommand';
+  if (token.startsWith('-')) return 'command-token-option';
+  if (token.startsWith('<') || token.startsWith('"') || token.startsWith("'")) return 'command-token-argument';
+  if (token === '|' || token === '=') return 'command-token-operator';
+  return 'command-token-value';
+}
+
+function highlightCommand(code: HTMLElement, command: string, withPrompt = false): void {
+  const fragment = document.createDocumentFragment();
+  if (withPrompt) {
+    const prompt = document.createElement('span');
+    prompt.className = 'prompt';
+    prompt.textContent = '$';
+    fragment.append(prompt, ' ');
+  }
+
+  let offset = 0;
+  let tokenIndex = 0;
+  let previousToken: string | undefined;
+  for (const match of command.matchAll(commandTokenPattern)) {
+    const index = match.index ?? 0;
+    if (index > offset) fragment.append(command.slice(offset, index));
+    const token = document.createElement('span');
+    token.className = commandTokenClass(match[0], tokenIndex, previousToken);
+    token.textContent = match[0];
+    fragment.append(token);
+    offset = index + match[0].length;
+    previousToken = match[0].toLowerCase();
+    tokenIndex += 1;
+  }
+  if (offset < command.length) fragment.append(command.slice(offset));
+
+  code.replaceChildren(fragment);
+  code.dataset.commandHighlighted = 'true';
+}
 
 async function copyCommandText(text: string): Promise<boolean> {
   try {
@@ -46,10 +144,13 @@ class ArcantryCopyCommands extends HTMLElement {
   }
 
   private decorate = (): void => {
-    document.querySelectorAll<HTMLElement>('code:not([data-copyable-command])').forEach((code) => {
-      if (code.closest('pre, button, a, [data-no-command-copy]')) return;
-      const command = code.textContent?.trim() ?? '';
+    document.querySelectorAll<HTMLElement>('code:not([data-command-highlighted])').forEach((code) => {
+      if (code.closest('pre, a, [data-no-command-copy]')) return;
+      const copyOwner = code.closest<HTMLElement>('button[data-copy]');
+      const command = copyOwner?.dataset.copy?.trim() ?? code.textContent?.trim() ?? '';
       if (!commandPattern.test(command)) return;
+      highlightCommand(code, command, Boolean(code.querySelector('.prompt')));
+      if (copyOwner) return;
       code.dataset.copyableCommand = command;
       code.setAttribute('role', 'button');
       code.setAttribute('tabindex', '0');

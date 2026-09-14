@@ -69,7 +69,7 @@ fn empty_project_needs_no_configuration_and_unknown_change_is_not_invented() {
   let project = resolve_project(root.path(), None, true, None).unwrap();
   assert_eq!(
     guidance::next(&project, None).unwrap()["command"],
-    "arcantry explain proposal"
+    "arcantry context"
   );
   assert!(guidance::next(&project, Some("missing")).is_err());
   assert!(guidance::explain(&project, "invented-format").is_err());

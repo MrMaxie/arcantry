@@ -208,26 +208,21 @@ const faviconHref = `${import.meta.env.BASE_URL}favicon.svg`;
     </div>
   </arcantry-knowledge-graph>
 
-  <section class="setup-invitation" aria-labelledby="setup-invitation-title">
-    <p>Your setup</p>
-    <h3 id="setup-invitation-title">
-      <span class="setup-heading-line">Every project has different boundaries.</span>
-      <span class="setup-heading-line"
-        >Build a setup that keeps its knowledge <span class="setup-accent">safe</span>.</span
-      >
-    </h3>
-    <div class="setup-actions">
-      <a class="setup-primary" href="/configurator/">
-        <span class="setup-primary-label"><Icon name="setting" /><strong>Configure your setup</strong></span>
-        <Icon name="right-arrow" />
+  <footer class="configurator-footer">
+    <p>Build the setup that matches your project boundaries.</p>
+    <div class="configurator-actions">
+      <a class="configurator-primary" href="/configurator/">
+        <Icon name="setting" /><strong>Configure your setup</strong><Icon name="right-arrow" />
       </a>
-      <a class="setup-next" href="/getting-started/" transition:name="arcantry-next-action">
-        <small>Learn more</small>
-        <strong>Explore the details</strong>
-        <Icon name="right-arrow" />
+      <a
+        class="configurator-secondary"
+        href="/adoption/#choose-an-adoption-path"
+        transition:name="arcantry-next-action"
+      >
+        <strong>Read the adoption guide</strong><Icon name="right-arrow" />
       </a>
     </div>
-  </section>
+  </footer>
 </section>
 
 <script>
@@ -581,128 +576,69 @@ arcantry-knowledge-graph {
 .scope-column li[data-active='false'] .source-mode {
   display: none;
 }
-.setup-invitation {
-  display: grid;
-  grid-template-columns: minmax(8rem, 0.55fr) minmax(0, 1.45fr);
-  gap: 0.5rem 1.5rem;
-  margin: 2.4rem 0 0 !important;
-}
-.setup-invitation > p {
-  margin: 0.35rem 0 0 !important;
-  color: var(--ar-accent-blue);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.setup-invitation h3 {
-  max-width: 46rem;
-  margin: 0 !important;
-  color: var(--ar-text);
-  font-family: var(--ar-font-serif);
-  font-size: clamp(1.55rem, 3vw, 2.25rem) !important;
-  line-height: 1.12 !important;
-  letter-spacing: -0.025em;
-}
-.setup-invitation h3 .setup-heading-line {
-  display: block;
-}
-.setup-invitation h3 .setup-accent {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--ar-accent-blue) 50%, var(--ar-effect-ink)),
-    color-mix(in srgb, var(--ar-accent-violet) 50%, var(--ar-effect-ink)),
-    color-mix(in srgb, var(--ar-accent-pink) 50%, var(--ar-effect-ink))
-  );
-  background-clip: text;
-  color: transparent;
-}
-.setup-actions {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: minmax(0, 2fr) minmax(12rem, 1fr);
-  gap: 0.75rem;
-  margin: 1.25rem 0 0 !important;
-}
-.setup-actions a {
-  position: relative;
-  min-width: 0;
-  min-height: 4.6rem;
-  margin: 0 !important;
-  overflow: hidden;
-  border: 1px solid transparent;
-  border-radius: 0.25rem;
-  background:
-    linear-gradient(var(--ar-bg), var(--ar-bg)) padding-box,
-    linear-gradient(105deg, var(--ar-accent-blue), var(--ar-accent-violet), var(--ar-accent-pink)) border-box;
-  color: var(--ar-text);
-  text-decoration: none;
-  transition:
-    background-color 160ms ease,
-    box-shadow 160ms ease;
-}
-.setup-actions a:hover {
-  background:
-    linear-gradient(
-      color-mix(in srgb, var(--ar-accent-violet) 7%, var(--ar-bg)),
-      color-mix(in srgb, var(--ar-accent-violet) 7%, var(--ar-bg))
-    )
-    padding-box,
-    linear-gradient(105deg, var(--ar-accent-blue), var(--ar-accent-violet), var(--ar-accent-pink)) border-box;
-  box-shadow: 0 0 2rem color-mix(in srgb, var(--ar-accent-violet) 16%, transparent);
-}
-.setup-actions a:focus-visible {
-  outline: 2px solid var(--ar-accent-blue);
-  outline-offset: 3px;
-}
-.setup-actions svg {
-  width: 1rem;
-  height: 1rem;
-  color: var(--ar-accent-pink);
-}
-.setup-primary {
+.configurator-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem 1.2rem;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--ar-border);
 }
-.setup-primary-label {
-  display: inline-flex;
+.configurator-footer > p {
+  max-width: 28rem;
+  margin: 0 !important;
+  color: var(--ar-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.configurator-actions {
+  display: flex;
   align-items: center;
   gap: 0.65rem;
-  min-width: 0;
+  flex: 0 0 auto;
 }
-.setup-primary-label svg {
+.configurator-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  margin: 0 !important;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--ar-border);
+  border-radius: 0.2rem;
+  color: var(--ar-text) !important;
+  font-size: 0.74rem;
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+.configurator-actions a:hover {
+  border-color: color-mix(in srgb, var(--ar-accent-violet) 62%, var(--ar-border));
+  background: var(--ar-bg-subtle);
+}
+.configurator-actions a:focus-visible {
+  outline: 2px solid var(--ar-accent-blue);
+  outline-offset: 3px;
+}
+.configurator-actions svg {
+  width: 0.75rem;
+  height: 0.75rem;
+  color: var(--ar-text-soft);
+}
+.configurator-primary {
+  border: 1px solid color-mix(in srgb, var(--ar-accent-violet) 55%, var(--ar-border));
+  background: color-mix(in srgb, var(--ar-accent-violet) 5%, var(--ar-bg));
+}
+.configurator-primary svg:first-child {
   color: var(--ar-accent-violet);
 }
-.setup-primary strong {
-  font-size: 1rem;
-  line-height: 1.25;
+.configurator-actions a svg:last-child {
+  transition: transform 160ms ease;
 }
-.setup-next {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-content: center;
-  gap: 0.15rem 0.75rem;
-  padding: 0.8rem 1rem;
-}
-.setup-next small {
-  color: var(--ar-text-muted);
-  font-size: 0.68rem;
-  line-height: 1.2;
-}
-.setup-next strong {
-  overflow: hidden;
-  font-size: 0.9rem;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.setup-next svg {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  align-self: center;
+.configurator-actions a:hover svg:last-child {
+  transform: translateX(0.18rem);
 }
 
 @media (max-width: 64rem) {
@@ -774,20 +710,13 @@ arcantry-knowledge-graph {
   .source-mode {
     font-size: 0.7rem;
   }
-  .setup-invitation {
-    grid-template-columns: 1fr;
-    gap: 0.55rem;
-    margin-top: 2rem !important;
+  .configurator-footer {
+    align-items: flex-start;
+    flex-direction: column;
   }
-  .setup-invitation > p {
-    margin-top: 0 !important;
-  }
-  .setup-actions {
-    grid-template-columns: 1fr;
-    margin-top: 0.9rem !important;
-  }
-  .setup-actions a {
-    min-height: 4.2rem;
+  .configurator-actions {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 @media (max-width: 24rem) {
@@ -809,7 +738,8 @@ arcantry-knowledge-graph {
 }
 @media (prefers-reduced-motion: reduce) {
   .preset-selector button,
-  .scope-column li {
+  .scope-column li,
+  .configurator-actions svg {
     transition: none;
   }
   .sync-wave-stream,

@@ -1,6 +1,7 @@
 use anyhow::{Result, bail};
 use chrono::NaiveDate;
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use todo_txt::task::Simple;
 
@@ -33,6 +34,7 @@ pub struct TodoTask {
   pub projects: Vec<String>,
   pub contexts: Vec<String>,
   pub metadata: BTreeMap<String, String>,
+  pub digest: String,
 }
 
 impl TodoDocument {
@@ -150,6 +152,47 @@ impl TodoDocument {
     Ok(())
   }
 
+  pub fn defer(&mut self, line: usize, until: Option<&str>, wait: Option<&str>) -> Result<()> {
+    if until.is_none() && wait.is_none() {
+      bail!("Todo deferral requires --until, --wait, or both.");
+    }
+    if let Some(until) = until {
+      validate_date(until, "Deferral date")?;
+    }
+    if let Some(wait) = wait
+      && !valid_wait_slug(wait)
+    {
+      bail!("Wait condition must match [a-z0-9][a-z0-9._-]*.");
+    }
+    let raw = self.task_raw_mut(line)?;
+    *raw = replace_deferral(raw, until, wait);
+    self.reparse(line);
+    Ok(())
+  }
+
+  pub fn resume(&mut self, line: usize) -> Result<()> {
+    let raw = self.task_raw_mut(line)?;
+    *raw = replace_deferral(raw, None, None);
+    self.reparse(line);
+    Ok(())
+  }
+
+  fn task_raw_mut(&mut self, line: usize) -> Result<&mut String> {
+    let Some(entry) = self.entries.get_mut(line.saturating_sub(1)) else {
+      bail!("todo.txt line {line} does not exist.");
+    };
+    match entry {
+      TodoEntry::Task { raw, .. } => Ok(raw),
+      TodoEntry::Empty(_) => bail!("todo.txt line {line} does not contain a task."),
+    }
+  }
+
+  fn reparse(&mut self, line: usize) {
+    if let Some(TodoEntry::Task { raw, parsed }) = self.entries.get_mut(line - 1) {
+      *parsed = parse_task(raw);
+    }
+  }
+
   fn remove(&mut self, line: usize) -> Result<TodoEntry> {
     let index = line.saturating_sub(1);
     match self.entries.get(index) {
@@ -192,7 +235,19 @@ impl TodoTask {
       projects: task.projects.clone(),
       contexts: task.contexts.clone(),
       metadata,
+      digest: hex_digest(Sha256::digest(raw.as_bytes()).as_slice()),
     }
+  }
+
+  pub fn is_deferred_on(&self, date: NaiveDate) -> bool {
+    if self.completed || self.metadata.contains_key("wait") {
+      return true;
+    }
+    self
+      .metadata
+      .get("t")
+      .and_then(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d").ok())
+      .is_some_and(|threshold| date < threshold)
   }
 }
 
@@ -218,6 +273,63 @@ pub fn move_task(source: &str, target: &str, line: usize) -> Result<(String, Str
   let mut target = TodoDocument::parse(target);
   target.push(task);
   Ok((source.render(), target.render()))
+}
+
+pub fn defer_task(
+  content: &str,
+  line: usize,
+  until: Option<&str>,
+  wait: Option<&str>,
+) -> Result<String> {
+  let mut document = TodoDocument::parse(content);
+  document.defer(line, until, wait)?;
+  Ok(document.render())
+}
+
+pub fn resume_task(content: &str, line: usize) -> Result<String> {
+  let mut document = TodoDocument::parse(content);
+  document.resume(line)?;
+  Ok(document.render())
+}
+
+fn validate_date(value: &str, label: &str) -> Result<NaiveDate> {
+  NaiveDate::parse_from_str(value, "%Y-%m-%d")
+    .ok()
+    .filter(|_| value.len() == 10)
+    .ok_or_else(|| anyhow::anyhow!("{label} must use YYYY-MM-DD."))
+}
+
+fn valid_wait_slug(value: &str) -> bool {
+  let mut chars = value.chars();
+  chars
+    .next()
+    .is_some_and(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+    && chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, '.' | '_' | '-'))
+}
+
+fn replace_deferral(raw: &str, until: Option<&str>, wait: Option<&str>) -> String {
+  let leading_len = raw.len() - raw.trim_start().len();
+  let trailing_len = raw.len() - raw.trim_end().len();
+  let leading = &raw[..leading_len];
+  let end = raw.len().saturating_sub(trailing_len);
+  let trailing = &raw[end..];
+  let middle = &raw[leading_len..end];
+  let mut tokens = middle
+    .split_whitespace()
+    .filter(|token| !token.starts_with("t:") && !token.starts_with("wait:"))
+    .map(str::to_owned)
+    .collect::<Vec<_>>();
+  if let Some(until) = until {
+    tokens.push(format!("t:{until}"));
+  }
+  if let Some(wait) = wait {
+    tokens.push(format!("wait:{wait}"));
+  }
+  format!("{leading}{}{trailing}", tokens.join(" "))
+}
+
+fn hex_digest(bytes: &[u8]) -> String {
+  bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
 fn parse_task(line: &str) -> Simple {
@@ -318,5 +430,29 @@ mod tests {
         .to_string()
         .contains("does not exist")
     );
+  }
+
+  #[test]
+  fn defers_and_resumes_without_changing_document_format() {
+    let content = "\u{feff}  Keep spacing owner:maxie  \r\nSecond\r\n";
+    let deferred = defer_task(content, 1, Some("2026-10-01"), Some("legal-review")).unwrap();
+    assert_eq!(
+      deferred,
+      "\u{feff}  Keep spacing owner:maxie t:2026-10-01 wait:legal-review  \r\nSecond\r\n"
+    );
+    assert_eq!(
+      resume_task(&deferred, 1).unwrap(),
+      "\u{feff}  Keep spacing owner:maxie  \r\nSecond\r\n"
+    );
+  }
+
+  #[test]
+  fn reports_digest_and_filters_only_future_or_waiting_tasks() {
+    let tasks = inspect_tasks("Today t:2026-09-11\nFuture t:2026-09-12\nManual wait:owner\n");
+    let today = NaiveDate::from_ymd_opt(2026, 9, 11).unwrap();
+    assert!(!tasks[0].is_deferred_on(today));
+    assert!(tasks[1].is_deferred_on(today));
+    assert!(tasks[2].is_deferred_on(today));
+    assert_eq!(tasks[0].digest.len(), 64);
   }
 }

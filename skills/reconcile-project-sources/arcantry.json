@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "primary",
   "summary": "Explain shared and private source drift and prepare one explicit transition that preserves both sides until apply.",
   "compatibility": {
     "sourceKinds": ["openspec", "changelog", "todo-txt"]

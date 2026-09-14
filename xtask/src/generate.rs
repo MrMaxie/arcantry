@@ -12,6 +12,15 @@ struct Section<'a> {
   skills: Vec<&'a catalog::CatalogEntry>,
 }
 
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SkillHistoryEntry {
+  change: String,
+  date: String,
+  title: String,
+  summary: String,
+}
+
 pub fn run(root: &Path, check: bool, docs_only: bool) -> Result<()> {
   let root = root
     .canonicalize()
@@ -42,6 +51,38 @@ pub fn run(root: &Path, check: bool, docs_only: bool) -> Result<()> {
   }
   let catalog = catalog.context("Catalog validation returned no catalog.")?;
   let version = arcantry_core::release::latest_standard_release_version(&root)?;
+  let histories = skill_histories(&root)?;
+  let manifests = catalog
+    .skills
+    .iter()
+    .map(|entry| {
+      Ok((
+        entry.name.clone(),
+        catalog::package_manifest(&root, &entry.name)?,
+        histories.get(&entry.name).cloned().unwrap_or_default(),
+      ))
+    })
+    .collect::<Result<Vec<_>>>()?;
+  let manifest_document = manifests
+    .iter()
+    .map(|(name, manifest, history)| {
+      json!({
+        "name": name,
+        "version": manifest.version,
+        "role": manifest.role,
+        "digest": manifest.digest,
+        "files": manifest.files,
+        "history": history,
+      })
+    })
+    .collect::<Vec<_>>();
+  project(
+    &root.join("contracts/skill-manifests.json"),
+    &format!("{}\n", serde_json::to_string_pretty(&manifest_document)?),
+    true,
+    check,
+    &mut stale,
+  )?;
 
   if !docs_only {
     project_plugins(&root, &version, check, &mut stale)?;
@@ -51,6 +92,7 @@ pub fn run(root: &Path, check: bool, docs_only: bool) -> Result<()> {
     ("self-improvement", "Self improvement"),
     ("repo-safely", "Repo safely"),
     ("content-safely", "Content safely"),
+    ("code-quality", "Code quality"),
   ]
   .into_iter()
   .map(|(family, title)| Section {
@@ -73,14 +115,25 @@ pub fn run(root: &Path, check: bool, docs_only: bool) -> Result<()> {
     cards.insert(
       entry.name.clone(),
       format!(
-        "<a class=\"skill-catalog-card\" href=\"/skills/{}/\">\n  <p class=\"skill-catalog-version\">Arcantry {version}</p>\n  <h3>{}</h3>\n  <p class=\"skill-catalog-summary\">{}</p>\n  <p class=\"skill-catalog-command\"><code>{}</code></p>\n</a>",
+        "<a class=\"skill-catalog-card\" href=\"/skills/{}/\">\n  <p class=\"skill-catalog-version\">Skill {} · {}</p>\n  <h3>{}</h3>\n  <p class=\"skill-catalog-summary\">{}</p>\n  <p class=\"skill-catalog-command\"><code>{}</code></p>\n</a>",
         entry.name,
+        escape_html(&metadata.version),
+        escape_html(&metadata.role),
         escape_html(&agent.display_name),
         escape_html(&metadata.summary),
         escape_html(&entry.name)
       ),
     );
-    let content = render_skill_page(entry, &metadata, &description, &agent, &version)?;
+    let content = render_skill_page(
+      entry,
+      &metadata,
+      &description,
+      &agent,
+      histories
+        .get(&entry.name)
+        .map(Vec::as_slice)
+        .unwrap_or_default(),
+    )?;
     project(
       &details_root.join(format!("{}.md", entry.name)),
       &content,
@@ -134,7 +187,7 @@ pub fn run(root: &Path, check: bool, docs_only: bool) -> Result<()> {
   project(
     &details_root.join("catalog.md"),
     &format!(
-      "---\ntitle: Skill catalog\ndescription: Choose a focused Arcantry skill for the work at hand.\n---\n\n<!-- {GENERATED_NOTICE} -->\n\n<p class=\"skill-catalog-lead\">Choose the job. Each page explains the outcome, compatibility, and link command.</p>\n\n{catalog_sections}\n"
+      "---\ntitle: Skill catalog\ndescription: Choose a focused Arcantry skill for the work at hand.\n---\n\n<!-- {GENERATED_NOTICE} -->\n\n<p class=\"skill-catalog-lead\">Choose the job. Each page explains the outcome, compatibility, and individual installation command.</p>\n\n{catalog_sections}\n"
     ),
     false,
     check,
@@ -151,14 +204,24 @@ pub fn run(root: &Path, check: bool, docs_only: bool) -> Result<()> {
 }
 
 fn project_plugins(root: &Path, version: &str, check: bool, stale: &mut bool) -> Result<()> {
+  let package: serde_json::Value = serde_json::from_str(&fs::read_to_string(
+    root.join("packages/arcantry/package.json"),
+  )?)?;
+  if package["version"].as_str() != Some(version) {
+    bail!("Canonical package identity version does not match the current product version.");
+  }
+  let repository = package["repository"]["url"]
+    .as_str()
+    .context("Canonical package identity requires repository.url.")?
+    .trim_end_matches(".git");
   let plugin = json!({
-    "name": "arcantry",
-    "version": version,
-    "description": "Local-first project knowledge and focused agent skills.",
-    "author": { "name": "Maxie", "url": "https://github.com/MrMaxie" },
-    "homepage": "https://arcantry.dev/",
-    "repository": "https://github.com/MrMaxie/arcantry",
-    "license": "Apache-2.0",
+    "name": package["name"],
+    "version": package["version"],
+    "description": package["description"],
+    "author": package["author"],
+    "homepage": package["homepage"],
+    "repository": repository,
+    "license": package["license"],
     "keywords": ["agent-skills", "codex", "repository-lifecycle"],
     "skills": "./skills/",
     "interface": {
@@ -181,13 +244,13 @@ fn project_plugins(root: &Path, version: &str, check: bool, stale: &mut bool) ->
     stale,
   )?;
   let claude = json!({
-    "name": "arcantry",
-    "version": version,
-    "description": "Local-first project knowledge and focused agent skills.",
-    "author": { "name": "Maxie", "url": "https://github.com/MrMaxie" },
-    "homepage": "https://arcantry.dev/",
-    "repository": "https://github.com/MrMaxie/arcantry",
-    "license": "Apache-2.0",
+    "name": package["name"],
+    "version": package["version"],
+    "description": package["description"],
+    "author": package["author"],
+    "homepage": package["homepage"],
+    "repository": repository,
+    "license": package["license"],
     "keywords": ["agent-skills", "claude-code", "repository-lifecycle"]
   });
   project(
@@ -204,7 +267,7 @@ fn render_skill_page(
   metadata: &catalog::SkillMetadata,
   description: &str,
   agent: &catalog::SkillAgent,
-  version: &str,
+  history: &[SkillHistoryEntry],
 ) -> Result<String> {
   let scenarios = metadata
     .scenarios
@@ -247,7 +310,7 @@ fn render_skill_page(
     .as_ref()
     .map_or_else(String::new, |value| {
       format!(
-        "## Learning outcomes\n\n{}\n\n",
+        "## What it helps with\n\n{}\n\n",
         value
           .outcomes
           .iter()
@@ -257,9 +320,27 @@ fn render_skill_page(
       )
     });
   let summary = serde_json::to_string(&metadata.summary)?;
+  let history = if history.is_empty() {
+    "## History\n\nNo accepted skill-specific changes are recorded yet.\n\n".to_owned()
+  } else {
+    format!(
+      "## History\n\n{}\n\n",
+      history
+        .iter()
+        .map(|entry| format!("- **{}** - {}: {}", entry.date, entry.title, entry.summary))
+        .collect::<Vec<_>>()
+        .join("\n")
+    )
+  };
   Ok(format!(
-    "---\ntitle: {}\ndescription: {summary}\n---\n\n<!-- {GENERATED_NOTICE} -->\n\n<p class=\"skill-reference-meta\"><span>Arcantry {version}</span><code>{}</code></p>\n\n{}\n\n## When to use\n\n{description}\n\n## Link this skill\n\n```sh\narcantry skills link {} --scope user\n```\n\nThe standard destination is `~/.agents/skills`. Codex reads this universal Agent Skills location directly.\n\n### Claude compatibility\n\n```sh\narcantry skills link {} --scope user --compat claude\n```\n\nThis keeps the universal link and adds a Claude alias to the same canonical package.\n\n{compatibility}{learning}## Examples\n\n{scenarios}\n",
-    agent.display_name, entry.name, metadata.summary, entry.name, entry.name
+    "---\ntitle: {}\ndescription: {summary}\n---\n\n<!-- {GENERATED_NOTICE} -->\n\n<p class=\"skill-reference-meta\"><span>Skill {} · {}</span><code>{}</code></p>\n\n{}\n\n**Use when:** {description}\n\n## Install only this skill\n\n```sh\narcantry skills link {} --scope user\n```\n\nThis links only `{}` to the standard user location, `~/.agents/skills`. Use `--scope repo` for one repository, or add `--compat claude` when that optional alias is needed.\n\n{compatibility}{learning}{history}## Examples\n\n{scenarios}\n",
+    agent.display_name,
+    metadata.version,
+    metadata.role,
+    entry.name,
+    metadata.summary,
+    entry.name,
+    entry.name
   ))
 }
 
@@ -270,6 +351,85 @@ fn escape_html(value: &str) -> String {
     .replace('>', "&gt;")
     .replace('"', "&quot;")
     .replace('\'', "&#39;")
+}
+
+fn skill_histories(root: &Path) -> Result<BTreeMap<String, Vec<SkillHistoryEntry>>> {
+  let mut histories: BTreeMap<String, Vec<SkillHistoryEntry>> = BTreeMap::new();
+  for entry in walkdir::WalkDir::new(root.join("openspec/changes"))
+    .min_depth(2)
+    .max_depth(4)
+    .into_iter()
+    .filter_map(Result::ok)
+    .filter(|entry| entry.file_type().is_file() && entry.file_name() == "release.md")
+  {
+    let source = fs::read_to_string(entry.path())?.replace("\r\n", "\n");
+    let Some((frontmatter, body)) = source
+      .strip_prefix("---\n")
+      .and_then(|value| value.split_once("\n---\n"))
+    else {
+      continue;
+    };
+    let components = frontmatter
+      .lines()
+      .filter_map(|line| line.trim().strip_prefix("- skill:"))
+      .map(str::trim)
+      .collect::<Vec<_>>();
+    if components.is_empty() {
+      continue;
+    }
+    let change_dir = entry
+      .path()
+      .parent()
+      .context("Release file has no change directory")?;
+    let change = change_dir
+      .file_name()
+      .and_then(|value| value.to_str())
+      .unwrap_or_default();
+    let archived = change_dir
+      .parent()
+      .and_then(|parent| parent.file_name())
+      .and_then(|value| value.to_str())
+      == Some("archive");
+    let (date, id) = if archived && change.len() > 11 {
+      (change[..10].to_owned(), change[11..].to_owned())
+    } else {
+      ("Unreleased".to_owned(), change.to_owned())
+    };
+    let title = body
+      .lines()
+      .find_map(|line| line.strip_prefix("# "))
+      .unwrap_or(&id)
+      .trim()
+      .to_owned();
+    let summary = body
+      .lines()
+      .skip_while(|line| !line.starts_with("# "))
+      .skip(1)
+      .find(|line| !line.trim().is_empty())
+      .unwrap_or_default()
+      .trim()
+      .to_owned();
+    for name in components {
+      histories
+        .entry(name.to_owned())
+        .or_default()
+        .push(SkillHistoryEntry {
+          change: id.clone(),
+          date: date.clone(),
+          title: title.clone(),
+          summary: summary.clone(),
+        });
+    }
+  }
+  for history in histories.values_mut() {
+    history.sort_by(|left, right| {
+      right
+        .date
+        .cmp(&left.date)
+        .then(left.change.cmp(&right.change))
+    });
+  }
+  Ok(histories)
 }
 
 fn project(path: &Path, content: &str, tracked: bool, check: bool, stale: &mut bool) -> Result<()> {

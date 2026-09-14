@@ -108,6 +108,8 @@ pub enum RepoCommand {
   },
   #[command(about = "Plan one explicit source transition without changing the project.")]
   Plan(RepoPlanArgs),
+  #[command(about = "Preview or apply full or capability-scoped project ownership transfer.")]
+  Detach(RepoDetachArgs),
   #[command(about = "Apply an unchanged serialized transition plan.")]
   Apply {
     #[arg(
@@ -143,6 +145,56 @@ pub enum RepoCommand {
     )]
     scope: String,
   },
+}
+
+#[derive(Args)]
+pub struct SkillStatusOptions {
+  #[arg(
+    long,
+    value_name = "path",
+    help = "Use an explicit local catalog instead of the official remote when checking."
+  )]
+  pub catalog_root: Option<PathBuf>,
+  #[arg(
+    long,
+    value_name = "scope",
+    help = "Installed scope: user or repo. Defaults to user when --target is absent."
+  )]
+  pub scope: Option<String>,
+  #[arg(
+    long,
+    value_name = "path",
+    help = "Advanced explicit Agent Skills directory."
+  )]
+  pub target: Option<PathBuf>,
+}
+
+#[derive(Args)]
+pub struct SkillUpdateOptions {
+  #[arg(
+    long,
+    value_name = "path",
+    help = "Use an explicit local catalog instead of the official GitHub master."
+  )]
+  pub catalog_root: Option<PathBuf>,
+  #[arg(
+    long,
+    value_name = "scope",
+    help = "Installed scope: user or repo. Defaults to user when --target is absent."
+  )]
+  pub scope: Option<String>,
+  #[arg(
+    long,
+    value_name = "compatibility",
+    help = "Also manage the compatibility alias: claude."
+  )]
+  pub compat: Option<String>,
+  #[arg(
+    long,
+    value_name = "path",
+    help = "Advanced explicit Agent Skills directory."
+  )]
+  pub target: Option<PathBuf>,
 }
 
 #[derive(Args)]
@@ -228,6 +280,11 @@ pub enum TodoCommand {
   List {
     #[arg(long, value_name = "id", help = "Todo source id, root, or local.")]
     source: Option<String>,
+    #[arg(
+      long,
+      help = "Write a machine-readable queue snapshot with line digests."
+    )]
+    json: bool,
   },
   #[command(about = "Preview or apply one todo.txt task addition.")]
   Add {
@@ -270,6 +327,61 @@ pub enum TodoCommand {
     #[arg(long, help = "Apply the previewed file changes.")]
     apply: bool,
   },
+  #[command(about = "Preview or apply date-based or manual deferral of one todo.txt line.")]
+  Defer {
+    #[arg(value_name = "line")]
+    line: String,
+    #[arg(
+      long,
+      required = true,
+      value_name = "id",
+      help = "Todo source id, root, or local."
+    )]
+    source: String,
+    #[arg(
+      long,
+      value_name = "date",
+      help = "Keep inactive before this local date (YYYY-MM-DD)."
+    )]
+    until: Option<String>,
+    #[arg(
+      long,
+      value_name = "slug",
+      help = "Keep inactive until this manual condition is cleared."
+    )]
+    wait: Option<String>,
+    #[arg(long, help = "Apply the previewed file change.")]
+    apply: bool,
+  },
+  #[command(about = "Preview or apply removal of all deferral metadata from one todo.txt line.")]
+  Resume {
+    #[arg(value_name = "line")]
+    line: String,
+    #[arg(
+      long,
+      required = true,
+      value_name = "id",
+      help = "Todo source id, root, or local."
+    )]
+    source: String,
+    #[arg(long, help = "Apply the previewed file change.")]
+    apply: bool,
+  },
+}
+
+#[derive(Args)]
+pub struct RepoDetachArgs {
+  #[arg(
+    long,
+    value_name = "id",
+    action = clap::ArgAction::Append,
+    help = "Detach one capability such as source:<id>, release-workflow, or guidance:<scope>. Omit for full detachment."
+  )]
+  pub capability: Vec<String>,
+  #[arg(long, help = "Apply the previewed ownership-transfer plan.")]
+  pub apply: bool,
+  #[arg(long, help = "Write the plan or applied operations as JSON.")]
+  pub json: bool,
 }
 
 #[derive(Subcommand)]
@@ -391,6 +503,34 @@ pub enum SkillsCommand {
       help = "Inventory scope: public or private."
     )]
     scope: String,
+  },
+  #[command(about = "Report installed skill identity, provenance, drift, and optional updates.")]
+  Status {
+    #[arg(value_name = "name")]
+    name: Option<String>,
+    #[command(flatten)]
+    options: SkillStatusOptions,
+    #[arg(long, help = "Check the selected source for a newer package revision.")]
+    check: bool,
+    #[arg(long, help = "Write stable machine-readable output.")]
+    json: bool,
+  },
+  #[command(about = "Preview one exact public skill update without changing the installation.")]
+  Update {
+    #[arg(value_name = "name")]
+    name: String,
+    #[command(flatten)]
+    options: SkillUpdateOptions,
+  },
+  #[command(about = "Apply an unchanged serialized skill update plan.")]
+  Apply {
+    #[arg(
+      long,
+      value_name = "path",
+      required = true,
+      help = "Update plan JSON file, or - for standard input."
+    )]
+    plan: String,
   },
   #[command(about = "Link one canonical skill into the universal Agent Skills directory.")]
   Link {

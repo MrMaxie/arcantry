@@ -70,6 +70,10 @@ struct Artifact {
   dependency_updates: BTreeMap<String, Vec<String>>,
   source_id: Option<String>,
   outcomes: Vec<ReleaseOutcome>,
+  audiences: Vec<String>,
+  observable_impact: Option<String>,
+  projection_group: Option<String>,
+  projection_members: Vec<String>,
 }
 #[derive(Debug)]
 struct Configuration {
@@ -118,7 +122,7 @@ pub fn baseline(
     validate_versions(&configuration, version)?;
     let state = state(&configuration)?;
     let manifest = ReleaseManifest {
-      format: (configuration.adapter == "openspec-release@2").then_some(2),
+      format: configuration.unit.is_some().then_some(2),
       unit: configuration.unit.clone(),
       version: version.to_owned(),
       date: date.to_owned(),
@@ -194,7 +198,7 @@ pub fn cut(project: &ResolvedProject, date: &str, unit: Option<&str>) -> Result<
     }
     validate_versions(&configuration, &release.current)?;
     let manifest = ReleaseManifest {
-      format: (configuration.adapter == "openspec-release@2").then_some(2),
+      format: configuration.unit.is_some().then_some(2),
       unit: configuration.unit.clone(),
       version: release.next,
       date: date.to_owned(),
@@ -358,9 +362,7 @@ fn check_configuration(
     bail!("CHANGELOG.md is stale; run the configured release render command");
   }
   if sealed {
-    if configuration.adapter == "openspec-release@2"
-      && configuration.topology == ReleaseTopology::Composed
-    {
+    if configuration.topology == ReleaseTopology::Composed {
       let pinned = state
         .manifests
         .last()
@@ -580,7 +582,10 @@ fn configuration(project: &ResolvedProject, unit: Option<&str>) -> Result<Config
         .with_context(|| format!("Release changelog dependency is not OpenSpec: {id}."))
     })
     .collect::<Result<Vec<_>>>()?;
-  if release.adapter == "openspec-release@2" {
+  if openspec
+    .iter()
+    .all(|(_, path)| project.root.join(path).join("config.yaml").is_file())
+  {
     validate_single_coverage(project, &openspec)?;
   }
   Ok(Configuration {
@@ -595,19 +600,15 @@ fn configuration(project: &ResolvedProject, unit: Option<&str>) -> Result<Config
     changelog_visibility: effective_visibility(changelog),
     adapter: release.adapter.clone(),
     topology: ReleaseTopology::Single,
-    unit: (release.adapter == "openspec-release@2").then(|| "root".to_owned()),
-    selectors: if release.adapter == "openspec-release@2" {
-      changelog
-        .from
-        .iter()
-        .map(|source| ReleaseUnitSelector {
-          source: source.clone(),
-          components: None,
-        })
-        .collect()
-    } else {
-      Vec::new()
-    },
+    unit: None,
+    selectors: changelog
+      .from
+      .iter()
+      .map(|source| ReleaseUnitSelector {
+        source: source.clone(),
+        components: None,
+      })
+      .collect(),
     dependencies: BTreeMap::new(),
     openspec,
     repository_url: release.repository_url.clone(),
@@ -685,7 +686,7 @@ fn unit_configuration(
     releases: unit.manifests_path.clone(),
     changelog: changelog.path.clone(),
     changelog_visibility: effective_visibility(changelog),
-    adapter: "openspec-release@2".to_owned(),
+    adapter: "openspec-release@1".to_owned(),
     topology: release.topology,
     unit: Some(unit_id.to_owned()),
     openspec,
@@ -894,7 +895,7 @@ fn inspect_configuration_on(configuration: &Configuration, date: &str) -> Result
   let next = configuration
     .strategy
     .next(&current, &impact, date, !changes.is_empty())?;
-  if configuration.adapter == "openspec-release@1" {
+  if configuration.unit.is_none() {
     return Ok(ReleasePlan {
       current,
       next,
@@ -1000,7 +1001,7 @@ fn read_archived(configuration: &Configuration) -> Result<BTreeMap<String, Artif
       if artifacts.contains_key(&id) {
         bail!("duplicate archived change id: {id}");
       }
-      let artifact = if configuration.adapter == "openspec-release@2" {
+      let artifact = if configuration.unit.is_some() {
         classify_change(
           &configuration.root.join(path),
           source_id,
@@ -1015,14 +1016,97 @@ fn read_archived(configuration: &Configuration) -> Result<BTreeMap<String, Artif
         )?)
       };
       if let Some(artifact) = artifact
-        && (configuration.adapter == "openspec-release@1"
-          || artifact_matches(configuration, &artifact))
+        && (configuration.unit.is_none() || artifact_matches(configuration, &artifact))
       {
         artifacts.insert(id, artifact);
       }
     }
   }
+  apply_projection_groups(configuration, &mut artifacts)?;
   Ok(artifacts)
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ProjectionGroup {
+  category: String,
+  audiences: Vec<String>,
+  title: String,
+  body: String,
+  members: Vec<String>,
+}
+
+fn apply_projection_groups(
+  configuration: &Configuration,
+  artifacts: &mut BTreeMap<String, Artifact>,
+) -> Result<()> {
+  let mut claimed = BTreeSet::new();
+  for (_, openspec_path) in &configuration.openspec {
+    let groups = configuration
+      .root
+      .join(openspec_path)
+      .join("release-groups");
+    if !groups.is_dir() {
+      continue;
+    }
+    let mut entries = fs::read_dir(groups)?.collect::<std::io::Result<Vec<_>>>()?;
+    entries.sort_by_key(|entry| entry.file_name());
+    for entry in entries {
+      if entry.path().extension().and_then(|value| value.to_str()) != Some("yaml") {
+        continue;
+      }
+      let id = entry
+        .path()
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .filter(|value| valid_id(value))
+        .context("release group filename must be a stable slug")?
+        .to_owned();
+      let group: ProjectionGroup = serde_saphyr::from_str(&fs::read_to_string(entry.path())?)?;
+      if !valid_category(&group.category)
+        || group.audiences.is_empty()
+        || group.audiences.iter().any(|value| !valid_id(value))
+        || group.title.trim().is_empty()
+        || group.body.trim().is_empty()
+        || group.members.len() < 2
+        || group.members.iter().any(|value| !valid_id(value))
+        || group.members.iter().collect::<BTreeSet<_>>().len() != group.members.len()
+      {
+        bail!("invalid release projection group: {id}");
+      }
+      for member in &group.members {
+        if !claimed.insert(member.clone()) {
+          bail!("release change belongs to overlapping projection groups: {member}");
+        }
+        let artifact = artifacts
+          .get(member)
+          .with_context(|| format!("release group {id} references unknown change: {member}"))?;
+        if artifact.projection_group.as_deref() != Some(id.as_str()) {
+          bail!("release group {id} does not match projection_group on {member}");
+        }
+        if artifact.audiences != group.audiences {
+          bail!("release group {id} members must use the group's audiences");
+        }
+      }
+      for member in &group.members {
+        artifacts.get_mut(member).unwrap().visibility = "internal".to_owned();
+      }
+      let owner = artifacts.get_mut(&group.members[0]).unwrap();
+      owner.visibility = "public".to_owned();
+      owner.outcomes = vec![ReleaseOutcome {
+        category: group.category,
+        title: group.title,
+        body: group.body,
+      }];
+      owner.projection_members = group.members;
+    }
+  }
+  for (id, artifact) in artifacts.iter() {
+    if artifact.projection_group.is_some() && !claimed.contains(id) {
+      bail!("release change {id} references a missing projection group");
+    }
+  }
+  Ok(())
 }
 
 #[derive(Deserialize)]
@@ -1030,8 +1114,17 @@ struct ArtifactMetadata {
   category: Option<String>,
   #[serde(default = "unspecified_impact")]
   impact: String,
+  #[serde(default = "public_visibility")]
   visibility: String,
   components: Vec<String>,
+  #[serde(default)]
+  audiences: Vec<String>,
+  #[serde(default)]
+  observable_impact: Option<String>,
+  #[serde(default)]
+  changelog: Option<String>,
+  #[serde(default)]
+  projection_group: Option<String>,
   #[serde(default)]
   unit_impacts: BTreeMap<String, String>,
   #[serde(default)]
@@ -1039,6 +1132,9 @@ struct ArtifactMetadata {
 }
 fn unspecified_impact() -> String {
   "unspecified".to_owned()
+}
+fn public_visibility() -> String {
+  "public".to_owned()
 }
 
 fn parse_artifact(source: &str, v2: bool) -> Result<Artifact> {
@@ -1061,7 +1157,7 @@ fn parse_artifact(source: &str, v2: bool) -> Result<Artifact> {
     );
   }
   if v2 && metadata.impact == "none" {
-    bail!("openspec-release@2 does not support impact: none; use a non-release schema");
+    bail!("openspec-release@1 does not support impact: none; use a non-release schema");
   }
   if !matches!(
     metadata.impact.as_str(),
@@ -1078,6 +1174,36 @@ fn parse_artifact(source: &str, v2: bool) -> Result<Artifact> {
     || metadata.components.iter().collect::<BTreeSet<_>>().len() != metadata.components.len()
   {
     bail!("invalid release visibility or components");
+  }
+  let audience_projection = !metadata.audiences.is_empty()
+    || metadata.observable_impact.is_some()
+    || metadata.changelog.is_some()
+    || metadata.projection_group.is_some();
+  if audience_projection {
+    if metadata.audiences.is_empty()
+      || metadata.audiences.iter().any(|value| !valid_id(value))
+      || metadata.audiences.iter().collect::<BTreeSet<_>>().len() != metadata.audiences.len()
+    {
+      bail!("audiences must contain unique non-empty slugs");
+    }
+    if !matches!(
+      metadata.observable_impact.as_deref(),
+      Some("customer-outcome" | "user-felt" | "significant-technical" | "maintenance")
+    ) {
+      bail!(
+        "observable_impact must be customer-outcome, user-felt, significant-technical or maintenance"
+      );
+    }
+    if !matches!(metadata.changelog.as_deref(), Some("include" | "omit")) {
+      bail!("changelog must be include or omit");
+    }
+    if metadata
+      .projection_group
+      .as_deref()
+      .is_some_and(|value| !valid_id(value))
+    {
+      bail!("projection_group must be a stable slug");
+    }
   }
   if metadata.unit_impacts.iter().any(|(unit, impact)| {
     !valid_id(unit) || !matches!(impact.as_str(), "patch" | "minor" | "major")
@@ -1103,12 +1229,20 @@ fn parse_artifact(source: &str, v2: bool) -> Result<Artifact> {
   };
   Ok(Artifact {
     impact: metadata.impact,
-    visibility: metadata.visibility,
+    visibility: if metadata.changelog.as_deref() == Some("omit") {
+      "internal".to_owned()
+    } else {
+      metadata.visibility
+    },
     components: metadata.components,
     unit_impacts: metadata.unit_impacts,
     dependency_updates: metadata.dependency_updates,
     source_id: None,
     outcomes,
+    audiences: metadata.audiences,
+    observable_impact: metadata.observable_impact,
+    projection_group: metadata.projection_group,
+    projection_members: Vec::new(),
   })
 }
 
@@ -1359,6 +1493,9 @@ fn artifact_matches(configuration: &Configuration, artifact: &Artifact) -> bool 
 }
 
 fn active_matches(configuration: &Configuration, change: &Path) -> Result<bool> {
+  if configuration.unit.is_none() {
+    return Ok(true);
+  }
   let Some((source_id, source_path)) = configuration
     .openspec
     .iter()
@@ -1434,8 +1571,7 @@ fn read_manifest_directory(
     if manifest.baseline != Some(true) && manifest.changes.is_empty() {
       bail!("non-baseline release must assign changes");
     }
-    if let Some(configuration) = configuration.filter(|value| value.adapter == "openspec-release@2")
-    {
+    if let Some(configuration) = configuration.filter(|value| value.unit.is_some()) {
       if manifest.format != Some(2) {
         bail!("release manifest must use format 2");
       }
@@ -1548,7 +1684,13 @@ fn render_changelog(configuration: &Configuration, state: &State) -> Result<Stri
               .archived
               .get(id)
               .filter(|a| a.visibility == "public")
-              .map(|a| serde_json::json!({"id":id,"outcomes":a.outcomes}))
+              .map(|a| serde_json::json!({
+                "id":id,
+                "traceability": if a.projection_members.is_empty() { vec![id.clone()] } else { a.projection_members.clone() },
+                "audiences": a.audiences,
+                "observableImpact": a.observable_impact,
+                "outcomes":a.outcomes
+              }))
           })
           .collect();
         serde_json::json!({"version":manifest.version,"date":manifest.date,"changes":changes})
@@ -1634,7 +1776,7 @@ fn render_preset_changelog(configuration: &Configuration, state: &State) -> Stri
     .rev()
     .filter(|manifest| manifest.baseline != Some(true))
   {
-    let mut grouped: BTreeMap<&str, Vec<(&str, &ReleaseOutcome)>> = BTreeMap::new();
+    let mut grouped: BTreeMap<&str, Vec<(&str, &Artifact, &ReleaseOutcome)>> = BTreeMap::new();
     for id in &manifest.changes {
       let artifact = &state.archived[id];
       if artifact.visibility == "public" {
@@ -1642,7 +1784,7 @@ fn render_preset_changelog(configuration: &Configuration, state: &State) -> Stri
           grouped
             .entry(&outcome.category)
             .or_default()
-            .push((id, outcome));
+            .push((id, artifact, outcome));
         }
       }
     }
@@ -1662,8 +1804,14 @@ fn render_preset_changelog(configuration: &Configuration, state: &State) -> Stri
       if let Some(entries) = grouped.get(category) {
         lines.push(format!("### {heading}"));
         lines.push(String::new());
-        for (id, outcome) in entries {
-          lines.push(format!("<!-- openspec: {id} -->"));
+        for (id, artifact, outcome) in entries {
+          if artifact.projection_members.is_empty() {
+            lines.push(format!("<!-- openspec: {id} -->"));
+          } else {
+            for member in &artifact.projection_members {
+              lines.push(format!("<!-- openspec: {member} -->"));
+            }
+          }
           lines.push(format!("#### {}", outcome.title));
           lines.push(String::new());
           lines.push(outcome.body.clone());
@@ -1935,6 +2083,10 @@ mod tests {
             title: "Pending".to_owned(),
             body: "Pending change.".to_owned(),
           }],
+          projection_group: None,
+          projection_members: Vec::new(),
+          audiences: Vec::new(),
+          observable_impact: None,
         },
       )]),
       manifests: Vec::new(),
@@ -2032,6 +2184,10 @@ mod tests {
             title: "Native CLI".to_owned(),
             body: "Run the native CLI.".to_owned(),
           }],
+          projection_group: None,
+          projection_members: Vec::new(),
+          audiences: Vec::new(),
+          observable_impact: None,
         },
       )]),
       manifests: vec![
@@ -2064,6 +2220,43 @@ mod tests {
     assert!(
       changelog.contains("[1.1.0]: https://github.com/example/project/compare/v1.0.0...v1.1.0")
     );
+  }
+
+  #[test]
+  fn parses_audience_projection_and_keeps_omitted_semver_work() {
+    let artifact = parse_artifact(
+      "---\nimpact: patch\ncomponents: [cli]\naudiences: [developers]\nobservable_impact: maintenance\nchangelog: omit\n---\n\n## Changed\n\n### Internal cleanup\n\nThe release state remains complete.\n",
+      true,
+    )
+    .unwrap();
+    assert_eq!(artifact.impact, "patch");
+    assert_eq!(artifact.visibility, "internal");
+    assert_eq!(artifact.audiences, ["developers"]);
+  }
+
+  #[test]
+  fn projection_group_owns_prose_and_traces_every_member() {
+    let root = tempfile::tempdir().unwrap();
+    fs::create_dir_all(root.path().join("openspec/release-groups")).unwrap();
+    fs::write(
+      root.path().join("openspec/release-groups/one-story.yaml"),
+      "category: changed\naudiences: [developers]\ntitle: One story\nbody: One group-owned outcome.\nmembers: [first, second]\n",
+    )
+    .unwrap();
+    let source = "---\nimpact: patch\ncomponents: [cli]\naudiences: [developers]\nobservable_impact: user-felt\nchangelog: include\nprojection_group: one-story\n---\n\n## Changed\n\n### Member\n\nMember prose is replaced by the group.\n";
+    let mut artifacts = BTreeMap::from([
+      ("first".to_owned(), parse_artifact(source, true).unwrap()),
+      ("second".to_owned(), parse_artifact(source, true).unwrap()),
+    ]);
+    let mut configuration = release_configuration(root.path());
+    configuration.openspec = vec![("spec".to_owned(), "openspec".to_owned())];
+
+    apply_projection_groups(&configuration, &mut artifacts).unwrap();
+
+    assert_eq!(artifacts["first"].visibility, "public");
+    assert_eq!(artifacts["first"].outcomes[0].title, "One story");
+    assert_eq!(artifacts["first"].projection_members, ["first", "second"]);
+    assert_eq!(artifacts["second"].visibility, "internal");
   }
 
   #[test]

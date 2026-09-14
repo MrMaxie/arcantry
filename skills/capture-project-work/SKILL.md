@@ -24,8 +24,9 @@ When both shared and private sources can accept the item, ask for the scope only
 1. Restate the item in one concrete, portable sentence without expanding its scope or exposing source context that the target audience does not need.
 2. Inspect the chosen source and preserve its ordering and line endings.
    For todo.txt, follow an explicitly required project or source format when one exists; otherwise use the [official todo.txt format](https://github.com/todotxt/todo.txt) as the baseline. Treat priority, creation date, `+project`, and `@context` as optional, and do not infer stricter requirements from existing entries alone. Preserve local conventions that are compatible with the governing format.
-3. Preview the exact addition or specification delta. The CLI accepts the exact todo line without inventing dates, priorities or tags; use project instructions to supply any required fields. Without the CLI, edit the source directly and verify the bounded diff.
-4. Apply only when the user requested the write or approves the preview. If the target audience is broader than the source context, treat a general write request as authorization to preview only and require approval of the exact target wording before writing.
-5. Re-read the bounded result and report the target and any unresolved routing decision.
+3. Resolve capture conventions in this order: explicit user instruction, selected-source configuration, applicable repository guidance, then an unambiguous convention from comparable active entries. Frequency alone does not make optional metadata mandatory. Reuse only established tokens whose meaning matches the task. Stop for one focused decision when required metadata or taxonomy remains ambiguous.
+4. Preview the exact physical todo line and identify the source of its priority, creation date, project, context and each `key:value` field. The CLI accepts that exact line without inventing metadata. Without the CLI, edit the source directly and verify the bounded diff.
+5. Apply only when the user requested the write or approves the preview. If the target audience is broader than the source context, treat a general write request as authorization to preview only and require approval of the exact target wording before writing.
+6. Re-read the bounded result and report the target and any unresolved routing decision.
 
 Do not duplicate the same item across sources. A later explicit promotion or relocation should preserve provenance and remove the source copy only when separately authorized.

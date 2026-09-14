@@ -48,6 +48,7 @@ pub fn run() -> Result<()> {
     .start()
     .context("Docker could not start the Linux system-test container.")?;
   let command = [
+    "cargo run -p xtask -- prepare-package",
     "cargo clippy --workspace --all-targets --locked -- -D warnings",
     "cargo test --workspace --locked",
     "cargo build -p arcantry-cli",

@@ -18,7 +18,7 @@ pub fn execute(
 ) -> Result<i32> {
   let inspection = project_inspection(cwd, config, cwd_explicit)?;
   match command {
-    TodoCommand::List { source } => {
+    TodoCommand::List { source, json } => {
       let sources: Vec<_> = if let Some(source) = source {
         vec![resolve_source(&inspection, &source, false)?]
       } else {
@@ -29,6 +29,29 @@ pub fn execute(
           .cloned()
           .collect()
       };
+      if json {
+        let snapshot = sources
+          .iter()
+          .map(|source| {
+            let content = fs::read_to_string(&source.absolute_path)?;
+            Ok(serde_json::json!({
+              "source": source.id,
+              "visibility": source.visibility,
+              "path": source.path,
+              "tasks": todo::inspect_tasks(&content),
+              "contentHash": arcantry_core::project_plan::hash_content(&content),
+            }))
+          })
+          .collect::<Result<Vec<_>>>()?;
+        println!(
+          "{}",
+          serde_json::to_string_pretty(&serde_json::json!({
+            "schemaVersion": 1,
+            "queues": snapshot,
+          }))?
+        );
+        return Ok(0);
+      }
       if sources.is_empty() {
         println!("No todo.txt tasks.");
       }
@@ -131,7 +154,79 @@ pub fn execute(
       }
       handle_plan(plan, apply, false, output)
     }
+    TodoCommand::Defer {
+      line,
+      source,
+      until,
+      wait,
+      apply,
+    } => {
+      let source = resolve_source(&inspection, &source, false)?;
+      let current = fs::read_to_string(&source.absolute_path)?;
+      let desired = todo::defer_task(
+        &current,
+        parse_line(&line)?,
+        until.as_deref(),
+        wait.as_deref(),
+      )?;
+      todo_write_plan(
+        &inspection,
+        &source,
+        current,
+        desired,
+        "defer",
+        apply,
+        output,
+      )
+    }
+    TodoCommand::Resume {
+      line,
+      source,
+      apply,
+    } => {
+      let source = resolve_source(&inspection, &source, false)?;
+      let current = fs::read_to_string(&source.absolute_path)?;
+      let desired = todo::resume_task(&current, parse_line(&line)?)?;
+      todo_write_plan(
+        &inspection,
+        &source,
+        current,
+        desired,
+        "resume",
+        apply,
+        output,
+      )
+    }
   }
+}
+
+fn todo_write_plan(
+  inspection: &KnowledgeInspection,
+  source: &ProjectSource,
+  current: String,
+  desired: String,
+  transition: &str,
+  apply: bool,
+  output: Option<&Path>,
+) -> Result<i32> {
+  let mut plan = ProjectPlan::new(
+    inspection.root.clone(),
+    &source.id,
+    transition,
+    "todo-txt@1",
+  );
+  if desired != current {
+    plan.operations.push(create_write_operation(
+      &inspection.root,
+      &source.path,
+      desired,
+      source.visibility,
+    )?);
+  }
+  if let Some(path) = &inspection.config_path {
+    plan.watch(&path.to_string_lossy())?;
+  }
+  handle_plan(plan, apply, false, output)
 }
 
 fn resolve_source(

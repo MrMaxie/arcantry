@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "supporting",
   "summary": "Stage evidence-backed review findings in chat until the user selects exactly what may become an external draft.",
   "scenarios": [
     {

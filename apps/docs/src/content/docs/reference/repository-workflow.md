@@ -40,7 +40,7 @@ Use `--to-path`, `--to-adapter`, `--managed-from`, and `--delete-source` only wh
 
 ## Serialize and protect the plan
 
-`repo apply` accepts the complete JSON plan produced by `--json`:
+`arcantry repo apply` accepts the complete JSON plan produced by `--json`:
 
 ```sh
 arcantry repo plan --source history --transition cutover --managed-from 1.0.0 --json > plan.json
@@ -60,7 +60,7 @@ For relocation with deletion, the target is staged and verified before the separ
 
 ## Replan after drift
 
-If a source changes after planning or during apply, Arcantry rejects the plan before accepting the changed state. Do not edit hash fields or reuse the stale plan. Run `repo inspect`, recreate the plan from current inputs, and apply the replacement.
+If a source changes after planning or during apply, Arcantry rejects the plan before accepting the changed state. Do not edit hash fields or reuse the stale plan. Run `arcantry repo inspect`, recreate the plan from current inputs, and apply the replacement.
 
 <!-- cli-evidence: apply-rejects-drift -->
 
@@ -73,6 +73,6 @@ arcantry repo validate
 arcantry repo doctor
 ```
 
-`repo validate` checks configured `validate` and `manage` responsibilities without changing a source. `repo doctor` adds repair guidance but remains read-only. Neither command upgrades adapters or applies a plan.
+`arcantry repo validate` checks configured `validate` and `manage` responsibilities without changing a source. `arcantry repo doctor` adds repair guidance but remains read-only. Neither command upgrades adapters or applies a plan.
 
 External trackers, pull requests, and design tools may provide context, but source configuration and skills do not grant permission to modify those systems.

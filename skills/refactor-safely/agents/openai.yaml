@@ -1,0 +1,4 @@
+interface:
+  display_name: "Refactor Safely"
+  short_description: "Refactor code without changing behavior"
+  default_prompt: "Use $refactor-safely to implement this authorized structural change in verified increments."

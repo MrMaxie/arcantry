@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "primary",
   "summary": "Maintain universal AGENTS.md guidance at the narrowest applicable scope through exact, approval-gated edits.",
   "learning": {
     "outcomes": [
