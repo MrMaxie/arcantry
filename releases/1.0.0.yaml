@@ -19,6 +19,7 @@ changes:
   - improve-configurator-responsive-reflow
   - make-cli-documentation-verifiable
   - model-audience-based-release-projection
+  - normalize-cross-platform-skill-manifests
   - organize-docs-and-adopt-nub
   - preserve-cli-intent-provenance
   - preserve-todo-queue-conventions

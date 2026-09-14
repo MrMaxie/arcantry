@@ -180,6 +180,11 @@ Arcantry holds native CLI behavior to independent command-level evidence and kee
 
 The configurator reflows questions and generated instructions before its three-region workspace becomes cramped and preserves content at a 320 CSS pixel viewport and with user text-spacing overrides.
 
+<!-- openspec: normalize-cross-platform-skill-manifests -->
+#### Keep skill package identity stable across platforms
+
+Arcantry now produces the same skill package hashes from equivalent Windows and Linux text checkouts while preserving exact byte identity for binary resources.
+
 <!-- openspec: preserve-todo-queue-conventions -->
 #### Preserve each todo queue's established vocabulary during capture
 
