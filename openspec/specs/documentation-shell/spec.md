@@ -140,7 +140,7 @@ Documentation code blocks MUST use the bundled Catppuccin Latte theme in light m
 
 ### Requirement: The configurator builds an agent-ready adoption scenario
 
-The documentation MUST provide a full-width prompt configurator using the established header and footer without the overview hero treatment. It MUST ask progressive, plain-language questions that distinguish new setup from an existing Arcantry setup, installed tool state, Git and GitHub use, shared or private audience, external control, desired knowledge sources, agent compatibility, and the user's preferred execution boundary. A choice that materially changes the next decision MUST reveal a relevant follow-up instead of assuming technical knowledge.
+The documentation MUST provide a full-width prompt configurator using the established header and footer without the overview hero treatment. It MUST offer a bounded set of supported scenarios and ask progressive, plain-language questions that distinguish read-only evaluation, new adoption and inspection of an existing setup. A scenario MUST seed only facts inherent to that scenario. A choice that materially changes the next decision, conflicts with an earlier answer or leaves authority uncertain MUST reveal one relevant follow-up instead of assuming technical knowledge or permission.
 
 #### Scenario: A new user does not use GitHub
 
@@ -148,15 +148,27 @@ The documentation MUST provide a full-width prompt configurator using the establ
 - **THEN** the configurator asks whether local Git would be useful without requiring a remote
 - **AND** the generated prompt states that Arcantry can continue without Git
 
+#### Scenario: A visitor starts from evaluation
+
+- **WHEN** the visitor selects a scenario whose first outcome is deciding whether Arcantry fits
+- **THEN** the generated request begins with read-only inspection and a no-change recommendation boundary
+- **AND** does not imply approval to adopt or modify the repository
+
+#### Scenario: Scenario answers conflict
+
+- **WHEN** one selected answer conflicts with the scenario or another material answer
+- **THEN** the relevant stage asks a focused follow-up and marks the request incomplete
+- **AND** the generator does not silently choose one answer
+
 #### Scenario: A project already uses Arcantry
 
-- **WHEN** the user chooses to change an existing setup
-- **THEN** the configurator asks which boundaries, sources, guidance, or repair concerns should be reviewed
-- **AND** the generated prompt begins with read-only inspection before recommending an update or source transition
+- **WHEN** the visitor selects a scenario for an existing setup
+- **THEN** the configurator asks which boundaries, sources, guidance or repair concerns should be inspected
+- **AND** the generated request requires current-state inspection before recommending an update or transition
 
 ### Requirement: Configurator choices are portable in the URL
 
-The configurator MUST begin with no selected answer when its URL contains no valid configuration parameters. It MUST reveal each subsequent question only after the preceding applicable question has an answer. It MUST encode relevant answers as compact URL query parameters, MUST omit unanswered values, MUST restore the scenario from valid parameters after reload, and MUST discard invalid or inapplicable values. It MUST NOT use local storage, cookies, accounts, analytics, or server persistence for scenario answers.
+The configurator MUST encode the selected scenario and relevant answers as compact URL query parameters, MUST omit unanswered and inapplicable values, MUST restore the normalized scenario after reload, and MUST discard unknown or conflicting values without replacing them with an implicit decision. It MUST NOT use local storage, cookies, accounts, analytics or server persistence for scenario answers.
 
 When a visitor enters the empty configurator and makes at least one selection, the page MUST use a browser navigation warning before leaving while selections remain. When a visitor enters through a URL that already contains valid selections, the page MUST NOT add that warning, including after the visitor temporarily changes those selections.
 
@@ -183,6 +195,12 @@ When a visitor enters the empty configurator and makes at least one selection, t
 - **WHEN** a user opens a configurator URL containing valid answers
 - **THEN** the same applicable controls are selected
 - **AND** the generated prompt and completion state match those selections
+
+#### Scenario: A configured scenario URL is reopened
+
+- **WHEN** a user opens a URL containing one supported scenario and valid answers
+- **THEN** the same applicable controls are selected
+- **AND** the generated request, unresolved follow-ups and completion state match those selections
 
 ### Requirement: Prompt changes remain understandable and safe
 
@@ -221,9 +239,43 @@ The scrollable request MUST remain reachable by keyboard with a visible focus in
 
 ### Requirement: The configurator uses the documentation application shell
 
-The configurator MUST retain the established header and footer. On sufficiently wide and tall screens, questions and the request MUST form two aligned columns. The request MUST remain available while answering later questions, with long generated text scrolling inside its preview while the copy action stays outside that scroll area. On narrow or short screens, the request MUST follow the questions and expand naturally with its content. The document MUST remain scrollable, without horizontal overflow or clipped controls.
+The configurator MUST use three regions only while setup navigation, questions and generated instructions each retain their defined readable minimum size. At intermediate widths it MUST reduce the parallel regions before text, controls or the preview become undersized, and at narrow widths it MUST preserve the questions as the primary column with the preview following the question flow. Layout changes MUST preserve every answer, available action, progress state, focus target and programmatic relationship.
 
-The compact mobile brand symbol MUST remain readable in both themes. Header search, repository, and theme icons MUST retain the common documentation treatment.
+The configurator MUST support browser zoom equivalent to a 320 CSS pixel viewport and user text-spacing overrides without loss of content or functionality or page-level scrolling in two dimensions. A region that requires its own scrolling MUST remain keyboard, pointer and touch accessible and MUST NOT obscure focused content.
+
+The configurator MUST reuse the documentation sidebar's link treatment and credit footer in the left region on wide screens instead of approximating their spacing, width, typography or content. The compact mobile brand symbol MUST remain readable in both light and dark themes. Header search, repository and theme icons MUST use a moderate common visual size, and the search control MUST NOT display a keyboard-shortcut badge on any page. The full-width configurator header and workspace MUST use the same outer alignment instead of independently centered maximum widths.
+
+#### Scenario: A visitor uses the configurator on a wide screen
+
+- **WHEN** the viewport can display the documentation application shell
+- **THEN** setup navigation, questions and the instructions preview appear as left, center and right regions
+- **AND** the header aligns to the same full-width grid
+- **AND** selecting an answer enables its applicable follow-up stage link
+
+#### Scenario: A visitor uses the configurator below the documentation sidebar breakpoint
+
+- **WHEN** the viewport is narrower than the documentation sidebar breakpoint
+- **THEN** the stage navigation is available through a compact control above the questions
+- **AND** the instructions preview follows the question flow
+- **AND** the compact Arcantry symbol has sufficient contrast for the active theme
+
+#### Scenario: The three-region workspace becomes constrained
+
+- **WHEN** the viewport or browser zoom cannot preserve readable minimum sizes for all three regions
+- **THEN** the configurator reduces its parallel layout before shrinking question or preview text
+- **AND** the user retains every answer, action and progress relationship
+
+#### Scenario: A user enlarges the configurator
+
+- **WHEN** content is presented at the 320 CSS pixel reflow equivalent or with user text-spacing overrides
+- **THEN** all non-exempt content remains available without two-dimensional page scrolling
+- **AND** keyboard focus is not hidden by fixed or independently scrolling regions
+
+#### Scenario: Side-by-side comparison remains useful
+
+- **WHEN** the viewport provides enough width for readable questions and generated instructions
+- **THEN** the preview remains available beside the question flow
+- **AND** the layout continues to use the established visual system
 
 #### Scenario: A visitor answers the last question on a wide screen
 
@@ -256,3 +308,19 @@ The changelog MUST preserve the canonical history while clearly separating relea
 - **WHEN** they view the introduction or scroll to the project footer on desktop or mobile
 - **THEN** the navigation, content and footer use the same horizontal alignment
 - **AND** no breadcrumb occupies the introduction
+
+### Requirement: Product evaluation begins with recognizable outcomes
+
+The overview MUST explain recognizable repository problems, the user outcomes Arcantry supports and representative examples before relying on Arcantry-specific source names or scope terminology. It MUST preserve a progressive path to the precise OpenSpec, changelog, todo.txt, guidance, skill and scope contracts for readers who need technical detail.
+
+#### Scenario: A developer evaluates relevance
+
+- **WHEN** a developer opens the product overview without prior Arcantry knowledge
+- **THEN** they can identify at least one concrete problem and expected outcome before learning the source model
+- **AND** they can continue to the exact technical boundaries without encountering a contradictory simplified story
+
+#### Scenario: An experienced engineer compares existing practice
+
+- **WHEN** the repository already uses disciplined ADR, RFC, issue, documentation and release practices
+- **THEN** the overview identifies compatible incremental adoption paths, non-goals and cases where Arcantry adds little value
+- **AND** does not portray those established practices as failures to be replaced

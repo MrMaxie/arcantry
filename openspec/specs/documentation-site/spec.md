@@ -2,9 +2,7 @@
 
 ## Purpose
 Define the documentation content contract for developers adopting and verifying Arcantry.
-
 ## Requirements
-
 ### Requirement: Documentation explains the unified adoption journey
 
 The authored documentation MUST explain how shared and private TOML configuration, OpenSpec, changelog, todo.txt, repository guidance, portable skills, and the three catalog families fit together. It MUST distinguish shared project state from private workstation state, present each source as independently adoptable, and describe `AGENTS.md` and `.agents` as universal surfaces rather than provider-owned files.
@@ -27,12 +25,18 @@ Adoption, repository workflow, CLI, and skills overview pages MUST be authored f
 
 ### Requirement: Arcantry documents its own conformance
 
-The contributor documentation MUST state that Arcantry validates its own repository through documented project commands and contracts. It MUST NOT present Arcantry's mandatory OpenSpec change and release lifecycle as a universal requirement for projects that only use Arcantry.
+The contributor documentation MUST identify the repository verification surface and accurately distinguish unit tests, black-box CLI contract tests, optional coverage diagnostics, disposable Linux system tests and release-target execution. It MUST NOT describe an independent native contract suite as a comparison with a retired implementation or describe missing branch data as branch coverage.
 
 #### Scenario: A contributor checks Arcantry itself
 
 - **WHEN** the contributor follows the Contributing to Arcantry section
 - **THEN** they can identify the repository verification surface and Arcantry-specific lifecycle rules
+
+#### Scenario: A contributor selects a verification command
+
+- **WHEN** the contributor follows the command reference
+- **THEN** they can identify which boundary the command executes and whether failure blocks acceptance
+- **AND** the documented claim matches the command's current implementation
 
 ### Requirement: Documentation links and presentation remain stable
 
@@ -110,12 +114,12 @@ Every rendered Markdown and MDX table MUST preserve the header's column count in
 
 ### Requirement: Public CLI trust claims identify executable evidence
 
-Claims about read-only behavior, network behavior, repository writes, removal boundaries, rollback and private data MUST be no broader than named executable evidence. Unsupported or incompletely executed platforms MUST be described as contract targets rather than current execution evidence.
+Claims about read-only behavior, network behavior, repository writes, removal boundaries, rollback and private data MUST be no broader than named executable evidence and an accepted OpenSpec requirement. Unsupported or incompletely executed platforms MUST be described as contract targets rather than current execution evidence. Documentation verification MUST validate the complete provenance chain rather than checking only that a marker is present.
 
 #### Scenario: A trust claim loses executable evidence
 
-- **WHEN** its mapped executable scenario is removed or renamed
-- **THEN** documentation verification fails until the claim is narrowed or evidence is restored
+- **WHEN** its accepted requirement, documentation reference or executable scenario is removed, renamed or rebound
+- **THEN** documentation verification fails until the claim is narrowed or the complete evidence chain is restored
 
 ### Requirement: MVP setup follows the visitor outcome
 
@@ -126,3 +130,108 @@ The configurator MUST distinguish evaluation, new adoption and existing setup re
 - **WHEN** a visitor selects source-based work
 - **THEN** the generated request reads project instructions, configuration, change tasks and templates directly
 - **AND** does not block on installation
+
+### Requirement: Public trust claims have audience-visible evidence
+
+Every material public claim about data flow, network activity, permissions, repository writes, rollback, private state, skill trust, package integrity or vulnerability handling MUST identify an accepted requirement, evidence at least as broad as the claim and the boundary Arcantry actually controls. Evidence required to evaluate a public claim MUST be available to that audience. When complete public evidence is unavailable, documentation MUST narrow the claim and state the remaining responsibility instead of exposing private diagnostics or presenting an aspiration as a guarantee.
+
+#### Scenario: A public guarantee exceeds its evidence
+
+- **WHEN** the claim covers behavior, platforms or actors that its linked evidence does not cover
+- **THEN** documentation validation fails until the evidence expands or the wording narrows
+- **AND** a responsibility boundary is not presented as verified Arcantry behavior
+
+#### Scenario: Evidence contains private diagnostic data
+
+- **WHEN** supporting evidence cannot be published safely to the claim's audience
+- **THEN** the public claim is limited to evidence that audience can inspect
+- **AND** private diagnostics are not copied into the public trust surface
+
+### Requirement: Trust evidence has one non-duplicative owner
+
+The public trust inventory MUST reference the CLI provenance ledger for CLI-specific claims and MUST NOT restate or independently rebind its executable evidence. Non-CLI trust claims MUST have their own stable owners and evidence references.
+
+#### Scenario: A CLI trust claim appears in the public inventory
+
+- **WHEN** the inventory includes a claim already owned by the CLI provenance contract
+- **THEN** it references that existing claim and evidence identity
+- **AND** validation rejects a competing duplicate mapping
+
+### Requirement: Adoption guidance explains ownership exit consequences
+
+Every adoption path MUST make removal, rollback and permanent detachment consequences discoverable before apply. Guidance MUST distinguish verified Arcantry-owned metadata, user-authored project knowledge, managed links, copied or reimplemented detached assets and independently maintained project behavior. It MUST identify which updates, compatibility promises, validation, distribution and support are retained or forfeited.
+
+#### Scenario: A team compares managed and detached ownership
+
+- **WHEN** a fixed repository-specific implementation may fit better than managed Arcantry
+- **THEN** guidance explains the maintenance, security, migration and compatibility obligations transferred to the project
+- **AND** explains that Arcantry's portability, safe upgrades, cross-project consistency, distribution and supported evolution remain separate product value
+
+#### Scenario: A user reads removal guidance
+
+- **WHEN** the user intends only to stop Arcantry management
+- **THEN** guidance does not describe removal as ownership transfer or independence proof
+- **AND** identifies any preserved user-authored content separately
+
+### Requirement: Adoption guidance supports an informed ownership decision
+
+Adoption guidance MUST identify the work required to evaluate and adopt the selected scope, the ongoing ownership retained by the project, and the observable behavior available for the project's own evaluation. The project MUST retain authority over its evaluation period, success signals and stopping or removal conditions. Claims about effort or value MUST be grounded in current product behavior and representative project workflows and MUST NOT present unsupported return-on-investment estimates.
+
+#### Scenario: A team evaluates a pilot
+
+- **WHEN** a product or engineering leader compares Arcantry's expected value with organizational overhead
+- **THEN** the guidance identifies available scopes, responsibilities and observable product behavior
+- **AND** leaves evaluation criteria and the stopping decision to that team
+
+### Requirement: Adjacent engineering practices retain their authority
+
+Documentation MUST explain that ADRs and RFCs own decision rationale, issue trackers own delivery coordination, project documentation owns durable usage knowledge and release practices own delivered history. Arcantry MUST describe supported connections and boundaries without turning those systems into Arcantry-owned sources or duplicating their content by default.
+
+#### Scenario: A mature repository compares integration
+
+- **WHEN** an evaluator already has credible decision, planning, documentation and release practices
+- **THEN** the guidance shows what remains authoritative, what Arcantry may connect and what it does not manage
+- **AND** identifies when preserving the existing system without Arcantry is the lower-cost choice
+
+### Requirement: Project-work adoption does not imply delivery integration
+
+Documentation MUST distinguish shared project-work configuration from integrating Arcantry into product runtime, build, CI or publication workflows. Guidance and generated adoption requests MUST NOT infer those delivery-toolchain changes from shared scope and MUST require an explicit user selection or request before including them.
+
+#### Scenario: A project adopts shared configuration only
+
+- **WHEN** a user selects shared project-work configuration without selecting a delivery-toolchain integration
+- **THEN** adoption guidance limits the requested changes to the selected project-work scope
+- **AND** does not request changes to product runtime, build, CI or publication workflows
+
+### Requirement: Documentation has one canonical public origin
+
+The documentation site, canonical and social metadata, sitemaps, public schema identities, runtime schema defaults, package metadata and plugin metadata MUST use `https://arcantry.dev/` as the public Arcantry origin. The site MUST be published from the domain root through the repository's GitHub Pages workflow. Public documentation links MUST NOT depend on the previous `/arcantry/` repository base path or identify the GitHub Pages origin as canonical. The independent `https://maxie.dev` author identity MAY remain linked as author information.
+
+#### Scenario: A public Arcantry URL is generated
+
+- **WHEN** documentation and package projections are generated from a clean checkout
+- **THEN** canonical metadata, Open Graph URLs, sitemap entries, schema locations and product homepage links use `https://arcantry.dev/`
+- **AND** internal documentation links resolve from the domain root
+- **AND** generated-output verification rejects the previous public origins and repository base path
+
+### Requirement: Hashed documentation assets use a dedicated cache path
+
+Astro-generated JavaScript, CSS, optimized images, fonts and other content-hashed documentation assets MUST be emitted under `/static/`. Requests under `/static/` MUST be served through Cloudflare with an edge and browser cache TTL of 15,552,000 seconds. HTML and non-hashed public files MUST NOT inherit this long-lived cache policy.
+
+#### Scenario: A visitor requests a generated asset twice
+
+- **WHEN** a deployed content-hashed asset under `/static/` is requested through `arcantry.dev`
+- **THEN** the response advertises a 15,552,000-second browser cache lifetime
+- **AND** a repeated request can be served as a Cloudflare cache hit
+- **AND** an HTML response remains outside the long-lived asset rule
+
+### Requirement: The custom domain preserves secure canonical routing
+
+The GitHub Pages site MUST assign `arcantry.dev` as its custom domain, serve it over enforced HTTPS and accept both the apex and `www` DNS variants. Cloudflare MUST proxy the web records only after GitHub Pages has provisioned the custom-domain certificate, use strict TLS to the origin and redirect HTTP to HTTPS. The `www` variant MUST redirect to the canonical apex origin.
+
+#### Scenario: A visitor uses a non-canonical entry point
+
+- **WHEN** they request HTTP or the `www` hostname
+- **THEN** they reach the corresponding HTTPS route on `https://arcantry.dev/`
+- **AND** the delivered page identifies the apex origin as canonical
+
