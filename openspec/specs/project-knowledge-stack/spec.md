@@ -121,7 +121,25 @@ Inspect and plan operations MUST NOT write project state. Shared and private sou
 
 ### Requirement: Todo sources preserve the todo.txt contract
 
-Arcantry MUST recognize root `todo.txt` and private `.local/todo.txt` independently. The `todo-txt@1` adapter and todo mutation commands MUST treat each non-empty physical line as one task. Content that Arcantry creates or directly rewrites MUST follow the official todo.txt baseline: priority MAY appear first, a creation date MAY follow the priority or begin an unprioritized task, projects, contexts and `key:value` metadata MUST remain optional, and a completed task MUST begin with lowercase `x`, its completion date, an optional creation date and the task text in that order. Todo operations MUST preserve untouched lines, line endings, BOM, trailing-newline state, arbitrary projects, contexts and `key:value` metadata. Older or noncanonical lines MUST NOT block a scoped mutation of different content and MUST NOT be normalized implicitly. Arcantry MUST NOT impose inbox or outbox tags.
+Arcantry MUST recognize root `todo.txt` and private `.local/todo.txt` independently. The `todo-txt@1` adapter and todo mutation commands MUST treat each non-empty physical line as one task. Content that Arcantry creates or directly rewrites MUST follow the official todo.txt baseline: priority MAY appear first, a creation date MAY follow the priority or begin an unprioritized task, projects, contexts and `key:value` metadata MUST remain optional, and a completed task MUST begin with lowercase `x`, its completion date, an optional creation date and the task text in that order. Todo operations MUST preserve untouched lines, line endings, BOM, trailing-newline state, arbitrary projects, contexts and `key:value` metadata. Older or noncanonical lines MUST NOT block a scoped mutation of different content and MUST NOT be normalized implicitly. Arcantry MUST NOT impose inbox or outbox tags. Before creating or directly rewriting a task, a mutating operation MUST inspect the selected source and resolve any compatible capture convention from explicit user instruction, selected-source configuration, applicable repository guidance or an unambiguous pattern among comparable active tasks, in that precedence order. Frequency alone MUST NOT make optional metadata mandatory. The operation MUST NOT invent a project, context, metadata key or taxonomy token.
+
+#### Scenario: A queue has an explicit capture convention
+
+- **WHEN** the selected source requires a creation date or identifies an established project, context or metadata vocabulary
+- **THEN** the preview applies the compatible convention and identifies the source of every optional field
+- **AND** apply writes only the exact reviewed physical line
+
+#### Scenario: Local taxonomy is ambiguous
+
+- **WHEN** more than one existing token could represent the new task or required metadata is missing
+- **THEN** the operation reports mutually exclusive alternatives and leaves the queue unchanged
+- **AND** does not choose the most frequent token as an implicit decision
+
+#### Scenario: No compatible convention exists
+
+- **WHEN** the queue, configuration and guidance establish no applicable capture convention
+- **THEN** the preview uses the official one-task-per-line todo.txt baseline
+- **AND** does not add optional priority, date, project, context or metadata
 
 #### Scenario: Both todo sources exist
 
@@ -205,18 +223,29 @@ Source adoption MUST accept explicit source dependencies and MUST reject the pla
 
 ### Requirement: Release configuration is versioned by adapter contract
 
-Arcantry MUST preserve `openspec-release@1` behavior and MAY use `openspec-release@2` only when configured explicitly. The v2 adapter MUST support `single`, `independent` and `composed` topologies. An omitted v2 topology MUST mean `single` and MUST retain the flat release configuration shape.
+Arcantry MUST expose `openspec-release@1` as its single final release adapter. That adapter MUST support `single`, `independent` and `composed` topologies. An omitted topology MUST mean `single` and MUST retain the flat release configuration shape. Historical manifest formats MAY remain parseable, but no second public adapter identifier or adapter migration command MAY be required for unpublished prepublication contracts.
+
+#### Scenario: A single-release project is inspected
+
+- **WHEN** a project configures `openspec-release@1` without a topology
+- **THEN** Arcantry applies the flat single-release behavior
 
 #### Scenario: An existing v1 project is inspected
 
 - **WHEN** a project configures `openspec-release@1`
-- **THEN** Arcantry applies the existing single-release behavior
-- **AND** does not reinterpret its configuration or manifests as v2
+- **THEN** Arcantry applies the final adapter contract without requiring migration
+- **AND** historical release manifests remain parseable
 
 #### Scenario: A v2 topology is omitted
 
-- **WHEN** a project configures `openspec-release@2` with flat release fields and no topology
-- **THEN** Arcantry treats the release topology as `single`
+- **WHEN** a project configuration originating before publication omits topology
+- **THEN** Arcantry treats the release topology as `single` under `openspec-release@1`
+
+#### Scenario: A multi-unit topology is configured
+
+- **WHEN** a project configures `openspec-release@1` with independent or composed units
+- **THEN** Arcantry applies the explicit unit ownership and dependency contract
+- **AND** does not require another adapter version
 
 ### Requirement: Multi-unit release ownership is explicit
 
@@ -293,3 +322,39 @@ Repository context discovery MUST inspect the selected configuration, every supp
 - **WHEN** Git is available and `.local` is not tracked by the configured default remote branch
 - **THEN** discovery reports whether Git's effective exclusion rules protect `.local`
 - **AND** does not infer protection solely from one ignore file
+
+### Requirement: Todo mutation previews expose the exact task line
+
+Every todo capture plan MUST present the exact non-empty physical line that apply would write and MUST distinguish user-supplied, convention-derived and omitted optional fields. Apply MUST reject input drift and any task line that differs from the reviewed plan.
+
+#### Scenario: A caller reviews optional metadata
+
+- **WHEN** preview includes a creation date, project, context or `key:value` metadata
+- **THEN** the plan shows the complete line and the origin of each optional field
+- **AND** apply cannot add a further field that was absent from the preview
+
+### Requirement: Todo deferral is explicit and affects only next-step selection
+
+Arcantry MUST support `t:YYYY-MM-DD` as a local-date threshold and `wait:<slug>` as an opaque manual condition. Deferral and resume MUST preserve unrelated queue bytes and preview before apply. `todo list` MUST show every entry. Only `arcantry next` MUST filter completed entries, future thresholds and all waiting entries. A threshold task MUST become active on its date. Resume MUST remove both deferral markers.
+
+#### Scenario: A task waits for a date and a manual condition
+
+- **WHEN** the selected line contains both deferral markers
+- **THEN** `todo list` continues to report it
+- **AND** `arcantry next` ignores it until the wait marker is removed and the threshold date has arrived
+
+### Requirement: Approved todo promotion is hash-bound and atomic
+
+Todo snapshot output MUST include the queue content hash and each task's source id, visibility, line, raw content and digest. Semantic classification and item-level approval MUST remain owned by the promotion skill. An accepted promotion MUST bind its OpenSpec targets, provenance and source disposition into one serializable project plan, reject drift, validate every target before source removal and apply atomically. Partial promotion MUST retain an explicit remainder.
+
+#### Scenario: A selected todo line changes after approval
+
+- **WHEN** its queue hash or line digest differs from the accepted transformation
+- **THEN** apply refuses every write
+- **AND** the transformation returns to review
+
+#### Scenario: Private intent yields a safe shared requirement
+
+- **WHEN** approved private evidence supports a redacted shared requirement
+- **THEN** shared provenance does not contain private source identity, raw content or hashes
+- **AND** detailed provenance remains private under `.local`
