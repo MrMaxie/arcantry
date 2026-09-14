@@ -23,15 +23,6 @@ Arcantry MUST support SemVer, monotonic integer and calendar versions selected p
 - **WHEN** it selects the integer strategy and plans a release
 - **THEN** the next identifier increments numerically and its preview updates only compatible version sources and managed changelog content
 
-### Requirement: Local verification replaces mandatory CI
-
-Implementation MUST use Windows host checks and existing Linux Testcontainers. Only Pages documentation generation, build and deploy MUST remain enabled remotely. Coverage MUST be diagnostic, not a completion gate. Changes MUST remain at version 1.0.0 until separately authorized.
-
-#### Scenario: Documentation changes reach master
-
-- **WHEN** the Pages workflow runs
-- **THEN** it builds and deploys documentation without running Rust, package or release gates
-
 ### Requirement: Safe operations remain previewable and recoverable
 
 File mutations MUST retain drift checks, preserve unrelated content and refuse ambiguous recovery. Plans MAY be saved to an explicit file with private-content disclosure. Context profiles and Varlock observation MUST NOT expose environment values or imply authorization. Detachment MUST identify project ownership and preserve licensing.
@@ -40,3 +31,19 @@ File mutations MUST retain drift checks, preserve unrelated content and refuse a
 
 - **WHEN** an input changes before apply
 - **THEN** apply refuses to overwrite it and leaves existing content intact
+
+### Requirement: Local and remote verification have separate delivery roles
+
+Implementation MUST pass Windows host checks and Linux Testcontainers before delivery. Pull requests and `master` MUST run repository CI, Pages MUST build and deploy documentation independently, and a sealed release tag MUST run the native and publication matrix. Coverage MUST remain diagnostic rather than a completion gate. Product and distributable versions MUST remain `1.0.0` for this first public release.
+
+#### Scenario: Ordinary work reaches master
+
+- **WHEN** a pull request is opened and merged
+- **THEN** repository CI validates the proposed and delivered commit
+- **AND** Pages builds documentation without becoming a release gate
+
+#### Scenario: A release tag is pushed
+
+- **WHEN** `v1.0.0` identifies the sealed release commit
+- **THEN** the release workflow executes target qualification and protected publication
+- **AND** local completion evidence is not substituted for execution of release artifacts on their declared platforms

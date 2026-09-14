@@ -1,6 +1,6 @@
 ---
 category: changed
-impact: none
+impact: patch
 visibility: internal
 components:
   - repository-lifecycle

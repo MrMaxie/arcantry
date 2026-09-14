@@ -7,21 +7,131 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-08-18
+## [1.0.0] - 2026-09-14
 
 ### Added
+
+<!-- openspec: add-agent-prompt-configurator -->
+#### Configure an Arcantry setup prompt
+
+The documentation configurator guides visitors through installation, adoption scope, project sources and agent compatibility choices, then produces a copyable setup prompt whose state can be restored from the page URL.
+
+<!-- openspec: add-code-quality-skills -->
+#### Add focused code-quality workflows
+
+Arcantry separates evidence-backed code assessment, maintainable structural design and authorized behavior-preserving refactoring into three focused public skills.
+
+<!-- openspec: add-design-coherent-gui-skill -->
+#### Design coherent graphical interfaces
+
+Arcantry now guides graphical interface work around audience-fit information density, purposeful spatial composition, established component contracts, and rendered consistency.
+
+<!-- openspec: add-deterministic-context-discovery -->
+#### Inspect complete Arcantry repository context deterministically
+
+Repository inspection exposes concise, detailed and machine-readable Arcantry context without repeated platform-specific scans.
+
+<!-- openspec: define-managed-and-detached-adoption -->
+#### Transfer selected capabilities into independent project ownership
+
+Arcantry distinguishes managed removal from reviewed one-way detachment and verifies that detached outputs remain useful without an Arcantry dependency or update channel.
+
+<!-- openspec: deliver-practical-mvp -->
+#### Answer project context through the CLI and MCP
+
+Arcantry exposes shared `context`, `next` and `explain` behavior through the native CLI and a read-only MCP server so agents can resume work from discovered project sources without inferring approval.
+
+<!-- openspec: deliver-practical-mvp -->
+#### Adapt release workflows to project conventions
+
+Projects can choose SemVer, monotonically increasing integer or calendar release identifiers and can render managed changelogs from a project template while preserving existing history.
+
+<!-- openspec: expose-generic-release-cli -->
+#### Manage local release stories from adopted projects
+
+Adopted projects can establish a release baseline, plan and cut SemVer manifests, render a managed changelog and check release consistency through a configuration-driven local CLI that never publishes implicitly.
+
+<!-- openspec: extend-configurator-adoption-scenarios -->
+#### Start adoption guidance from a supported scenario
+
+The configurator turns representative project scenarios into portable, approval-aware agent requests and asks when material choices conflict.
+
+<!-- openspec: model-audience-based-release-projection -->
+#### Project release work into audience-appropriate changelog stories
+
+Arcantry separates audience, observable impact and inclusion policy, allowing traceable consolidation and intentional omission without losing manifest or SemVer ownership.
+
+<!-- openspec: ship-native-rust-cli -->
+#### Run Arcantry as a native cross-platform CLI
+
+Arcantry provides verified native executables for Windows, macOS and Linux on x64 and ARM64 while preserving package-runner commands for npm consumers.
 
 <!-- openspec: stabilize-arcantry-1-0 -->
 #### Coordinate project knowledge and agent workflows with Arcantry
 
 Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content.
 
+<!-- openspec: support-composable-release-units -->
+#### Model independent and composed release units
+
+Projects can manage one release story, several independently versioned units or a composed product whose unit manifests pin exact direct dependencies, without turning child releases into implicit parent version changes.
+
 <!-- openspec: support-multiple-agent-hosts -->
 #### Use universal Agent Skills with Claude compatibility
 
 Arcantry links individual skills through the universal `.agents` directory, lets Codex consume that standard directly, and can add Claude Code compatibility aliases to the same canonical packages.
 
+<!-- openspec: support-multiple-release-outcomes -->
+#### Represent distinct consumer outcomes within one release change
+
+Arcantry release artifacts can keep several consumer outcomes under their truthful changelog categories while preserving one OpenSpec change as the SemVer, manifest, visibility, component, and provenance boundary.
+
+<!-- openspec: version-and-update-skills -->
+#### Version and update individual skills
+
+Arcantry can identify, compare and safely update one public skill from an exact canonical revision without replacing other installed skills or requiring a CLI release.
+
 ### Changed
+
+<!-- openspec: align-host-plugin-identity -->
+#### Keep plugin identity aligned across supported hosts
+
+Arcantry presents one canonical product identity through platform-appropriate Codex and Claude plugin manifests.
+
+<!-- openspec: deliver-practical-mvp -->
+#### Keep planned project mutations recoverable
+
+Saved plans retain source hashes, refuse stale inputs and preserve ambiguous interrupted state for explicit recovery instead of overwriting project content.
+
+<!-- openspec: establish-arcantry-dev-public-domain -->
+#### Publish Arcantry from its own public domain
+
+Arcantry documentation, metadata and public schemas use `arcantry.dev`, with long-lived caching limited to content-hashed site assets.
+
+<!-- openspec: establish-executable-cli-contract -->
+#### Verify the native CLI against its public contract
+
+The native CLI now proves its documented command surface and repository effects through independent executable contract cases instead of treating the retired TypeScript CLI as the expected result. Repository adoption, project plans and multi-target skill links now restore their complete pre-command filesystem state when a staged mutation fails.
+
+<!-- openspec: explain-arcantry-fit-and-adoption-tradeoffs -->
+#### Explain when Arcantry fits and what adoption requires
+
+Arcantry presents recognizable project outcomes, adoption trade-offs and compatibility with mature engineering practices before requiring readers to learn its source model. It makes clear that shared project-work configuration does not automatically integrate Arcantry into product runtime, build, CI or publication workflows.
+
+<!-- openspec: make-cli-documentation-verifiable -->
+#### Keep the CLI reference aligned and readable
+
+The CLI reference now fails verification when command syntax drifts, safety claims lose their evidence or Markdown tables split option alternatives into unintended columns.
+
+<!-- openspec: organize-docs-and-adopt-nub -->
+#### Organize documentation and repository tooling
+
+Arcantry now keeps its documentation application in a dedicated workspace, uses mise to provision pinned `just` and Nub versions, retains the root `justfile` as its task runner, and recreates documentation projections during builds instead of storing them as authored sources.
+
+<!-- openspec: preserve-cli-intent-provenance -->
+#### Keep CLI expectations traceable to executable evidence
+
+Arcantry traces public CLI behavior and trust claims from authored documentation through accepted OpenSpec requirements to executable native evidence.
 
 <!-- openspec: refine-documentation-navigation -->
 #### Navigate Arcantry documentation quickly
@@ -32,6 +142,53 @@ Documentation navigation exposes every skill through clear nested families, cons
 #### Explain why and how to adopt Arcantry
 
 The documentation overview explains Arcantry's value through concrete outcomes, clear recommended adoption paths, an interactive source configuration map, one cross-platform command picker, and complete project footer details.
+
+<!-- openspec: restore-verified-release-publishing -->
+#### Publish one verified Arcantry 1.0 distribution
+
+Arcantry 1.0 ships the same sealed release through native archives, checksum-verifying installers, the `arcantry` npm launcher and exact platform packages. GitHub Actions executes every supported target, retains the verified package archives and keeps the GitHub Release as a draft until the complete npm package set is confirmed.
+
+<!-- openspec: retire-typescript-core-and-tooling -->
+#### Use one native Rust engine for Arcantry
+
+Arcantry's CLI, repository operations and supporting project tools use one Rust implementation. The npm package remains a launcher for the native executable and no longer exposes a separate JavaScript library API.
+
+<!-- openspec: support-private-project-artifacts-and-universal-agent-files -->
+#### Use universal agent files with private project artifacts
+
+Arcantry now treats `AGENTS.md` and `.agents/skills` as the universal project surfaces, offers explicit Claude compatibility without duplicating source material, and discovers private OpenSpec, changelog and skill artifacts alongside their shared counterparts.
+
+### Fixed
+
+<!-- openspec: adopt-discovered-sources-into-config -->
+#### Persist adopted project sources
+
+Adopting a discovered or standard project source now records it in the active configuration, including explicitly selected dependencies, so later inspections retain the adopted responsibility.
+
+<!-- openspec: align-public-trust-surface-with-evidence -->
+#### Bound public safety claims to visible evidence
+
+Arcantry distinguishes verified guarantees from responsibility boundaries and narrows public trust claims when evidence does not support the broader promise.
+
+<!-- openspec: harden-native-cli-verification-gates -->
+#### Make native CLI verification fail on untested behavior
+
+Arcantry holds native CLI behavior to independent command-level evidence and keeps host, Linux system and release-target execution as distinct gates. Coverage remains an optional diagnostic.
+
+<!-- openspec: improve-configurator-responsive-reflow -->
+#### Keep the setup configurator readable between desktop and mobile widths
+
+The configurator reflows questions and generated instructions before its three-region workspace becomes cramped and preserves content at a 320 CSS pixel viewport and with user text-spacing overrides.
+
+<!-- openspec: preserve-todo-queue-conventions -->
+#### Preserve each todo queue's established vocabulary during capture
+
+Arcantry previews the exact task line, reuses compatible local conventions and asks before inventing or omitting meaningful optional metadata.
+
+<!-- openspec: support-official-todo-txt-baseline -->
+#### Preserve the official todo.txt baseline across Arcantry writes
+
+Arcantry CLI and canonical skills use the official todo.txt baseline for new or directly changed tasks while preserving existing queue content and optional metadata.
 
 ## [0.4.3] - 2026-08-18
 
