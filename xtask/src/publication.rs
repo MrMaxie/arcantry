@@ -287,13 +287,6 @@ fn validate_existing_archive(
   expected: &str,
   actual: &str,
 ) -> Result<()> {
-  if metadata.name == MAIN_PACKAGE {
-    bail!(
-      "{}@{} already exists; refusing duplicate main-package publication.",
-      metadata.name,
-      metadata.version
-    );
-  }
   if actual != expected {
     bail!(
       "{}@{} exists with different integrity.",
@@ -324,6 +317,10 @@ fn publish_npm(root: &Path, archives: &Path, existing: &Path) -> Result<()> {
 
 fn create_draft_release(tag: &str, artifacts: &Path) -> Result<()> {
   let artifacts = absolutize(artifacts)?;
+  let notes_directory = tempfile::tempdir()?;
+  let notes_path = notes_directory.path().join("release-notes.md");
+  fs::write(&notes_path, release_notes(&std::env::current_dir()?, tag)?)?;
+  let notes_path = notes_path.to_string_lossy().into_owned();
   let release_artifacts = TARGETS
     .iter()
     .map(|target| artifacts.join(target.archive))
@@ -341,6 +338,7 @@ fn create_draft_release(tag: &str, artifacts: &Path) -> Result<()> {
   if existing.success {
     let release: GitHubRelease = serde_json::from_str(&existing.stdout)?;
     validate_draft_identity(tag, &release)?;
+    run_checked("gh", &["release", "edit", tag, "--notes-file", &notes_path])?;
     let mut arguments = vec!["release".to_owned(), "upload".to_owned(), tag.to_owned()];
     arguments.extend(release_artifacts);
     arguments.push("--clobber".to_owned());
@@ -364,10 +362,33 @@ fn create_draft_release(tag: &str, artifacts: &Path) -> Result<()> {
     "--verify-tag".to_owned(),
     "--title".to_owned(),
     tag.to_owned(),
+    "--notes-file".to_owned(),
+    notes_path,
   ];
   arguments.extend(release_artifacts);
   run_checked_owned("gh", &arguments)?;
   Ok(())
+}
+
+fn release_notes(root: &Path, tag: &str) -> Result<String> {
+  let version = tag
+    .strip_prefix('v')
+    .with_context(|| format!("invalid release tag: {tag}"))?;
+  let changelog = fs::read_to_string(root.join("CHANGELOG.md"))?.replace("\r\n", "\n");
+  let heading = format!("## [{version}] - ");
+  let start = changelog
+    .find(&heading)
+    .with_context(|| format!("CHANGELOG.md has no release section for {version}"))?;
+  let section = &changelog[start..];
+  let end = section[heading.len()..]
+    .find("\n## [")
+    .map(|index| index + heading.len())
+    .unwrap_or(section.len());
+  let section = section[..end].trim();
+  if section.lines().count() < 2 {
+    bail!("CHANGELOG.md release section for {version} is empty");
+  }
+  Ok(format!("{section}\n"))
 }
 
 fn validate_draft_identity(tag: &str, release: &GitHubRelease) -> Result<()> {
@@ -492,17 +513,12 @@ mod tests {
   }
 
   #[test]
-  fn rejects_duplicate_main_publication_and_platform_integrity_drift() {
+  fn accepts_exact_existing_packages_and_rejects_integrity_drift() {
     let main = PackageMetadata {
       name: MAIN_PACKAGE.to_owned(),
       version: "1.0.0".to_owned(),
     };
-    assert!(
-      validate_existing_archive(&main, "sha512-same", "sha512-same")
-        .unwrap_err()
-        .to_string()
-        .contains("refusing duplicate main-package publication")
-    );
+    validate_existing_archive(&main, "sha512-same", "sha512-same").unwrap();
     let platform = PackageMetadata {
       name: "@arcantry/cli-linux-x64".to_owned(),
       version: "1.0.0".to_owned(),
@@ -545,7 +561,7 @@ mod tests {
   #[test]
   fn pins_every_github_artifact_action_to_a_full_commit_sha() {
     let workflow = fs::read_to_string(
-      Path::new(env!("CARGO_MANIFEST_DIR")).join("../.github/release.yml.disabled"),
+      Path::new(env!("CARGO_MANIFEST_DIR")).join("../.github/workflows/release.yml"),
     )
     .unwrap();
     let actions = workflow
@@ -555,11 +571,48 @@ mod tests {
           || token.starts_with("actions/download-artifact@")
       })
       .collect::<Vec<_>>();
-    assert_eq!(actions.len(), 5);
+    assert_eq!(actions.len(), 6);
     assert!(actions.iter().all(|action| {
       action.rsplit_once('@').is_some_and(|(_, reference)| {
         reference.len() == 40 && reference.bytes().all(|byte| byte.is_ascii_hexdigit())
       })
     }));
+  }
+
+  #[test]
+  fn keeps_release_publication_behind_verified_artifacts_and_environment_approval() {
+    let workflow = fs::read_to_string(
+      Path::new(env!("CARGO_MANIFEST_DIR")).join("../.github/workflows/release.yml"),
+    )
+    .unwrap();
+    assert!(workflow.contains("name: release-${{ github.ref_name }}"));
+    assert!(!workflow.contains("release-v1.0.0"));
+    assert!(
+      workflow.contains("draft-release:\n    needs:\n      - assemble\n      - installer-smoke")
+    );
+    assert!(workflow.contains("publish:\n    needs: draft-release"));
+    assert!(workflow.contains("environment: npm"));
+    assert!(workflow.contains("id-token: write"));
+    let draft = workflow.find("draft-release:").unwrap();
+    let publish = workflow.find("\n  publish:").unwrap();
+    let create_draft = workflow.find("publish create-draft-release").unwrap();
+    let publish_npm = workflow.find("publish publish-npm").unwrap();
+    let publish_release = workflow.find("publish publish-release").unwrap();
+    assert!(draft < create_draft && create_draft < publish);
+    assert!(publish < publish_npm && publish_npm < publish_release);
+  }
+
+  #[test]
+  fn extracts_exact_openspec_managed_release_notes() {
+    let root = tempfile::tempdir().unwrap();
+    fs::write(
+      root.path().join("CHANGELOG.md"),
+      "# Changelog\n\n## [Unreleased]\n\n## [1.0.0] - 2026-09-14\n\n### Added\n\nOne outcome.\n\n## [0.4.3] - 2026-08-18\n\nOlder.\n",
+    )
+    .unwrap();
+    assert_eq!(
+      release_notes(root.path(), "v1.0.0").unwrap(),
+      "## [1.0.0] - 2026-09-14\n\n### Added\n\nOne outcome.\n"
+    );
   }
 }

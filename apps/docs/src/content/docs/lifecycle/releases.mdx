@@ -134,23 +134,26 @@ Projects using Arcantry can observe a changelog without OpenSpec. Only a changel
 
 The public package is `arcantry`. npm publication consumes an already sealed Arcantry release; it does not create or reinterpret one.
 
-For normal releases:
+For releases after the first public version:
 
 1. Complete the internal release flow and push the seal commit.
 2. Create a protected `v<version>` tag that points exactly to that commit.
-3. Let the `Publish npm` workflow verify the tag, manifest, package version, repository metadata and exact package archive.
-4. The workflow publishes through npm trusted publishing from the protected `npm` GitHub environment. It does not use a stored npm write token.
+3. Let the `Native release` workflow verify the tag, manifest, package version, repository metadata and exact package archives.
+4. Approve the protected `npm` environment after the native binaries, installers, npm archives and draft GitHub Release have passed their checks.
+5. The workflow publishes platform packages before the main package through npm trusted publishing, then makes the GitHub Release public. It does not use a stored npm write token.
 
-The first publication is a one-time bootstrap because npm requires a package to exist before it can trust a CI publisher:
+The first publication is a one-time bootstrap because npm requires a package to exist before it can trust a CI publisher. The same tagged workflow still builds and verifies the release:
 
-1. Build and verify the release archive from the exact seal commit.
-2. As an authorized npm maintainer with 2FA, run `npm publish <archive>`.
-3. Assign organization governance for the unscoped package when required.
-4. In the package settings on npmjs.com, add the GitHub Actions trusted publisher for repository `MrMaxie/arcantry`, disabled workflow `release.yml.disabled`, environment `npm`, and the `npm publish` action.
-5. Require 2FA and disallow token-based publication after the trusted publisher has been verified.
+1. Push the protected release tag and let `.github/workflows/release.yml` build all native targets, test both installers, create the seven exact npm archives and open the draft GitHub Release.
+2. Leave the protected `npm` job waiting for maintainer approval.
+3. Download the retained `release-v<version>` artifact from that workflow run without rebuilding it locally.
+4. As an authorized npm maintainer with 2FA, publish the six platform archives in the workflow's declared order, then publish the main `arcantry` archive.
+5. Configure the GitHub Actions trusted publisher for every package with repository `MrMaxie/arcantry`, workflow `release.yml`, environment `npm`, and publication permission. Verify each relationship with `npm trust list <package>`.
+6. Approve the protected `npm` job. It rechecks each registry integrity, skips exact matches and stops on any mismatch before making the GitHub Release public.
+7. Require 2FA and disallow token-based publication after all trusted publishers have been verified.
 
-Do not create the first version tag before bootstrap is complete. Automated tag publication starts with the next sealed version.
+The manual bootstrap archives do not carry OIDC publication provenance. Trusted publishing becomes effective and verifiable when a later version is published by the workflow.
 
 Projects can select integer or calendar versions and a MiniJinja changelog template. See [Release conventions](/reference/configuration/#release-conventions) for compatible version sources and preserved history.
 
-The release workflow is retained as a reference and is not active. Only documentation deployment runs on GitHub during MVP development.
+Pull requests and `master` run CI, documentation changes run Pages, and protected `v<version>` tags run the native release workflow. The tag workflow keeps the GitHub Release as a draft until the protected npm publication gate completes.
