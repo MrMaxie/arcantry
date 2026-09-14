@@ -9,11 +9,12 @@ Read `.local/arcantry.toml` when present for private operational configuration.
 
 When an OpenSpec requirement applies to a class of files, components, or pages, inventory the matching candidates from the repository before implementation and again before completion. Mark each candidate compliant or explicitly out of scope; do not treat named examples as the complete surface unless the requirement limits them.
 
-## Local delivery
+## Delivery
 
-- Implement and commit coherent, verified increments directly on `master`. Do not create branches or pull requests for this workflow.
+- Implement and commit coherent, verified increments using the repository's protected-branch workflow. Deliver changes to `master` through a pull request when branch protection requires it.
 - Keep existing local commits and unrelated work intact. Pushes and remote settings changes require separate authorization.
-- Only the documentation Pages workflow runs remotely. Use `just check-fast`, `just check-host`, and `just linux-system-test` locally.
+- Pull requests and `master` run the repository CI workflow. Documentation changes also run the Pages workflow. Protected release tags run the native release workflow.
+- Use `just check-fast`, `just check-host`, and `just linux-system-test` locally before delivery; remote checks complement rather than replace local evidence.
 - Coverage is an optional diagnostic, not an implementation or publication gate.
 - Prefer concrete Rust code and established dependencies over new frameworks. Compare the total maintenance cost before adding infrastructure.
 
