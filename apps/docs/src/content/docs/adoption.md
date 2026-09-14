@@ -11,6 +11,20 @@ arcantry repo inspect
 
 Inspection is read-only and works without Git, configuration, or recognized sources.
 
+## Choose the decision you need
+
+| Reader | Useful decision | Start with |
+| --- | --- | --- |
+| Solo developer | Reduce repeated project discovery without adding team process. | Inspect, then choose private setup or one focused skill. |
+| Engineering team | Share source roles and agent guidance while keeping personal context private. | Compare shared setup with shared plus private sources. |
+| Enterprise team | Preserve existing ownership, policy and delivery boundaries. | Inspect first, then adopt only explicitly governed sources. |
+| Programmer | Find the next accepted task and work from current project conventions. | Context, OpenSpec changes and todo queues. |
+| DevOps or platform engineer | Keep runtime, CI, deployment and publication separate from project-work adoption. | Repository contract and explicit release configuration. |
+| Product manager | See which intent is accepted, deferred or delivered without replacing the delivery tracker. | OpenSpec changes, todo intake and changelog boundaries. |
+| CEO or product leader | Decide whether the coordination value justifies the maintenance ownership. | Current workflow fit, adoption footprint and detachment cost. |
+
+The adopting project chooses its own evaluation period, success signals and stopping decision. Arcantry supplies observable behavior and reversible boundaries, not a mandatory pilot template.
+
 In a Git repository, adoption resolves `.local/` before using local state. If the configured default remote branch already tracks `.local/`, Arcantry preserves that established repository policy and reports the conflict with its private-local convention. Otherwise it keeps the directory private through `.git/info/exclude`. If only the current index tracks `.local/`, removal from the index is planned separately, requires explicit approval, and preserves the working files.
 
 ## Choose an adoption path
@@ -79,6 +93,21 @@ arcantry repo apply --plan plan.json
 ```
 
 Available transitions preserve, adopt, rebind, cut over, migrate, or relocate one source. Apply refuses changed inputs and corrupt planned content.
+
+## Keep existing engineering records authoritative
+
+ADRs and RFCs retain decision rationale. Issue trackers retain delivery coordination. Project documentation retains durable usage knowledge. Release practices retain delivered history. Arcantry can connect these responsibilities through explicit project sources, but it does not replace or duplicate them by default.
+
+## Detach project-owned capabilities
+
+Detachment is an ownership transfer, not removal. Preview a full transfer by omitting selectors, or select repeated capability ids for a partial transfer:
+
+```sh
+arcantry repo detach --json
+arcantry repo detach --capability source:specs --capability guidance:shared --json
+```
+
+Apply only the reviewed plan with `--apply`. Retained files become project-owned and receive no Arcantry synchronization or support. The generated ownership record includes the capability budget, final owner, licensing obligation and negative dependency contract. Shared detached capabilities must work from a fresh checkout without the Arcantry executable, network access, user-scoped skills or private `.local` state. A later re-adoption is a new transition.
 
 ## Use queues or skills independently
 

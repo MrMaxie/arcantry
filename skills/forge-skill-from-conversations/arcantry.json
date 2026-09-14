@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "advanced",
   "summary": "Build one focused skill candidate from recurring conversation evidence and evaluate it behind explicit approval gates.",
   "scenarios": [
     {

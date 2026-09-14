@@ -1,0 +1,855 @@
+[
+  {
+    "name": "adopt-arcantry",
+    "version": "1.0.0",
+    "role": "primary",
+    "digest": "770f9480aacdd3a0339a66b5fba90fba9fad78750d7ed016c3a9eb230f0cc078",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "4b8b74cd6689bf67e056109839d85e7c32b3d9650e6ee76751c7f5af9f1fe950"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "244b52acf985689ae01165368a8d5218229b119cf687c8ecf48872091a64f551"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "c1d7b3a8c6b2fc5f3be486fc04b713de6c216699f6bba713c7a6473aef948592"
+      }
+    ],
+    "history": [
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      },
+      {
+        "change": "unify-arcantry-capabilities",
+        "date": "2026-08-17",
+        "title": "Unified Arcantry capabilities",
+        "summary": "Arcantry now combines its OpenSpec lifecycle with reusable skills, a complete Codex plugin, a versioned catalog, and one CLI for safe repository adoption and skill management."
+      }
+    ]
+  },
+  {
+    "name": "agent-self-improve",
+    "version": "1.0.0",
+    "role": "advanced",
+    "digest": "95bebc827f035a1d15eeddc61e91e0d58e6f28ee07187225da4fa637abb2ed03",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "c2dfd7df15159372b17fc6b282e0dd01d9c1b61512bdd01be6d66c7b7574ca79"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "ba0970b46ed7d9f2fb76845bb5bcb99d3e94ddce72431614346808fb0a0f3a2e"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "e26841b6cc5b9954a9b84b49eaf0fe552bbd4feb3ad2bdfca0802fbf6a06cf4a"
+      },
+      {
+        "path": "references/decision-rules.md",
+        "sha256": "bfc80a253ac75a318567d4cb860b11db6091b1fcfccdf78d6edd857011867d0d"
+      },
+      {
+        "path": "references/evaluation-rubric.md",
+        "sha256": "a761295d97fa7f3561a8ba578ebb44a9245f34e088f85c4d8bf9fab3b388ab4a"
+      },
+      {
+        "path": "references/scenarios.md",
+        "sha256": "62e52b1c9bc6b552146ec300e9d20015fef4ad123ff24fe3e6ec43575649beee"
+      }
+    ],
+    "history": [
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      },
+      {
+        "change": "unify-arcantry-capabilities",
+        "date": "2026-08-17",
+        "title": "Unified Arcantry capabilities",
+        "summary": "Arcantry now combines its OpenSpec lifecycle with reusable skills, a complete Codex plugin, a versioned catalog, and one CLI for safe repository adoption and skill management."
+      }
+    ]
+  },
+  {
+    "name": "assess-code-quality",
+    "version": "1.0.0",
+    "role": "primary",
+    "digest": "0b237108403458666abd664d9eab92da13ad9609eccf44a315bed02f6f38530d",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "fdb285c2e1ce56a95ed3ded8e4132e8c1e80120c38c81bdf65a7911dc9b0b58b"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "306a2fbabd5034258ad2a41ef8b520184e80cb37d935241f1961c858cbb7a7eb"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "f7904a8c6ac2861c0b2b12ff52c2a1563936d8693425db4d6f5104368be3607a"
+      },
+      {
+        "path": "references/assessment-guide.md",
+        "sha256": "7941b7461b667d5de19cde6c0e22a5185e81ec4ae51da344fbbcdeb3b7955507"
+      }
+    ],
+    "history": [
+      {
+        "change": "add-code-quality-skills",
+        "date": "2026-09-14",
+        "title": "Add focused code-quality workflows",
+        "summary": "Arcantry separates evidence-backed code assessment, maintainable structural design and authorized behavior-preserving refactoring into three focused public skills."
+      }
+    ]
+  },
+  {
+    "name": "audience-scope-discipline",
+    "version": "1.0.0",
+    "role": "supporting",
+    "digest": "0424fb1e2ec6eed33d83f0925c262ddcf91f28752ae951800fb8ee04c636cc12",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "52752528372becd43e1e0ed4f135693fe2072c2eac5f7d68d9c1c14f6a2e11e1"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "1ac5a65b2c96e8990d9b097ab34cbd4472010e90e8ba70465f0ad4ed281b1f4f"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "793f49b7adb572129635ca65e9907d835f80b0ad9d9e20a6e1d1677b2c5b8cbe"
+      },
+      {
+        "path": "references/evaluation-rubric.md",
+        "sha256": "527c8a0d3e9f2d7dc11fd59a6b40fbc9e83d7517950efbb7cb28e190d777ddf0"
+      },
+      {
+        "path": "references/scenarios.md",
+        "sha256": "89795328ac31274afd216183f145ecb967ab6bc4e443c6939ec8722e3c0ab507"
+      }
+    ],
+    "history": [
+      {
+        "change": "preserve-derived-artifact-fidelity",
+        "date": "2026-08-18",
+        "title": "Preserve derived artifact fidelity",
+        "summary": "Audience and scope guidance now preserves the structure and comparison semantics of existing artifacts unless the requester explicitly authorizes a different representation."
+      },
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      },
+      {
+        "change": "unify-arcantry-capabilities",
+        "date": "2026-08-17",
+        "title": "Unified Arcantry capabilities",
+        "summary": "Arcantry now combines its OpenSpec lifecycle with reusable skills, a complete Codex plugin, a versioned catalog, and one CLI for safe repository adoption and skill management."
+      }
+    ]
+  },
+  {
+    "name": "audit-skill-portfolio",
+    "version": "1.0.0",
+    "role": "advanced",
+    "digest": "1704ca1e20371dd1d0613251a27a80e3b2738962145209f9f78b7ebe772521f1",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "0d32876190ceb4b67bef0d8652c5506d4d802b4d0b9ae665219d7fbbe0296f00"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "938ad98b505a85ea12f2107dbd3a699629df532f1361a2747cb5b654e3685908"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "b0f52324d7d06e397620062325a58c7aa2a4404abcf2fc684eef43a64f2f24e7"
+      },
+      {
+        "path": "references/decision-rules.md",
+        "sha256": "802740e69f011c5e9768fcd783f46be19558f217951d9ecf634144c9d9a7a272"
+      },
+      {
+        "path": "references/evaluation-rubric.md",
+        "sha256": "e48cc377df101cdcfa356598f5cb11a2c9608f1e2328bb13a717d3a523607555"
+      },
+      {
+        "path": "references/scenarios.md",
+        "sha256": "ff8cafc59518c836483c2733fa7afd479084835176cf771ca4609f7783846ac6"
+      },
+      {
+        "path": "scripts/audit_skill_portfolio.py",
+        "sha256": "bab1564c4a32d9019b8ae62c64d3d2c599c30440de6800ddeb2b90bf2a083f8b"
+      },
+      {
+        "path": "scripts/test_audit_skill_portfolio.py",
+        "sha256": "521a96990904802ac21f45c1054067dc9b5d415a1084864ac6cd4d740611eb67"
+      }
+    ],
+    "history": [
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      },
+      {
+        "change": "unify-arcantry-capabilities",
+        "date": "2026-08-17",
+        "title": "Unified Arcantry capabilities",
+        "summary": "Arcantry now combines its OpenSpec lifecycle with reusable skills, a complete Codex plugin, a versioned catalog, and one CLI for safe repository adoption and skill management."
+      }
+    ]
+  },
+  {
+    "name": "capture-project-work",
+    "version": "1.0.0",
+    "role": "primary",
+    "digest": "ba8422a19ecae71d8cf0d9d9b96990f6922ab42c8d78f21e512955f01f9e4bfe",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "90334f3721ad3bf4acaeb1448dc8dcab201b12e33ba3f8bd8d8958ceb4994dd6"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "3fd9fa485df018ae40ebd6c8a3b79004ee16f85696b220de6c9a24e016426e60"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "c98096477798cc1ac12071fe14d00431fab60b07271e45dfe1c299e83fdaf9cf"
+      }
+    ],
+    "history": [
+      {
+        "change": "preserve-todo-queue-conventions",
+        "date": "2026-09-11",
+        "title": "Preserve each todo queue's established vocabulary during capture",
+        "summary": "Arcantry previews the exact task line, reuses compatible local conventions and asks before inventing or omitting meaningful optional metadata."
+      },
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      }
+    ]
+  },
+  {
+    "name": "capture-repeatable-work",
+    "version": "1.0.0",
+    "role": "advanced",
+    "digest": "093cdd40329cb7a6b064bcf1347843c9295f0030e39e4a0cef80d2c51a399b65",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "e4f4a14ffa5482cb9648733a117f6019d3bc7e1757ed431a5b1bc2911a982e03"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "b44569c799ed4eb75dc9ee3fcd5856437105ad7219684f8159611a879127cfa7"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "c9a899c18cdc23618112b1f61e18fbf975678673d6360957e89fbedc6631d1bc"
+      },
+      {
+        "path": "references/artifact-routing.md",
+        "sha256": "c0635dae49edeaabac29a7bbf3cb4fa75ba2315a296d97954d366eec136b6c28"
+      }
+    ],
+    "history": [
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      },
+      {
+        "change": "unify-arcantry-capabilities",
+        "date": "2026-08-17",
+        "title": "Unified Arcantry capabilities",
+        "summary": "Arcantry now combines its OpenSpec lifecycle with reusable skills, a complete Codex plugin, a versioned catalog, and one CLI for safe repository adoption and skill management."
+      }
+    ]
+  },
+  {
+    "name": "design-coherent-gui",
+    "version": "1.0.0",
+    "role": "primary",
+    "digest": "674332332a76f22ea8d9923d320a6f7ef41d432ce6496081b7c394195df64989",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "c379904eafc16fcdafe79b5fada076db1de528eb82411a32d296ef37becac107"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "8d98752f33879dedda84aaaebd709535d04ef6374fd63c8bc69a40e49dd3539e"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "bd78c738dd2bdb2844407a019c8472c1931175d92721ff61a67066050209454f"
+      },
+      {
+        "path": "references/component-contracts.md",
+        "sha256": "2a2144b458fe7ad432dd49131e0618889e01c5cefb543138ddc88af925bae452"
+      },
+      {
+        "path": "references/evaluation-rubric.md",
+        "sha256": "03543d788a452092ec4dc68155b860229ef2ac2740cb45ddf5c0ac8d7db5d6a2"
+      },
+      {
+        "path": "references/layout-and-density.md",
+        "sha256": "4aeac9bdbb9b26c581d477e4994752681d9d5090ebd1dda5f59fdbaddb47213a"
+      },
+      {
+        "path": "references/scenarios.md",
+        "sha256": "0827b54ae31b8bfe0c50c68874716de3a19b034e6c95e4420b5d4bd0c31bf6f0"
+      }
+    ],
+    "history": [
+      {
+        "change": "add-design-coherent-gui-skill",
+        "date": "2026-09-11",
+        "title": "Design coherent graphical interfaces",
+        "summary": "Arcantry now guides graphical interface work around audience-fit information density, purposeful spatial composition, established component contracts, and rendered consistency."
+      }
+    ]
+  },
+  {
+    "name": "design-maintainable-code",
+    "version": "1.0.0",
+    "role": "primary",
+    "digest": "cb0e78b09a5d454ba0241c0b1849bfe4ece7ba2558e1b10555fb6699d668d9d0",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "78154f80fa6f5b39be8457c63ec1a02db04de15697915e1191def74be8db5fcb"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "28a51dc30e3f982d64728a5ec0ef5b2ed68ab9c4609b8403c72e2a738a6fbd7a"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "f61995873faf44ee87223230ec7c1ada79bcc90c482893a6ddea730b510679ae"
+      },
+      {
+        "path": "references/design-guide.md",
+        "sha256": "e16ba97c35d970951b4efd8c123f82f3978885cf965115d2dfdf4366b368d4c4"
+      }
+    ],
+    "history": [
+      {
+        "change": "add-code-quality-skills",
+        "date": "2026-09-14",
+        "title": "Add focused code-quality workflows",
+        "summary": "Arcantry separates evidence-backed code assessment, maintainable structural design and authorized behavior-preserving refactoring into three focused public skills."
+      }
+    ]
+  },
+  {
+    "name": "design-terminal-ux",
+    "version": "1.0.0",
+    "role": "primary",
+    "digest": "929bc4d21e5dd20cf78070e16b1696d4d67aa8cee40df5e3aaf3baed8159a8af",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "1bb1df7642020af5dac841322c7cc4197d6d436d6333eff9045bb26df432634d"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "c926c24eb1d4a8bd45a74a8a1dd6d79e553f80e0b6f63b9a518f7d0705d25f58"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "9f0f560cbf7106d26bb77f7ab2bd404434a4661b2d09951cd9c44235cfc53d10"
+      },
+      {
+        "path": "references/audit-playbook.md",
+        "sha256": "973528b4039d1866b6c9e25b5301c8ef966b651035ba4b8046b0e28c8d94f05b"
+      },
+      {
+        "path": "references/design-scenarios.md",
+        "sha256": "51a14d5e6890d1e8344c902f0adcf93c602ea7aaaa34b34d37711abe670568ac"
+      },
+      {
+        "path": "references/information-and-interaction.md",
+        "sha256": "f50ca3a3ab90c10ec62ba45366f8f38fabaee033ca43a7731fbf7e6f2006535c"
+      },
+      {
+        "path": "references/states-and-copy.md",
+        "sha256": "426db827a379c1dcf48d13a179aaf189e8b293788cce3c78f16969c33e88f260"
+      }
+    ],
+    "history": [
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      },
+      {
+        "change": "unify-arcantry-capabilities",
+        "date": "2026-08-17",
+        "title": "Unified Arcantry capabilities",
+        "summary": "Arcantry now combines its OpenSpec lifecycle with reusable skills, a complete Codex plugin, a versioned catalog, and one CLI for safe repository adoption and skill management."
+      }
+    ]
+  },
+  {
+    "name": "evaluate-skill-change",
+    "version": "1.0.0",
+    "role": "advanced",
+    "digest": "e363594ab1907d5fb6fcbb1442fb4db4a29b3abab493d3dfb47f34d5fda425a3",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "4932c2cf1096420662969248c8a181d3382959963f7bc134eb5029e6dc93d016"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "b2f6777b4c1161b07066923a61cf6303944bc56234ec80135666152986f44085"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "8b03ee3c99f1efaf021417922b5cf32ef83b6569e52cbcfafd4a29feead6031b"
+      },
+      {
+        "path": "references/evaluation-protocol.md",
+        "sha256": "a203f19ba05f194bca8e26f4ca9813d6800f2d3e574f4df9912daa4c788fa82b"
+      },
+      {
+        "path": "scripts/resolve_quick_validate.py",
+        "sha256": "e02a158b33e549a8e9c1eaeaf98c41ddbd72ba3f5dca53eba3abf07716f19e6c"
+      },
+      {
+        "path": "scripts/test_validate_cases.py",
+        "sha256": "3c4f92104e079b3e5e98eb2abf28db30c22a1b78957df98c17ab9488d66f193d"
+      },
+      {
+        "path": "scripts/validate_cases.py",
+        "sha256": "a25b8ac2d26ec64dc46bbd60b49b89db168b1f31b35817b88f64ddf547402062"
+      }
+    ],
+    "history": [
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      },
+      {
+        "change": "unify-arcantry-capabilities",
+        "date": "2026-08-17",
+        "title": "Unified Arcantry capabilities",
+        "summary": "Arcantry now combines its OpenSpec lifecycle with reusable skills, a complete Codex plugin, a versioned catalog, and one CLI for safe repository adoption and skill management."
+      }
+    ]
+  },
+  {
+    "name": "forge-skill-from-conversations",
+    "version": "1.0.0",
+    "role": "advanced",
+    "digest": "e30874c786b4b2c4476be195f80585f1e5d90c120938fed105544f38c58dc9d0",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "e27101afa710057770f9488da34e7b60623618eea8efa2bf78eb88e85db3e66f"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "88066095d05e60e44b7ac2197f986eff897e1127feaee658a32a92fa47b83896"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "4bd6f481b0c11f3cabed3f03dde3035ff4d76d4e2c780b1f4c51923e5bb6dc1c"
+      }
+    ],
+    "history": [
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      },
+      {
+        "change": "unify-arcantry-capabilities",
+        "date": "2026-08-17",
+        "title": "Unified Arcantry capabilities",
+        "summary": "Arcantry now combines its OpenSpec lifecycle with reusable skills, a complete Codex plugin, a versioned catalog, and one CLI for safe repository adoption and skill management."
+      }
+    ]
+  },
+  {
+    "name": "maintain-agent-guidance",
+    "version": "1.0.0",
+    "role": "primary",
+    "digest": "b225f22bc2c0951b50392a212161f4170e3e8ad6dc98b176cad4f8e89a95ba6f",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "273d9ba5a543b6b92fcc8597821bd7f71e3a8e295cfe4b355c7e9ffe65415703"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "6874c00ed553e8260b3e4ac52fdd9133502bc5f92be08fb72c4eb9c522882b35"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "418fc8d9763c028a41a5f8e3a263e8def12660385f67a401e3a670d2a6cd61a6"
+      }
+    ],
+    "history": [
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      }
+    ]
+  },
+  {
+    "name": "maintain-release-story",
+    "version": "1.0.0",
+    "role": "primary",
+    "digest": "7d2b0c01b03a6b70a60fb724e43e2f707654847bbb85a8a4548fde8538a709c5",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "db8c8ffcfe2ff8bdbf35dd7d86d08082eb6551f1bf65c2088a1eb35c27344d1a"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "3023affb650f1a099518ee4c564877d029bd0cab0c34396b7a3ec6138a05cdc1"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "ed1a5ede8a177eb3e9b25562a8d558ecdeab6f876bb302051d31972558114491"
+      }
+    ],
+    "history": [
+      {
+        "change": "support-composable-release-units",
+        "date": "2026-08-25",
+        "title": "Model independent and composed release units",
+        "summary": "Projects can manage one release story, several independently versioned units or a composed product whose unit manifests pin exact direct dependencies, without turning child releases into implicit parent version changes."
+      },
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      }
+    ]
+  },
+  {
+    "name": "productize-repeatable-work",
+    "version": "1.0.0",
+    "role": "advanced",
+    "digest": "39e787609a52c818808b85104e68d0cfd63b8642a9908106d76227c63823d561",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "5a677f595403277463d326a918811e8894c89bfe67eef2bf8f97ab6fe331c0e8"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "48e0586ca45c96239e78569e353f93cc58b096e2c961927dd170decfa954a28b"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "8c35e20fe1272e1f87c958647f1262d793ec95a83b8e067f9390490c4ffc15c7"
+      },
+      {
+        "path": "references/productization-rules.md",
+        "sha256": "9964bca3af2d3951027f9f09889e0ced5df1ff6fc0ceade475a9467e5b1e45c7"
+      }
+    ],
+    "history": [
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      },
+      {
+        "change": "unify-arcantry-capabilities",
+        "date": "2026-08-17",
+        "title": "Unified Arcantry capabilities",
+        "summary": "Arcantry now combines its OpenSpec lifecycle with reusable skills, a complete Codex plugin, a versioned catalog, and one CLI for safe repository adoption and skill management."
+      }
+    ]
+  },
+  {
+    "name": "promote-todo-to-openspec",
+    "version": "1.0.0",
+    "role": "primary",
+    "digest": "b9a8016a0d26d54b17d6e9d068ca002f44d18e2df95045f417ae7e759d2c9066",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "1f2eceedf866f7a9d80b6e30c3e9d964bd6b5f15003a2973f423e5c1de704dba"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "305fad52bf4781f5817664b9a879fbd445018eb69c9beaa282ce3e866fff1003"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "22719252d583a4ab190268dd50fdcccd9a84816ae2e916ac81e969228804ff3a"
+      },
+      {
+        "path": "references/classification-and-examples.md",
+        "sha256": "6223f7df884ab612d33f58f55f2cea28129bcc4a3272417e2d2373299322a001"
+      }
+    ],
+    "history": [
+      {
+        "change": "preserve-todo-queue-conventions",
+        "date": "2026-09-11",
+        "title": "Preserve each todo queue's established vocabulary during capture",
+        "summary": "Arcantry previews the exact task line, reuses compatible local conventions and asks before inventing or omitting meaningful optional metadata."
+      },
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      }
+    ]
+  },
+  {
+    "name": "protect-local-boundary",
+    "version": "1.0.0",
+    "role": "supporting",
+    "digest": "6b6f301afb7c5e63119c0ba3b3b634108c372328d12d7e4b6c38bc5a54af8a10",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "9d4d7d060ea4eaa51479349af3b04c94fc781752abafc0c6eee8dd764ae1adca"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "4eb6d819a96861404b5462b76c7d3cc986ef18757ea7ccb6aea1c94c4db74774"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "3430ad2d275c216cfeadbc2c53f249a016ab2213ac2fd6c7dc44641e7a1cc484"
+      }
+    ],
+    "history": []
+  },
+  {
+    "name": "reconcile-project-sources",
+    "version": "1.0.0",
+    "role": "primary",
+    "digest": "122148e3e541977c78e13d5b3f9ca3d797478925bb81ebb3e0faabfcdd4f746c",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "710ba4a1be88e8fb1c52c16202b252664a95fdf046e2c1cf6c77bc0d4badde25"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "38e342284132807a5fa47a8caaf9aab062c140890cabdd7ce29f95484359eedf"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "805c2e0890a41c1a2156f0342456285063b5a0213c5141eb8a95c307aeb58373"
+      }
+    ],
+    "history": [
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      }
+    ]
+  },
+  {
+    "name": "refactor-safely",
+    "version": "1.0.0",
+    "role": "primary",
+    "digest": "bd53550f28eba2f7e1ea8f7a3382c7fe96e7947fbb59aa6132d0cdec9c299708",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "425f45005b72b09898854b950677dc5ad90d076f1651a142acf14542d55b9651"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "5db43143a045b6b1a74c401a6f4c521a95f9fb9def86e89ce687073c785fb9b8"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "8986d04b990468248dcf82666b6f2c754eacab1fcaa6eb5cee3b03907b1bce74"
+      },
+      {
+        "path": "references/refactoring-guide.md",
+        "sha256": "17aa5bd6560c10ef88281bbecce7e8c363e121b82291b78231b5c93a557c821a"
+      }
+    ],
+    "history": [
+      {
+        "change": "add-code-quality-skills",
+        "date": "2026-09-14",
+        "title": "Add focused code-quality workflows",
+        "summary": "Arcantry separates evidence-backed code assessment, maintainable structural design and authorized behavior-preserving refactoring into three focused public skills."
+      }
+    ]
+  },
+  {
+    "name": "select-task-skills",
+    "version": "1.0.0",
+    "role": "supporting",
+    "digest": "24d94582b7d03f3838b8e8de089a1701c6ddc465f4fb8043f0f0852a3f586f01",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "a1a0660e8dde1140612a7659c1204886aa288b28ea7f5781d9970da98ec5958f"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "1e056a64fdfc705fe692fe67a57fd923110f71b5a47d444110fd310acf668ead"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "c61d91a3e79aa28c542fba3b2691a311cca751ab00e093c85d2a94d532443fae"
+      },
+      {
+        "path": "references/selection-rules.md",
+        "sha256": "1a28c5a1bb89d601ba51d598fda190b4c60567a54193bc5cfe1b56c5f6eb6de4"
+      },
+      {
+        "path": "scripts/index_skills.py",
+        "sha256": "7b73739ea5e7ace73fef76d9e2511ff4cbaf2d9660c5f7c4ddec4fc1ce82a156"
+      }
+    ],
+    "history": [
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      },
+      {
+        "change": "unify-arcantry-capabilities",
+        "date": "2026-08-17",
+        "title": "Unified Arcantry capabilities",
+        "summary": "Arcantry now combines its OpenSpec lifecycle with reusable skills, a complete Codex plugin, a versioned catalog, and one CLI for safe repository adoption and skill management."
+      }
+    ]
+  },
+  {
+    "name": "stage-code-review-findings",
+    "version": "1.0.0",
+    "role": "supporting",
+    "digest": "ed1a99a4703251a6455c888c0b7d686d79c38192f9f741dd83380d023fc2225f",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "1b06a8d4bf554df62afaa99e93e565f3f8d5bb5bd843223f50eb303cc3b7e754"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "9d964dbff8539149f7ae9a519acd5bee2202c8bf5766a1dea977cb4720902b6c"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "f329f735753e2ed9643d505e8458c30f6533f63bbf65d29e62c3b3e5cbb17942"
+      }
+    ],
+    "history": [
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      },
+      {
+        "change": "require-complete-review-coverage",
+        "date": "2026-08-17",
+        "title": "Complete code reviews account for the full requested surface",
+        "summary": "The staged code review skill now requires repository-wide reviews to account for every material component and contract before claiming complete coverage."
+      },
+      {
+        "change": "unify-arcantry-capabilities",
+        "date": "2026-08-17",
+        "title": "Unified Arcantry capabilities",
+        "summary": "Arcantry now combines its OpenSpec lifecycle with reusable skills, a complete Codex plugin, a versioned catalog, and one CLI for safe repository adoption and skill management."
+      }
+    ]
+  },
+  {
+    "name": "verify-work-proportionally",
+    "version": "1.0.0",
+    "role": "supporting",
+    "digest": "9d81cd9e10910db963e8990c015d82498f83dbf085f4299932c3fda57b35b1d5",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "293f14c2f791f7e35d743da306faafc74fbf7962577096adfb34b8fd47642a3a"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "4435ec2055c0518aaa09f8a29f7d097bd4211a40585bb7b9eb34713a9a915a32"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "74f9b33434816db4fa5e5ddaec5778106465987c4c6d9200a5371c1d1387eb80"
+      }
+    ],
+    "history": [
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      }
+    ]
+  },
+  {
+    "name": "write-product-content",
+    "version": "1.0.0",
+    "role": "primary",
+    "digest": "51aea6ac52bf8c85821b00fd1bdc048e8d001273af92e4f1b7208462b50dfa8d",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "sha256": "370ad8cb4261e1dfd396683bd4d40fa71c3f21bc6ce3ea8d1b65ff60f9542dc2"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "sha256": "42c4cb6594cec4933be28487e3b2b5ad500b913343f2cefb81894633749fdd87"
+      },
+      {
+        "path": "arcantry.json",
+        "sha256": "c831641060574ed09ac38762eb9cc5b25fe9716edc40fef96b7f2a3644861fb7"
+      }
+    ],
+    "history": [
+      {
+        "change": "stabilize-arcantry-1-0",
+        "date": "2026-08-18",
+        "title": "Coordinate project knowledge and agent workflows with Arcantry",
+        "summary": "Arcantry provides local-first project configuration, safe repository adoption, a portable catalog of focused agent skills, and one documented workflow for maintaining project intent, release meaning, task intake, verification, and audience-safe content."
+      }
+    ]
+  }
+]

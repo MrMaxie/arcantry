@@ -175,15 +175,13 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
 
 .value,
 .comparison,
-.journey,
-.contract-map {
+.journey {
   margin: 0 0 5.5rem;
 }
 
 .value-heading,
 .comparison-heading,
-.journey-heading,
-.contract-heading {
+.journey-heading {
   display: grid;
   grid-template-columns: 12rem minmax(0, 1fr);
   gap: 2rem;
@@ -193,8 +191,7 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
 
 .value-heading > p,
 .comparison-heading > p,
-.journey-heading > p,
-.contract-heading > p {
+.journey-heading > p {
   margin: 0.45rem 0 0;
   color: var(--ar-text-soft);
   font-size: 0.67rem;
@@ -212,14 +209,9 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
 .journey-heading > p {
   color: var(--ar-accent-violet);
 }
-.contract-heading > p {
-  color: var(--ar-accent-violet);
-}
-
 .value-heading h2,
 .comparison-heading h2,
-.journey-heading h2,
-.contract-heading h2 {
+.journey-heading h2 {
   max-width: 19ch;
   margin: 0;
   color: var(--ar-text);
@@ -235,6 +227,7 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
 }
 
 .value-heading > div > p,
+.comparison-heading > div > p,
 .journey-heading > div > p {
   max-width: 42rem;
   margin: 1rem 0 0;
@@ -243,19 +236,20 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
   line-height: 1.7;
 }
 
-.value-grid {
+.workflow-steps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
   border-block: 1px solid var(--ar-border);
+  list-style: none;
 }
 
-.value-grid article {
-  display: grid;
-  grid-template-columns: 1.1rem minmax(0, 1fr);
-  gap: 0.8rem 1rem;
+.workflow-steps li {
+  --workflow-color: var(--ar-accent-blue);
   min-width: 0;
   margin-top: 0 !important;
-  padding: 1.6rem 1.5rem;
+  padding: 1.35rem 1.25rem;
 }
 
 @media (min-width: 72rem) {
@@ -273,39 +267,67 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
   line-height: 1.35;
 }
 
-.value-grid article + article {
+.workflow-steps li + li {
   border-left: 1px solid var(--ar-border);
 }
-.value-grid article > svg {
-  grid-row: 1 / span 2;
-  width: 1rem;
-  height: 1rem;
-  margin-top: 0.17rem;
+.workflow-steps li:nth-child(2) {
+  --workflow-color: var(--ar-accent-violet);
 }
-.value-grid article:nth-child(1) > svg {
-  color: var(--ar-accent-blue);
+.workflow-steps li:nth-child(3) {
+  --workflow-color: var(--ar-accent-pink);
 }
-.value-grid article:nth-child(2) > svg {
-  color: var(--ar-accent-violet);
-}
-.value-grid article:nth-child(3) > svg {
-  color: var(--ar-accent-pink);
-}
-.value-grid h3 {
+.workflow-steps h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   margin: 0;
   color: var(--ar-text);
   font-size: 1rem;
   letter-spacing: -0.025em;
 }
-.value-grid p {
+.workflow-steps h3 svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  color: var(--workflow-color);
+}
+.workflow-command {
+  margin: 0.85rem 0 0.7rem;
+}
+.workflow-command .expressive-code {
+  margin: 0;
+}
+.workflow-steps p {
   margin: 0;
   color: var(--ar-text-muted);
   font-size: 0.82rem;
   line-height: 1.65;
 }
-
-.outcome-stage {
-  margin-top: 1.6rem;
+.workflow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem 1.4rem;
+  padding-top: 1rem;
+}
+.workflow-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--ar-text);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.workflow-actions .workflow-primary {
+  color: var(--ar-accent-blue);
+}
+.workflow-actions svg {
+  width: 0.72rem;
+  height: 0.72rem;
+  transition: transform 160ms ease;
+}
+.workflow-actions a:hover svg {
+  transform: translateX(0.18rem);
 }
 
 .comparison-table-shell {
@@ -313,18 +335,19 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
   border-block: 1px solid var(--ar-border);
 }
 .comparison-flow {
+  display: table;
   width: 100%;
   min-width: 42rem;
   border-collapse: collapse;
   table-layout: fixed;
 }
 .comparison-area-column {
-  width: 22%;
+  width: 20%;
 }
 .comparison-flow th,
 .comparison-flow td {
   min-width: 0;
-  padding: 1.25rem;
+  padding: 0.85rem 1rem;
   vertical-align: top;
   text-align: left;
 }
@@ -351,7 +374,7 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
 }
 .comparison-flow tbody th > span {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.3rem;
   color: var(--ar-accent-violet);
   font-size: 0.62rem;
   font-weight: 750;
@@ -371,6 +394,18 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
 .comparison-before,
 .comparison-after {
   border-left: 1px solid var(--ar-border);
+}
+.comparison-result {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+.comparison-result > svg {
+  width: 0.8rem;
+  height: 0.8rem;
+  margin-top: 0.22rem;
+  flex: 0 0 auto;
+  color: var(--ar-accent-violet);
 }
 .comparison-flow h3 {
   margin: 0;
@@ -402,6 +437,13 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
 .comparison-after p strong {
   color: var(--ar-accent-blue);
 }
+.comparison-note {
+  max-width: 48rem;
+  margin: 0.9rem 0 0;
+  color: var(--ar-text-soft);
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
 
 .journey-steps {
   display: grid;
@@ -422,6 +464,9 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
   padding: 1.5rem;
   isolation: isolate;
   transition: background-color 280ms ease;
+}
+.adoption .journey-steps li {
+  min-height: 15.5rem;
 }
 
 .journey-steps li::after {
@@ -506,17 +551,6 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
   font-size: 0.76rem;
   line-height: 1.6;
 }
-.step-outcome {
-  display: block;
-  max-width: 32ch;
-  margin-top: 1rem;
-  padding-top: 0.8rem;
-  border-top: 1px solid var(--ar-border-soft);
-  color: var(--ar-text);
-  font-size: 0.7rem;
-  line-height: 1.5;
-  text-wrap: balance;
-}
 .journey-steps a {
   display: inline-flex;
   align-items: center;
@@ -536,279 +570,63 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
   transform: translateX(0.18rem);
 }
 
-.contract-lanes {
+.journey-links {
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.35fr);
-  border: 1px solid color-mix(in srgb, var(--ar-accent-violet) 18%, var(--ar-border));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 1.2rem;
 }
-
-.local-lane {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  isolation: isolate;
-  padding: 2rem;
-  border-right: 1px solid var(--ar-border);
-  background: var(--ar-bg-subtle);
-  color: inherit;
-  text-decoration: none;
-  transition: background-color 180ms ease;
-}
-.local-lane::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  inset: -22%;
-  background:
-    radial-gradient(circle at 18% 24%, color-mix(in srgb, var(--ar-accent-blue) 13%, transparent), transparent 34%),
-    radial-gradient(circle at 74% 66%, color-mix(in srgb, var(--ar-accent-violet) 9%, transparent), transparent 38%),
-    radial-gradient(circle at 42% 92%, color-mix(in srgb, var(--ar-accent-pink) 7%, transparent), transparent 28%);
-  opacity: 0.72;
-  transform: translate3d(-2%, -1%, 0) scale(1.04);
-  animation: lane-drift 14s ease-in-out infinite alternate;
-}
-.local-lane:hover {
-  background-color: var(--ar-surface);
-}
-.local-lane:hover::before {
-  opacity: 1;
-}
-.local-lane:focus-visible,
-.product-lane a:focus-visible {
-  position: relative;
-  z-index: 1;
-  outline: 2px solid var(--ar-accent-violet);
-  outline-offset: -2px;
-}
-.lane-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--ar-accent-blue);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.local-lane h3 {
-  max-width: 15ch;
-  margin: 2.3rem 0 0.9rem;
-  color: var(--ar-text);
-  font-family: var(--ar-font-section);
-  font-size: 1.9rem;
-  font-variation-settings:
-    'opsz' 54,
-    'SOFT' 40,
-    'WONK' 1;
-  font-weight: 480;
-  line-height: 1.08;
-  letter-spacing: -0.035em;
-}
-.local-lane p {
-  max-width: 30rem;
-  margin: 0;
-  color: var(--ar-text-muted);
-  font-size: 0.88rem;
-  line-height: 1.65;
-}
-.lane-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: auto;
-  padding-top: 1.6rem;
-  color: var(--ar-text);
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-.lane-action svg {
-  width: 0.8rem;
-  height: 0.8rem;
-  color: var(--ar-accent-blue);
-  transition: transform 160ms ease;
-}
-.local-lane:hover .lane-action svg {
-  transform: translateX(0.2rem);
-}
-.product-lane {
+.journey-links a {
   display: grid;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.product-lane li {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
   min-width: 0;
-}
-.product-lane li + li {
-  border-top: 1px solid var(--ar-border);
-}
-.product-lane a {
-  display: grid;
-  grid-template-columns: 1rem minmax(0, 1fr) 0.8rem;
-  align-items: center;
-  gap: 1rem;
-  height: 100%;
-  padding: 1.15rem 1.4rem;
-  color: inherit;
-  text-decoration: none;
-  transition: background-color 160ms ease;
-}
-.product-lane a:hover {
+  min-height: 4.7rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--ar-border);
+  border-radius: 0.2rem;
   background: var(--ar-bg-subtle);
-}
-.product-lane li:nth-child(1) a > svg:first-child {
-  color: var(--ar-accent-blue);
-}
-.product-lane li:nth-child(2) a > svg:first-child {
-  color: var(--ar-accent-violet);
-}
-.product-lane li:nth-child(3) a > svg:first-child,
-.product-lane li:nth-child(4) a > svg:first-child {
-  color: var(--ar-accent-pink);
-}
-.product-lane a > svg:last-child {
-  width: 0.75rem;
-  height: 0.75rem;
-  color: var(--ar-text-soft);
+  color: var(--ar-text) !important;
+  text-decoration: none;
   transition:
-    color 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
     transform 160ms ease;
 }
-.product-lane a:hover > svg:last-child {
-  color: var(--ar-accent-violet);
-  transform: translateX(0.2rem);
-}
-.product-lane span {
+.journey-links a > span {
   display: grid;
   gap: 0.18rem;
 }
-.product-lane strong {
+.journey-links strong {
   color: var(--ar-text);
-  font-size: 0.92rem;
+  font-size: 0.74rem;
 }
-.product-lane small {
+.journey-links small {
   color: var(--ar-text-soft);
-  font-size: 0.72rem;
+  font-size: 0.66rem;
+  line-height: 1.4;
 }
-
-.outcome-stage {
-  display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-  min-height: 21rem;
-  border: 1px solid color-mix(in srgb, var(--ar-accent-violet) 20%, var(--ar-border));
-  background: var(--ar-bg-subtle);
-  overflow: hidden;
+.journey-links a > svg {
+  width: 0.7rem;
+  height: 0.7rem;
+  color: var(--ar-text-soft);
+  transition: transform 160ms ease;
 }
-.outcome-stage article {
-  position: relative;
-  min-width: 0;
-  margin: 0 !important;
-  overflow: hidden;
-  isolation: isolate;
+.journey-links a:hover {
+  border-color: var(--ar-text-soft);
+  background: var(--ar-surface);
+  transform: translateY(-1px);
 }
-.outcome-stage article::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  width: 17rem;
-  height: 17rem;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--outcome-color) 13%, transparent), transparent 68%);
-  filter: blur(7px);
-  opacity: 0.8;
-  transition:
-    opacity 260ms ease,
-    transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+.journey-links a:active {
+  transform: translateY(0);
 }
-.outcome-stage article:hover::before {
-  opacity: 1;
-  transform: scale(1.14);
+.journey-links a:focus-visible {
+  outline: 2px solid var(--ar-accent-blue);
+  outline-offset: 3px;
 }
-.outcome-feature {
-  --outcome-color: var(--ar-accent-blue);
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto 1fr;
-  align-items: start;
-  gap: 1.6rem;
-  padding: 2.2rem;
-  border-right: 1px solid var(--ar-border);
-}
-.outcome-feature::before {
-  inset: -5rem auto auto -4rem;
-}
-.outcome-feature > svg {
-  width: 2.4rem;
-  height: 2.4rem;
-  color: var(--outcome-color);
-}
-.outcome-feature > div {
-  align-self: end;
-  grid-column: 1 / -1;
-  margin: 0 !important;
-}
-.outcome-stack {
-  display: grid;
-  grid-template-rows: 1fr 1fr;
-  min-width: 0;
-}
-.outcome-stack article {
-  --outcome-color: var(--ar-accent-violet);
-  display: grid;
-  grid-template-columns: 1.15rem minmax(0, 1fr);
-  align-content: center;
-  gap: 0.9rem 1.1rem;
-  padding: 1.7rem 1.8rem;
-}
-.outcome-stack article + article {
-  --outcome-color: var(--ar-accent-pink);
-  border-top: 1px solid var(--ar-border);
-}
-.outcome-stack article::before {
-  inset: auto -8rem -8rem auto;
-}
-.outcome-stack article > svg {
-  grid-row: 1 / span 2;
-  width: 1.05rem;
-  height: 1.05rem;
-  margin-top: 0.12rem;
-  color: var(--outcome-color);
-}
-.outcome-index {
-  position: absolute;
-  top: 1.25rem;
-  right: 1.4rem;
-  color: color-mix(in srgb, var(--outcome-color) 52%, var(--ar-text-soft));
-  font-size: 0.62rem;
-  font-weight: 750;
-  letter-spacing: 0.1em;
-}
-.outcome-stage h3 {
-  margin: 0 0 0.6rem;
-  color: var(--ar-text);
-  letter-spacing: -0.025em;
-}
-.outcome-feature h3 {
-  max-width: 14ch;
-  font-family: var(--ar-font-section);
-  font-size: clamp(1.8rem, 3vw, 2.7rem);
-  font-variation-settings:
-    'opsz' 56,
-    'SOFT' 40,
-    'WONK' 1;
-  font-weight: 470;
-  line-height: 1.05;
-}
-.outcome-stack h3 {
-  font-size: 1rem;
-}
-.outcome-stage p {
-  max-width: 36rem;
-  margin: 0;
-  color: var(--ar-text-muted);
-  font-size: 0.83rem;
-  line-height: 1.65;
+.journey-links a:hover > svg {
+  transform: translateX(0.16rem);
 }
 
 @keyframes step-glow {
@@ -823,18 +641,6 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
   52%,
   100% {
     opacity: 0;
-  }
-}
-
-@keyframes lane-drift {
-  0% {
-    transform: translate3d(-3%, -2%, 0) scale(1.03);
-  }
-  50% {
-    transform: translate3d(3%, 1%, 0) scale(1.08);
-  }
-  100% {
-    transform: translate3d(-1%, 4%, 0) scale(1.05);
   }
 }
 
@@ -920,11 +726,11 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
 }
 
 @media (max-width: 64rem) {
-  .value-grid,
+  .workflow-steps,
   .journey-steps {
     grid-template-columns: 1fr;
   }
-  .value-grid article + article {
+  .workflow-steps li + li {
     border-top: 1px solid var(--ar-border);
     border-left: 0;
   }
@@ -936,44 +742,93 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
   .comparison-flow td {
     padding-inline: 0.9rem;
   }
+  .journey-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @media (max-width: 49.99rem) {
   .value,
   .comparison,
-  .journey,
-  .contract-map {
+  .journey {
     margin-bottom: 5rem;
   }
   .value-heading,
   .comparison-heading,
-  .journey-heading,
-  .contract-heading {
+  .journey-heading {
     grid-template-columns: 1fr;
     gap: 0.7rem;
   }
-  .contract-lanes {
-    grid-template-columns: 1fr;
-  }
-  .local-lane {
-    border-right: 0;
-    border-bottom: 1px solid var(--ar-border);
-  }
   .comparison-table-shell {
-    margin-inline: -1rem;
-    padding-inline: 1rem;
+    overflow-x: visible;
   }
+  .comparison-flow {
+    display: block;
+    min-width: 0;
+  }
+  .comparison-flow thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .comparison-flow tbody,
+  .comparison-flow tr,
   .comparison-flow th,
   .comparison-flow td {
-    padding: 0.8rem;
+    display: block;
+    width: 100%;
   }
-  .outcome-stage {
+  .comparison-flow tbody tr {
+    padding: 1rem 0;
+  }
+  .comparison-flow tbody tr + tr > * {
+    border-top: 0;
+  }
+  .comparison-flow tbody tr + tr {
+    border-top: 1px solid var(--ar-border);
+  }
+  .comparison-flow tbody th,
+  .comparison-flow tbody td {
+    padding: 0;
+    border-left: 0;
+  }
+  .comparison-flow tbody th {
+    margin-bottom: 0.85rem;
+  }
+  .comparison-before {
+    margin-bottom: 0.8rem;
+  }
+  .comparison-before::before,
+  .comparison-after::before {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.58rem;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .comparison-before::before {
+    content: 'Without Arcantry';
+    color: var(--ar-accent-pink);
+  }
+  .comparison-after::before {
+    content: 'With Arcantry';
+    color: var(--ar-accent-blue);
+  }
+  .comparison-after {
+    padding: 0.7rem !important;
+    border: 1px solid var(--ar-border-soft);
+  }
+  .workflow-steps li {
+    padding: 1.2rem 0;
+  }
+  .workflow-command {
+    margin-top: 0.7rem;
+  }
+  .journey-links {
     grid-template-columns: 1fr;
-    min-height: 0;
-  }
-  .outcome-feature {
-    min-height: 18rem;
-    border-right: 0;
-    border-bottom: 1px solid var(--ar-border);
   }
   .project-footer {
     align-items: flex-start;
@@ -991,14 +846,13 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
   ::view-transition-new(arcantry-next-action) {
     animation-duration: 1ms;
   }
-  .journey-steps li,
-  .product-lane a {
+  .workflow-actions svg,
+  .journey-links a,
+  .journey-links a > svg,
+  .journey-steps li {
     transition: none;
   }
   .journey-steps li::after {
-    animation: none;
-  }
-  .local-lane::before {
     animation: none;
   }
   html[data-has-hero] .pagination-transition .pagination-links a {
@@ -1009,6 +863,9 @@ html[data-has-hero] .pagination-transition .pagination-links svg {
     animation: none;
   }
   .journey-steps li:hover {
+    transform: none;
+  }
+  .journey-links a:hover {
     transform: none;
   }
 }

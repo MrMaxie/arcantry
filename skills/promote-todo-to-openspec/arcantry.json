@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "primary",
   "summary": "Group selected todo.txt items into privacy-safe OpenSpec transformations and hold every proposed change for approval.",
   "compatibility": {
     "sourceKinds": ["openspec", "todo-txt"]

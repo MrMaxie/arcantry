@@ -1,4 +1,6 @@
-use crate::{SkillDoctorOptions, SkillLinkOptions, SkillUnlinkOptions, SkillsCommand, embedded};
+use crate::{
+  SkillDoctorOptions, SkillLinkOptions, SkillUnlinkOptions, SkillsCommand, embedded, skill_update,
+};
 use anyhow::{Context, Result, bail};
 use arcantry_core::config::Visibility;
 use arcantry_core::{catalog, project_plan, repository};
@@ -6,7 +8,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub fn execute(command: SkillsCommand, cwd: &Path) -> Result<i32> {
+pub fn execute(command: SkillsCommand, cwd: &Path, output: Option<&Path>) -> Result<i32> {
   match command {
     SkillsCommand::List {
       catalog_root,
@@ -88,6 +90,14 @@ pub fn execute(command: SkillsCommand, cwd: &Path) -> Result<i32> {
       }
       Ok(0)
     }
+    SkillsCommand::Status {
+      name,
+      options,
+      check,
+      json,
+    } => skill_update::status(cwd, name, options, check, json),
+    SkillsCommand::Update { name, options } => skill_update::preview(cwd, name, options, output),
+    SkillsCommand::Apply { plan } => skill_update::apply(cwd, &plan),
     SkillsCommand::Link {
       name,
       options,

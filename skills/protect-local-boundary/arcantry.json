@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "supporting",
   "summary": "Keep private .local state usable without letting it become a dependency of shared project behavior.",
   "learning": {
     "prerequisites": [

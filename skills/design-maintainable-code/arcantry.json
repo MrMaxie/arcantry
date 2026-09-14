@@ -1,0 +1,24 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "primary",
+  "summary": "Design implementation-ready module boundaries, interfaces, and dependency direction from current project evidence.",
+  "learning": {
+    "outcomes": [
+      "Choose the smallest maintainable structure that fits current behavior and repository conventions.",
+      "Define responsibilities, interfaces, state ownership, failures, increments, and tests before implementation."
+    ]
+  },
+  "scenarios": [
+    {
+      "title": "Design a cross-module feature",
+      "prompt": "Use the design-maintainable-code skill to design this non-trivial feature before any source files are edited.",
+      "outcome": "The result fixes concrete module and dependency decisions using the project's existing conventions."
+    },
+    {
+      "title": "Evaluate a proposed abstraction",
+      "prompt": "Use the design-maintainable-code skill to decide whether this new interface is justified by the current callers.",
+      "outcome": "The design keeps or rejects the interface from verified variation and maintenance cost rather than preference."
+    }
+  ]
+}

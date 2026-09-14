@@ -22,6 +22,9 @@ allow = [
   "Unlicense",
   "Zlib",
 ]
+exceptions = [
+  { allow = ["CDLA-Permissive-2.0"], crate = "webpki-root-certs@1.0.9" },
+]
 
 [bans]
 multiple-versions = "warn"

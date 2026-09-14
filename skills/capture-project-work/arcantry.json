@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "primary",
   "summary": "Route one project thought to the correct knowledge layer without duplicating it or overstating its commitment.",
   "compatibility": {
     "sourceKinds": ["openspec", "changelog", "todo-txt"]

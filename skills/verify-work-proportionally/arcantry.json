@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "supporting",
   "summary": "Match verification layers to impact and uncertainty, then separate proven behavior from assumptions and acceptance gaps.",
   "learning": {
     "outcomes": [

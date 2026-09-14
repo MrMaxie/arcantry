@@ -85,8 +85,42 @@ fn keeps_agent_manifests_aligned_with_the_package_identity() {
   let package = json("packages/arcantry/package.json");
   for relative in [".codex-plugin/plugin.json", ".claude-plugin/plugin.json"] {
     let manifest = json(relative);
-    assert_eq!(manifest["name"], package["name"], "{relative}");
-    assert_eq!(manifest["version"], package["version"], "{relative}");
+    for field in [
+      "name",
+      "version",
+      "description",
+      "author",
+      "homepage",
+      "license",
+    ] {
+      assert_eq!(manifest[field], package[field], "{relative}: {field}");
+    }
+    assert_eq!(
+      manifest["repository"],
+      package["repository"]["url"]
+        .as_str()
+        .unwrap()
+        .trim_end_matches(".git"),
+      "{relative}: repository"
+    );
+  }
+  let codex = json(".codex-plugin/plugin.json");
+  let claude = json(".claude-plugin/plugin.json");
+  for field in ["interface", "skills"] {
+    assert!(codex.get(field).is_some(), "Codex requires {field}");
+    assert!(
+      claude.get(field).is_none(),
+      "Claude must not receive Codex-only {field}"
+    );
+  }
+}
+
+#[test]
+fn packaged_plugin_manifests_match_the_canonical_checkout() {
+  for host in [".codex-plugin/plugin.json", ".claude-plugin/plugin.json"] {
+    let canonical = json(host);
+    let packaged = json(&format!("packages/arcantry/{host}"));
+    assert_eq!(packaged, canonical, "{host}");
   }
 }
 

@@ -12,6 +12,11 @@
       "tags": ["agent-guidance", "conversations", "quality"]
     },
     {
+      "name": "assess-code-quality",
+      "family": "code-quality",
+      "tags": ["assessment", "code-quality", "maintainability"]
+    },
+    {
       "name": "audience-scope-discipline",
       "family": "content-safely",
       "tags": ["audience", "privacy", "scope"]
@@ -35,6 +40,11 @@
       "name": "design-coherent-gui",
       "family": "content-safely",
       "tags": ["components", "gui", "layout"]
+    },
+    {
+      "name": "design-maintainable-code",
+      "family": "code-quality",
+      "tags": ["architecture", "code-quality", "design"]
     },
     {
       "name": "design-terminal-ux",
@@ -80,6 +90,11 @@
       "name": "reconcile-project-sources",
       "family": "repo-safely",
       "tags": ["privacy", "sources", "synchronization"]
+    },
+    {
+      "name": "refactor-safely",
+      "family": "code-quality",
+      "tags": ["code-quality", "refactoring", "verification"]
     },
     {
       "name": "select-task-skills",

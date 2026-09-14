@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "evidenceIndex": {
+    "cli:repo-inspect-read-only": "contracts/cli-contract.json",
+    "cli:repo-apply-rejects-drift": "contracts/cli-contract.json",
+    "cli:release-check-local-only": "contracts/cli-contract.json",
+    "cli:repo-detach": "contracts/cli-contract.json",
+    "docs:reference/repository-workflow": "apps/docs/src/content/docs/reference/repository-workflow.md",
+    "docs:adoption/private-setup": "apps/docs/src/content/docs/adoption.md",
+    "docs:lifecycle/releases": "apps/docs/src/content/docs/lifecycle/releases.mdx",
+    "docs:adoption/detach-project-owned-capabilities": "apps/docs/src/content/docs/adoption.md",
+    "test:project-plan-rollback": "crates/arcantry-core/src/project_plan.rs",
+    "test:repository-local-policy": "crates/arcantry-core/src/repository.rs"
+  },
+  "claims": [
+    {
+      "id": "inspection-is-read-only",
+      "audience": ["developers", "operators", "evaluators"],
+      "scope": "repo inspect and context discovery",
+      "owner": "arcantry-cli",
+      "boundary": "No project source write and no private source content in concise output.",
+      "evidence": ["cli:repo-inspect-read-only", "docs:reference/repository-workflow"]
+    },
+    {
+      "id": "plans-reject-drift",
+      "audience": ["developers", "operators"],
+      "scope": "serialized ProjectPlan apply",
+      "owner": "arcantry-core",
+      "boundary": "Every watched input and target hash must remain unchanged; transaction failure rolls back all operations.",
+      "evidence": ["cli:repo-apply-rejects-drift", "test:project-plan-rollback"]
+    },
+    {
+      "id": "private-state-stays-local",
+      "audience": ["developers", "teams", "enterprises"],
+      "scope": ".local project state and derived provenance",
+      "owner": "protect-local-boundary",
+      "boundary": "Shared artifacts cannot depend on or expose private paths, raw content or hashes.",
+      "evidence": ["docs:adoption/private-setup", "test:repository-local-policy"]
+    },
+    {
+      "id": "release-commands-do-not-publish",
+      "audience": ["maintainers", "operators"],
+      "scope": "release baseline, plan, cut, render and check",
+      "owner": "arcantry-core",
+      "boundary": "Commands operate on local files only and do not tag, push, publish or create a hosted release.",
+      "evidence": ["cli:release-check-local-only", "docs:lifecycle/releases"]
+    },
+    {
+      "id": "detachment-transfers-maintenance",
+      "audience": ["developers", "teams", "enterprises"],
+      "scope": "repo detach",
+      "owner": "project-maintainers-after-apply",
+      "boundary": "Detached capabilities have no Arcantry synchronization or support and must satisfy the recorded negative dependency contract.",
+      "evidence": ["cli:repo-detach", "docs:adoption/detach-project-owned-capabilities"]
+    }
+  ]
+}

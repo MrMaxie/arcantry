@@ -242,7 +242,7 @@ pub fn parse_project_config(
   tool_version: Option<&str>,
   allow_absolute_paths: bool,
 ) -> Result<ProjectConfig> {
-  let document = content
+  content
     .parse::<DocumentMut>()
     .context("Invalid Arcantry TOML configuration.")?;
   let mut config: ProjectConfig =
@@ -424,19 +424,8 @@ pub fn parse_project_config(
         );
       }
     }
-    if !matches!(
-      release.adapter.as_str(),
-      "openspec-release@1" | "openspec-release@2"
-    ) {
-      bail!("release.adapter must be openspec-release@1 or openspec-release@2.");
-    }
-    if release.adapter == "openspec-release@1"
-      && document
-        .get("release")
-        .and_then(toml_edit::Item::as_table_like)
-        .is_some_and(|table| table.contains_key("topology") || table.contains_key("units"))
-    {
-      bail!("openspec-release@1 does not accept topology or units.");
+    if release.adapter != "openspec-release@1" {
+      bail!("release.adapter must be openspec-release@1.");
     }
     if release
       .repository_url
@@ -445,10 +434,7 @@ pub fn parse_project_config(
     {
       bail!("release.repository_url must be a valid URL.");
     }
-    if release.adapter == "openspec-release@1" || release.topology == ReleaseTopology::Single {
-      if release.adapter == "openspec-release@1" && release.topology != ReleaseTopology::Single {
-        bail!("openspec-release@1 supports only the single topology.");
-      }
+    if release.topology == ReleaseTopology::Single {
       if !release.units.is_empty() {
         bail!("single release topology cannot define release.units.");
       }
@@ -471,6 +457,32 @@ pub fn parse_project_config(
     release.tag_prefix = Some("v".to_owned());
   }
   Ok(config)
+}
+
+pub fn detach_project_capabilities(
+  content: &str,
+  capabilities: &[String],
+  allow_absolute_paths: bool,
+) -> Result<String> {
+  let mut document = content
+    .parse::<DocumentMut>()
+    .context("Invalid Arcantry TOML configuration.")?;
+  for capability in capabilities {
+    if capability == "release-workflow" {
+      document.remove("release");
+    } else if let Some(source) = capability.strip_prefix("source:") {
+      let sources = document
+        .get_mut("sources")
+        .and_then(toml_edit::Item::as_table_like_mut)
+        .context("Arcantry configuration has no sources table.")?;
+      if sources.remove(source).is_none() {
+        bail!("Unknown configured source capability: {source}");
+      }
+    }
+  }
+  let rendered = document.to_string();
+  parse_project_config(&rendered, Some(crate::VERSION), allow_absolute_paths)?;
+  Ok(rendered)
 }
 
 fn validate_release_paths(
@@ -1230,7 +1242,7 @@ adapter = "keep-a-changelog@2"
 from = ["intent"]
 
 [release]
-adapter = "openspec-release@2"
+adapter = "openspec-release@1"
 topology = "composed"
 
 [release.units.core]

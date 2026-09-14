@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "advanced",
   "summary": "Extract repeated workflow friction from conversation evidence and propose the smallest durable carrier without implementing it.",
   "scenarios": [
     {

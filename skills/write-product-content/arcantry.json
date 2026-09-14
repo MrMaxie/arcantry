@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "primary",
   "summary": "Write concrete reader-facing product content from verified evidence without private leakage or internal process narration.",
   "learning": {
     "outcomes": [

@@ -9,12 +9,36 @@ use std::process::{Command as ProcessCommand, Output};
 #[derive(Deserialize)]
 struct Contract {
   version: u32,
+  #[serde(rename = "evidencePolicy")]
+  evidence_policy: EvidencePolicy,
+  provenance: Provenance,
   #[serde(rename = "globalOptions")]
   global_options: Vec<GlobalOption>,
   commands: Vec<ContractCommand>,
   #[serde(rename = "trustClaims")]
   trust_claims: Vec<TrustClaim>,
   scenarios: Vec<ContractScenario>,
+}
+
+#[derive(Deserialize)]
+struct EvidencePolicy {
+  #[serde(rename = "idFormat")]
+  id_format: String,
+  #[serde(rename = "requiredDimensions")]
+  required_dimensions: Vec<String>,
+  #[serde(rename = "mutationDimensions")]
+  mutation_dimensions: Vec<String>,
+  #[serde(rename = "mutatingCommands")]
+  mutating_commands: Vec<String>,
+}
+
+#[derive(Deserialize)]
+struct Provenance {
+  #[serde(rename = "appliesTo")]
+  applies_to: String,
+  requirement: String,
+  documentation: String,
+  evidence: String,
 }
 
 #[derive(Deserialize)]
@@ -185,7 +209,30 @@ The CLI contract is executable.
 #[test]
 fn inventory_is_complete_unique_and_evidenced() {
   let contract = contract();
-  assert_eq!(contract.version, 1);
+  assert_eq!(contract.version, 2);
+  assert_eq!(
+    contract.evidence_policy.id_format,
+    "<command-evidence>:<dimension>"
+  );
+  assert_eq!(
+    contract.evidence_policy.required_dimensions,
+    ["help", "invalid", "success"]
+  );
+  assert_eq!(
+    contract.evidence_policy.mutation_dimensions,
+    ["preview", "apply", "rejection-or-rollback"]
+  );
+  assert_eq!(
+    contract.provenance.applies_to,
+    "all-commands-and-trust-claims"
+  );
+  for relative in [
+    &contract.provenance.requirement,
+    &contract.provenance.documentation,
+    &contract.provenance.evidence,
+  ] {
+    assert!(workspace().join(relative).is_file(), "{relative}");
+  }
   assert_eq!(contract.global_options.len(), 5);
   assert_eq!(
     contract
@@ -220,6 +267,21 @@ fn inventory_is_complete_unique_and_evidenced() {
     .collect::<BTreeSet<_>>();
   assert_eq!(paths.len(), contract.commands.len());
   assert_eq!(command_evidence.len(), contract.commands.len());
+  let mut behavior_evidence = BTreeSet::new();
+  for command in &contract.commands {
+    let dimensions = contract.evidence_policy.required_dimensions.iter().chain(
+      contract
+        .evidence_policy
+        .mutating_commands
+        .contains(&command.path)
+        .then_some(contract.evidence_policy.mutation_dimensions.iter())
+        .into_iter()
+        .flatten(),
+    );
+    for dimension in dimensions {
+      assert!(behavior_evidence.insert(format!("{}:{dimension}", command.evidence)));
+    }
+  }
   let scenario_ids = contract
     .scenarios
     .iter()
@@ -258,6 +320,33 @@ fn inventory_is_complete_unique_and_evidenced() {
       "{}",
       scenario.id
     );
+  }
+}
+
+#[test]
+fn public_trust_claims_define_audience_owner_boundary_and_evidence() {
+  let value: serde_json::Value = serde_json::from_str(
+    &fs::read_to_string(workspace().join("contracts/public-trust.json")).unwrap(),
+  )
+  .unwrap();
+  assert_eq!(value["schemaVersion"], 1);
+  let claims = value["claims"].as_array().unwrap();
+  let evidence_index = value["evidenceIndex"].as_object().unwrap();
+  for path in evidence_index.values() {
+    assert!(workspace().join(path.as_str().unwrap()).is_file());
+  }
+  let mut ids = BTreeSet::new();
+  for claim in claims {
+    assert!(ids.insert(claim["id"].as_str().unwrap()));
+    assert!(!claim["audience"].as_array().unwrap().is_empty());
+    for field in ["scope", "owner", "boundary"] {
+      assert!(!claim[field].as_str().unwrap().trim().is_empty(), "{field}");
+    }
+    let evidence = claim["evidence"].as_array().unwrap();
+    assert!(!evidence.is_empty());
+    for reference in evidence {
+      assert!(evidence_index.contains_key(reference.as_str().unwrap()));
+    }
   }
 }
 
@@ -360,6 +449,7 @@ fn execute_scenario(id: &str, command: &str) {
     ("repo-inspect", "repo inspect")
     | ("repo-plan", "repo plan")
     | ("repo-apply", "repo apply")
+    | ("repo-detach", "repo detach")
     | ("repo-init", "repo init")
     | ("repo-update", "repo update")
     | ("repo-doctor", "repo doctor")
@@ -369,6 +459,8 @@ fn execute_scenario(id: &str, command: &str) {
     | ("todo-add", "todo add")
     | ("todo-complete", "todo complete")
     | ("todo-move", "todo move")
+    | ("todo-defer", "todo defer")
+    | ("todo-resume", "todo resume")
     | ("release-baseline", "release baseline")
     | ("release-plan", "release plan")
     | ("release-cut", "release cut")
@@ -376,9 +468,14 @@ fn execute_scenario(id: &str, command: &str) {
     | ("release-check", "release check")
     | ("skills-list", "skills list")
     | ("skills-inspect", "skills inspect")
+    | ("skills-status", "skills status")
+    | ("skills-update", "skills update")
     | ("skills-link", "skills link")
     | ("skills-unlink", "skills unlink")
     | ("skills-doctor", "skills doctor") => assert_successful_behavior(command),
+    ("skills-apply", "skills apply") => {
+      // Atomic apply and stale-plan behavior are covered by the skill_update unit tests.
+    }
     ("repo-inspect-bounded-context", "repo inspect") => {
       // Covered by the named inspection test.
     }
@@ -477,6 +574,16 @@ fn assert_successful_behavior(path: &str) {
       );
       assert!(!repository.path().join("todo.txt").exists());
     }
+    "repo detach" => {
+      let repository = repository();
+      success(repository.path(), &["repo", "init", "--scope", "shared"]);
+      let (preview, _) = success(repository.path(), &["repo", "detach", "--json"]);
+      assert!(preview.contains("arcantry-detachment@1"));
+      assert!(repository.path().join("arcantry.toml").exists());
+      success(repository.path(), &["repo", "detach", "--apply"]);
+      assert!(!repository.path().join("arcantry.toml").exists());
+      assert!(repository.path().join("PROJECT_CAPABILITIES.md").exists());
+    }
     "repo init" => assert_repository_lifecycle("init"),
     "repo update" => assert_repository_lifecycle("update"),
     "repo doctor" => assert_repository_validation("doctor"),
@@ -561,6 +668,48 @@ fn assert_successful_behavior(path: &str) {
         "Move me\n"
       );
     }
+    "todo defer" => {
+      let repository = repository();
+      write(repository.path(), "todo.txt", "Wait for review\r\n");
+      success(
+        repository.path(),
+        &["todo", "defer", "1", "--source", "root", "--wait", "review"],
+      );
+      assert_eq!(
+        fs::read_to_string(repository.path().join("todo.txt")).unwrap(),
+        "Wait for review\r\n"
+      );
+      success(
+        repository.path(),
+        &[
+          "todo", "defer", "1", "--source", "root", "--wait", "review", "--apply",
+        ],
+      );
+      assert_eq!(
+        fs::read_to_string(repository.path().join("todo.txt")).unwrap(),
+        "Wait for review wait:review\r\n"
+      );
+    }
+    "todo resume" => {
+      let repository = repository();
+      write(
+        repository.path(),
+        "todo.txt",
+        "Resume me t:2026-12-01 wait:review\n",
+      );
+      success(
+        repository.path(),
+        &["todo", "resume", "1", "--source", "root"],
+      );
+      success(
+        repository.path(),
+        &["todo", "resume", "1", "--source", "root", "--apply"],
+      );
+      assert_eq!(
+        fs::read_to_string(repository.path().join("todo.txt")).unwrap(),
+        "Resume me\n"
+      );
+    }
     "release baseline" => {
       let repository = repository();
       fs::create_dir_all(repository.path().join("openspec/changes/archive")).unwrap();
@@ -623,6 +772,43 @@ fn assert_successful_behavior(path: &str) {
     "skills inspect" => {
       let (stdout, _) = success(&workspace(), &["skills", "inspect", "adopt-arcantry"]);
       assert!(stdout.starts_with("adopt-arcantry\n"));
+    }
+    "skills status" => {
+      let target = tempfile::tempdir().unwrap();
+      let (stdout, _) = success(
+        &workspace(),
+        &[
+          "skills",
+          "status",
+          "adopt-arcantry",
+          "--target",
+          target.path().to_str().unwrap(),
+          "--json",
+        ],
+      );
+      assert_eq!(
+        serde_json::from_str::<serde_json::Value>(&stdout).unwrap()[0]["state"],
+        "not-installed"
+      );
+    }
+    "skills update" => {
+      let target = tempfile::tempdir().unwrap();
+      let (stdout, _) = success(
+        &workspace(),
+        &[
+          "skills",
+          "update",
+          "adopt-arcantry",
+          "--catalog-root",
+          workspace().to_str().unwrap(),
+          "--target",
+          target.path().to_str().unwrap(),
+        ],
+      );
+      assert_eq!(
+        serde_json::from_str::<serde_json::Value>(&stdout).unwrap()["schema"],
+        "skill-update@1"
+      );
     }
     "skills link" => assert_skill_link_lifecycle("link"),
     "skills unlink" => assert_skill_link_lifecycle("unlink"),
@@ -1133,7 +1319,7 @@ adapter = "keep-a-changelog@2"
 from = ["openspec"]
 
 [release]
-adapter = "openspec-release@2"
+adapter = "openspec-release@1"
 topology = "independent"
 
 [release.units.core]

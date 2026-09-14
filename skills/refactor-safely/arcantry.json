@@ -1,0 +1,27 @@
+{
+  "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "primary",
+  "summary": "Implement an authorized structural refactor in reversible, behavior-preserving, independently verified increments.",
+  "learning": {
+    "prerequisites": [
+      "Define the authorized refactor boundary and the observable behavior that must remain stable."
+    ],
+    "outcomes": [
+      "Protect behavior with a verified baseline before changing internal structure.",
+      "Keep refactoring separate from features, bug fixes, formatting, and adjacent cleanup."
+    ]
+  },
+  "scenarios": [
+    {
+      "title": "Extract one responsibility",
+      "prompt": "Use the refactor-safely skill to move this parsing responsibility without changing the command's behavior.",
+      "outcome": "The change lands in small tested increments and preserves every protected contract."
+    },
+    {
+      "title": "Separate a discovered defect",
+      "prompt": "Use the refactor-safely skill when a characterization test exposes an existing product bug during the refactor.",
+      "outcome": "The defect is separated from the structural work instead of silently choosing new behavior."
+    }
+  ]
+}

@@ -2,13 +2,14 @@ mod embedded;
 mod mcp;
 mod release_cmd;
 mod repo_cmd;
+mod skill_update;
 mod skills_cmd;
 mod todo_cmd;
 
 use anyhow::Result;
 pub(crate) use arcantry_cli::cli::{
   Cli, Command, ReleaseCommand, RepoCommand, RepoPlanArgs, SkillDoctorOptions, SkillLinkOptions,
-  SkillUnlinkOptions, SkillsCommand, TodoCommand,
+  SkillStatusOptions, SkillUnlinkOptions, SkillUpdateOptions, SkillsCommand, TodoCommand,
 };
 use clap::{Parser, error::ErrorKind};
 use std::path::{Path, PathBuf};
@@ -50,12 +51,20 @@ fn execute(cli: Cli) -> Result<i32> {
       &cli.command,
       Command::Repo {
         command: RepoCommand::Plan(_)
+      } | Command::Repo {
+        command: RepoCommand::Detach(_)
       } | Command::Todo {
-        command: TodoCommand::Add { .. } | TodoCommand::Move { .. } | TodoCommand::Complete { .. }
+        command: TodoCommand::Add { .. }
+          | TodoCommand::Move { .. }
+          | TodoCommand::Complete { .. }
+          | TodoCommand::Defer { .. }
+          | TodoCommand::Resume { .. }
       } | Command::Release {
         command: ReleaseCommand::Baseline { .. }
           | ReleaseCommand::Cut { .. }
           | ReleaseCommand::Render { .. }
+      } | Command::Skills {
+        command: SkillsCommand::Update { .. }
       }
     )
   {
@@ -176,7 +185,7 @@ fn execute(cli: Cli) -> Result<i32> {
       cwd_explicit,
       output.as_deref(),
     ),
-    Command::Skills { command } => skills_cmd::execute(command, &cwd),
+    Command::Skills { command } => skills_cmd::execute(command, &cwd, output.as_deref()),
   }
 }
 

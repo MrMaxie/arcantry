@@ -1,7 +1,11 @@
 {
   "name": "arcantry",
   "version": "1.0.0",
-  "description": "Arcantry repository adoption, skill catalog, and agent integration CLI.",
+  "description": "Local-first project knowledge and focused agent skills.",
+  "author": {
+    "name": "Maxie",
+    "url": "https://github.com/MrMaxie"
+  },
   "type": "module",
   "bin": {
     "arcantry": "bin/arcantry.js"
@@ -12,6 +16,9 @@
     "bin",
     "skills",
     "catalog.json",
+    "contracts/cli-contract.json",
+    "contracts/public-trust.json",
+    "contracts/skill-manifests.json",
     "assets",
     "schemas",
     "README.md",

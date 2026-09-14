@@ -63,7 +63,7 @@ fn mcp_answers_while_stdin_remains_open_without_writing_project_files() {
         if response.get("error").is_some() || response["result"]["isError"] == true {
           return Err(line);
         }
-        if message["id"] == 2 && !line.contains("arcantry explain proposal") {
+        if message["id"] == 2 && !line.contains("No active OpenSpec change or todo.txt task") {
           return Err(line);
         }
       }
@@ -445,11 +445,9 @@ fn saved_detachment_plan_preserves_source_and_refuses_stale_inputs() {
     .arg(root.path())
     .args([
       "repo",
-      "plan",
-      "--source",
-      "work",
-      "--transition",
       "detach",
+      "--capability",
+      "source:work",
       "--output",
       "plan.json",
     ])
@@ -461,11 +459,9 @@ fn saved_detachment_plan_preserves_source_and_refuses_stale_inputs() {
     .arg(root.path())
     .args([
       "repo",
-      "plan",
-      "--source",
-      "work",
-      "--transition",
       "detach",
+      "--capability",
+      "source:work",
       "--output",
       "plan.json",
     ])
@@ -495,8 +491,8 @@ fn saved_detachment_plan_preserves_source_and_refuses_stale_inputs() {
       .contains("sources.work")
   );
   assert!(
-    fs::read_to_string(root.path().join("arcantry-detached-work.md"))
+    fs::read_to_string(root.path().join("PROJECT_CAPABILITIES.md"))
       .unwrap()
-      .contains("Existing licenses")
+      .contains("preserve the license and attribution")
   );
 }

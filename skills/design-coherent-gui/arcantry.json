@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "primary",
   "summary": "Design graphical interfaces with audience-fit density, purposeful layout, and reusable visual and behavioral contracts.",
   "scenarios": [
     {

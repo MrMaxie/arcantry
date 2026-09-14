@@ -271,6 +271,31 @@ code[data-copyable-command][data-copied='true'] {
   box-shadow: 0 0 1rem color-mix(in srgb, var(--ar-accent-blue) 16%, transparent);
 }
 
+code[data-command-highlighted] .command-token-executable {
+  color: var(--ar-accent-blue);
+  font-weight: 700;
+}
+
+code[data-command-highlighted] .command-token-subcommand {
+  color: var(--ar-accent-violet);
+}
+
+code[data-command-highlighted] .command-token-option {
+  color: var(--ar-accent-pink);
+}
+
+code[data-command-highlighted] .command-token-argument {
+  color: color-mix(in srgb, var(--ar-accent-blue) 62%, var(--ar-text));
+}
+
+code[data-command-highlighted] .command-token-value {
+  color: var(--ar-text);
+}
+
+code[data-command-highlighted] .command-token-operator {
+  color: var(--ar-text-soft);
+}
+
 .skill-catalog-lead {
   max-width: 42rem;
   margin: 0 0 2.5rem;

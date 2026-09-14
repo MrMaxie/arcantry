@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "primary",
   "summary": "Align accepted OpenSpec outcomes, project version conventions, distributable versions, dependency pins, and consumer-facing changelog prose without publishing.",
   "compatibility": {
     "sourceKinds": ["openspec", "changelog"]

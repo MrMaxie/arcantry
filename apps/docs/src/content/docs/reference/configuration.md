@@ -26,7 +26,7 @@ location = "https://arcantry.dev/schemas/arcantry-config-v1.tosd"
 version = "1.0.0"
 ```
 
-`repo init --scope shared` creates this contract in `arcantry.toml`. `repo init --scope private` creates it in `.local/arcantry.toml`.
+`arcantry repo init --scope shared` creates this contract in `arcantry.toml`. `arcantry repo init --scope private` creates it in `.local/arcantry.toml`.
 
 ## Source example
 
@@ -115,8 +115,8 @@ A shared changelog cannot depend on private OpenSpec because collaborators could
 
 | Field | Required | Default | Contract |
 | --- | --- | --- | --- |
-| `adapter` | Yes | - | `openspec-release@1` or the opt-in `openspec-release@2`. |
-| `topology` | v2 only | `single` | `single`, `independent`, or `composed`. |
+| `adapter` | Yes | - | `openspec-release@1`. |
+| `topology` | No | `single` | `single`, `independent`, or `composed`. |
 | `manifests_path` | Single only | - | Directory containing `<version>.yaml` release manifests. |
 | `changelog_source` | Single only | - | Id of the managed changelog source for the release. |
 | `tag_prefix` | Single only | `v` | Prefix used only for generated changelog links. |
@@ -124,11 +124,11 @@ A shared changelog cannot depend on private OpenSpec because collaborators could
 | `version_sources` | Single only | - | One or more explicit `path` and `adapter` tables. |
 | `units` | Multi-unit only | - | Named release-unit tables for `independent` and `composed`. |
 
-`openspec-release@1` keeps the original single-release contract unchanged. `openspec-release@2` with no topology also uses the flat single-release shape. Multi-unit configurations move manifest, changelog, tag, version-source, selector and dependency ownership into each unit:
+`openspec-release@1` is the final release adapter. With no topology it uses the flat single-release shape. Multi-unit configurations move manifest, changelog, tag, version-source, selector and dependency ownership into each unit:
 
 ```toml
 [release]
-adapter = "openspec-release@2"
+adapter = "openspec-release@1"
 topology = "composed"
 
 [release.units.core]

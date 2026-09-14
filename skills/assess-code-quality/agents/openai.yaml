@@ -1,0 +1,4 @@
+interface:
+  display_name: "Assess Code Quality"
+  short_description: "Find evidence-backed code quality risks"
+  default_prompt: "Use $assess-code-quality to review this code without changing it."

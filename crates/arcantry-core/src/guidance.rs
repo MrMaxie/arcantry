@@ -1,6 +1,7 @@
 //! Read-only, bounded project answers shared by the CLI and MCP.
 use crate::config::{ResolvedProject, SourceKind};
 use anyhow::{Context, Result, bail};
+use chrono::Local;
 use serde_json::{Value, json};
 use std::{fs, io::Read, path::Path};
 
@@ -164,9 +165,41 @@ pub fn next(project: &ResolvedProject, selected: Option<&str>) -> Result<Value> 
       json!({"schemaVersion":1,"change":change,"action":action,"blockers":blocked,"reason":"Project workflow order followed by stable source order; approval is not inferred.","command":"arcantry explain tasks","authority":"unknown"}),
     )
   } else {
-    Ok(
-      json!({"schemaVersion":1,"action":"Choose a concrete outcome from the todo queue or current request, then describe its acceptance criteria.","reason":"No pending OpenSpec change was discovered.","command":"arcantry explain proposal","blockers":[],"authority":"unknown"}),
-    )
+    let today = Local::now().date_naive();
+    let inspection = crate::knowledge::inspect(project)?;
+    for source in inspection
+      .sources
+      .iter()
+      .filter(|source| source.kind == SourceKind::TodoTxt && source.exists)
+    {
+      let content = read(&source.absolute_path)?.unwrap_or_default();
+      if let Some(task) = crate::todo::inspect_tasks(&content)
+        .into_iter()
+        .find(|task| !task.is_deferred_on(today))
+      {
+        let action = format!(
+          "Define acceptance criteria for todo.txt line {}: {}",
+          task.line, task.raw
+        );
+        return Ok(json!({
+          "schemaVersion": 1,
+          "todo": {"source": source.id, "line": task.line, "raw": task.raw, "digest": task.digest},
+          "action": action,
+          "reason": "No actionable OpenSpec change was discovered; the first active todo.txt item was selected in stable source and line order.",
+          "command": "arcantry explain proposal",
+          "blockers": [],
+          "authority": "unknown"
+        }));
+      }
+    }
+    Ok(json!({
+      "schemaVersion": 1,
+      "action": "No active OpenSpec change or todo.txt task is available.",
+      "reason": "Completed, future-threshold and manual-wait todo.txt entries are not candidates for arcantry next.",
+      "command": "arcantry context",
+      "blockers": [],
+      "authority": "unknown"
+    }))
   }
 }
 

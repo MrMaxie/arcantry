@@ -1,12 +1,12 @@
 mod transition;
 
 use crate::RepoCommand;
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use arcantry_core::config::{Management, SourceKind, Visibility, resolve_project};
 use arcantry_core::knowledge::{KnowledgeInspection, inspect as inspect_knowledge};
 use arcantry_core::project_plan::{
-  Action, ApplyAuthority, ApplyOutcome, ProjectPlan, apply as apply_plan, create_write_operation,
-  parse as parse_plan, render as render_plan, serialize as serialize_plan,
+  Action, ApplyAuthority, ApplyOutcome, ProjectPlan, apply as apply_plan, create_delete_operation,
+  create_write_operation, parse as parse_plan, render as render_plan, serialize as serialize_plan,
 };
 use arcantry_core::repository;
 use std::fs;
@@ -61,6 +61,13 @@ pub fn execute(
       }
       Ok(code)
     }
+    RepoCommand::Detach(args) => {
+      let plan = plan_detachment(
+        &project_inspection(cwd, config, cwd_explicit)?,
+        &args.capability,
+      )?;
+      handle_plan(plan, args.apply, args.json, output)
+    }
     RepoCommand::Apply {
       plan,
       allow_outside,
@@ -110,6 +117,225 @@ pub fn execute(
     RepoCommand::Doctor => validate_repository_and_knowledge(cwd, config, cwd_explicit, true),
     RepoCommand::Validate => validate_repository_and_knowledge(cwd, config, cwd_explicit, false),
   }
+}
+
+fn plan_detachment(inspection: &KnowledgeInspection, requested: &[String]) -> Result<ProjectPlan> {
+  let config_path = inspection
+    .config_path
+    .as_ref()
+    .context("Detachment requires explicit Arcantry repository configuration.")?;
+  let content = fs::read_to_string(config_path)?;
+  let config = arcantry_core::config::parse_project_config(
+    &content,
+    Some(arcantry_core::VERSION),
+    inspection.config_scope == Some("external"),
+  )?;
+  let mut available = config
+    .sources
+    .keys()
+    .map(|id| format!("source:{id}"))
+    .collect::<Vec<_>>();
+  if config.release.is_some() {
+    available.push("release-workflow".to_owned());
+  }
+  for (scope, path) in [("shared", "AGENTS.md"), ("private", ".local/AGENTS.md")] {
+    if fs::read_to_string(inspection.root.join(path))
+      .ok()
+      .is_some_and(|text| arcantry_core::managed_content::contains_managed_section(&text))
+    {
+      available.push(format!("guidance:{scope}"));
+    }
+  }
+  available.sort();
+  let selected = if requested.is_empty() {
+    available.clone()
+  } else {
+    let unique = requested.iter().collect::<std::collections::BTreeSet<_>>();
+    if unique.len() != requested.len() {
+      bail!("Detachment capability ids must be unique.");
+    }
+    for id in requested {
+      if !available.contains(id) {
+        bail!(
+          "Unknown detachment capability: {id}. Available: {}",
+          available.join(", ")
+        );
+      }
+    }
+    requested.to_vec()
+  };
+  let full = requested.is_empty();
+  let selected_sources = selected
+    .iter()
+    .filter_map(|value| value.strip_prefix("source:"))
+    .collect::<std::collections::BTreeSet<_>>();
+  for (id, source) in &config.sources {
+    if selected_sources.contains(id.as_str()) {
+      continue;
+    }
+    if let Some(dependency) = source
+      .from
+      .iter()
+      .find(|dependency| selected_sources.contains(dependency.as_str()))
+    {
+      bail!(
+        "Capability source:{dependency} is still required by source:{id}; detach the dependent capability in the same plan."
+      );
+    }
+  }
+  if !selected.contains(&"release-workflow".to_owned())
+    && config.release.as_ref().is_some_and(|release| {
+      release
+        .changelog_source
+        .as_deref()
+        .is_some_and(|id| selected_sources.contains(id))
+        || release.units.values().any(|unit| {
+          selected_sources.contains(unit.changelog_source.as_str())
+            || unit
+              .selectors
+              .iter()
+              .any(|selector| selected_sources.contains(selector.source.as_str()))
+        })
+    })
+  {
+    bail!("Selected sources are still required by release-workflow; detach it in the same plan.");
+  }
+
+  let mut plan = ProjectPlan::new(
+    inspection.root.clone(),
+    "repository",
+    "detach",
+    "arcantry-detachment@1",
+  );
+  plan.watch(&config_path.to_string_lossy())?;
+  for source_id in &selected_sources {
+    if let Some(source) = inspection
+      .sources
+      .iter()
+      .find(|source| source.id == **source_id && source.origin == "configured" && source.exists)
+    {
+      plan.watch(&source.absolute_path.to_string_lossy())?;
+    }
+  }
+  let config_plan_path = config_path.strip_prefix(&inspection.root).map_or_else(
+    |_| config_path.to_string_lossy().into_owned(),
+    |path| path.to_string_lossy().replace('\\', "/"),
+  );
+  let config_visibility = if config_plan_path == ".local/arcantry.toml" {
+    Visibility::Private
+  } else {
+    Visibility::Shared
+  };
+  if full {
+    plan.operations.push(create_delete_operation(
+      &inspection.root,
+      &config_plan_path,
+      config_visibility,
+    )?);
+  } else {
+    let desired = arcantry_core::config::detach_project_capabilities(
+      &content,
+      &selected,
+      inspection.config_scope == Some("external"),
+    )?;
+    plan.operations.push(create_write_operation(
+      &inspection.root,
+      &config_plan_path,
+      desired,
+      config_visibility,
+    )?);
+  }
+  for (capability, path, visibility) in [
+    ("guidance:shared", "AGENTS.md", Visibility::Shared),
+    ("guidance:private", ".local/AGENTS.md", Visibility::Private),
+  ] {
+    if !selected.iter().any(|value| value == capability) {
+      continue;
+    }
+    let current = fs::read_to_string(inspection.root.join(path))?;
+    match arcantry_core::managed_content::remove_managed_section(&current) {
+      arcantry_core::managed_content::ManagedSectionResult::Changed(desired) => {
+        plan.operations.push(create_write_operation(
+          &inspection.root,
+          path,
+          desired,
+          visibility,
+        )?);
+      }
+      arcantry_core::managed_content::ManagedSectionResult::Unchanged(_) => {}
+      arcantry_core::managed_content::ManagedSectionResult::Conflict { reason, .. } => {
+        plan.conflicts.push(reason);
+      }
+    }
+  }
+
+  let shared_sources = selected_sources
+    .iter()
+    .filter_map(|id| {
+      config
+        .sources
+        .get(*id)
+        .filter(|source| arcantry_core::config::effective_visibility(source) == Visibility::Shared)
+        .map(|source| format!("- source:{id}: `{}`", source.path))
+    })
+    .collect::<Vec<_>>();
+  if !shared_sources.is_empty()
+    || selected
+      .iter()
+      .any(|value| value == "release-workflow" || value == "guidance:shared")
+    || (full && config_visibility == Visibility::Shared)
+  {
+    let record = detachment_record(&selected, &shared_sources, full);
+    plan.operations.push(create_write_operation(
+      &inspection.root,
+      "PROJECT_CAPABILITIES.md",
+      record,
+      Visibility::Shared,
+    )?);
+  }
+  let private_sources = selected_sources
+    .iter()
+    .filter_map(|id| {
+      config
+        .sources
+        .get(*id)
+        .filter(|source| arcantry_core::config::effective_visibility(source) == Visibility::Private)
+        .map(|source| format!("- source:{id}: `{}`", source.path))
+    })
+    .collect::<Vec<_>>();
+  if !private_sources.is_empty()
+    || selected.iter().any(|value| value == "guidance:private")
+    || (full && config_visibility == Visibility::Private)
+  {
+    let record = detachment_record(&selected, &private_sources, full);
+    plan.operations.push(create_write_operation(
+      &inspection.root,
+      ".local/PROJECT_CAPABILITIES.md",
+      record,
+      Visibility::Private,
+    )?);
+    add_private_exclude_operation(&inspection.root, Visibility::Private, &mut plan)?;
+  }
+  plan.notes.push("Detached capabilities remain project-owned and receive no synchronization, support, or updates from Arcantry. Re-adoption is a new reviewed transition.".to_owned());
+  plan.notes.push("Fresh-checkout verification must run without an Arcantry executable, network access, user-scoped skills, or .local state for shared capabilities.".to_owned());
+  if !plan.conflicts.is_empty() {
+    plan.operations.clear();
+  }
+  Ok(plan)
+}
+
+fn detachment_record(selected: &[String], sources: &[String], full: bool) -> String {
+  let source_lines = if sources.is_empty() {
+    "- No source path is disclosed in this scope.".to_owned()
+  } else {
+    sources.join("\n")
+  };
+  format!(
+    "# Project-owned capabilities\n\nOwnership transfer: {}.\n\n## Capability budget\n\n- Selected capabilities: {}\n- Final owner: project maintainers\n- License: preserve the license and attribution of every retained or copied file\n\n## Retained sources\n\n{}\n\n## Negative dependency contract\n\nThese capabilities must work from a fresh checkout without an Arcantry executable or package, network access, user-scoped skills, private `.local` state, or an automatic update channel. Re-adoption requires a new reviewed transition.\n",
+    if full { "full" } else { "partial" },
+    selected.len(),
+    source_lines
+  )
 }
 
 pub fn project_inspection(

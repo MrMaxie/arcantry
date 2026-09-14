@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "primary",
   "summary": "Adopt the smallest useful Arcantry boundary while preserving repository-owned tooling, knowledge sources, and private state.",
   "compatibility": {
     "sourceKinds": ["openspec", "changelog", "todo-txt"],

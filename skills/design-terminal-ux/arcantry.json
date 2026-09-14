@@ -1,5 +1,7 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
+  "version": "1.0.0",
+  "role": "primary",
   "summary": "Design terminal interactions around clear navigation, state, recovery, accessibility, and constrained-screen behavior.",
   "scenarios": [
     {

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Design Maintainable Code"
+  short_description: "Design code boundaries before implementation"
+  default_prompt: "Use $design-maintainable-code to produce an implementation-ready structural design."
