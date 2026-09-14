@@ -115,13 +115,13 @@ pub fn smoke(
     [cli.as_os_str(), OsStr::new("--version")],
     &install_root,
   )?;
-  let actual_version = String::from_utf8(version_output)?.trim().to_owned();
+  let actual_version = reported_version(&version_output)?;
   if actual_version != version {
     bail!("packed native CLI reported {actual_version}, expected {version}");
   }
   for (runner, arguments) in package_runners() {
     let output = run(runner, arguments, &install_root)?;
-    let actual = String::from_utf8(output)?.trim().to_owned();
+    let actual = reported_version(&output)?;
     if actual != version {
       bail!("{runner} reported {actual}, expected {version} from the packed native CLI");
     }
@@ -286,6 +286,16 @@ fn package_runners() -> Vec<(&'static str, Vec<&'static OsStr>)> {
   ]
 }
 
+fn reported_version(output: &[u8]) -> Result<String> {
+  String::from_utf8(output.to_vec())?
+    .lines()
+    .rev()
+    .map(str::trim)
+    .find(|line| !line.is_empty())
+    .map(str::to_owned)
+    .context("package runner produced no version output")
+}
+
 fn platform_program(command: &OsStr) -> OsString {
   #[cfg(windows)]
   if ["npm", "npx", "pnpm"]
@@ -310,6 +320,14 @@ fn absolute(path: &Path) -> Result<PathBuf> {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn reads_the_version_after_package_manager_progress() {
+    assert_eq!(
+      reported_version(b"Recreating node_modules\nProgress: resolved 2\n\n1.0.0\n").unwrap(),
+      "1.0.0"
+    );
+  }
 
   #[test]
   fn rejects_a_target_that_does_not_match_the_host() {

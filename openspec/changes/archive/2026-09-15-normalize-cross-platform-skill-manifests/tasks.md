@@ -5,4 +5,5 @@
 - [x] Regenerate the canonical package manifest.
 - [x] Add a cross-platform line-ending regression test.
 - [x] Make package identity and projection checks independent from ignored local build output.
+- [x] Accept package-manager progress before the native version result in smoke tests.
 - [x] Verify generation on Windows and Linux.
