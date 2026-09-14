@@ -299,4 +299,3 @@ The native CLI MUST provide `skills status [<name>] [--scope <user|repo>] [--tar
 - **WHEN** `skills apply --plan` receives a valid unchanged plan
 - **THEN** only the planned skill targets and ownership receipt change
 - **AND** the command reports the applied version, revision and digest
-

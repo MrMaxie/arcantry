@@ -195,4 +195,3 @@ The public catalog MUST provide distinct skills for assessing code quality, desi
 - **WHEN** the user authorizes a defined structural refactor
 - **THEN** the refactoring skill protects observable behavior with an explicit baseline
 - **AND** it implements and verifies small coherent increments without adding product behavior
-
