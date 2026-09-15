@@ -417,7 +417,7 @@ fn package_from_directory(directory: &Path, name: &str) -> Result<PackagePayload
   let manifest = catalog::validate_package_directory(directory, name, &schema_root)?;
   let mut files = Vec::new();
   for file in &manifest.files {
-    let bytes = fs::read(directory.join(&file.path))?;
+    let bytes = canonical_package_bytes(fs::read(directory.join(&file.path))?);
     files.push(PackageFile {
       path: file.path.clone(),
       sha256: file.sha256.clone(),
@@ -430,6 +430,13 @@ fn package_from_directory(directory: &Path, name: &str) -> Result<PackagePayload
     digest: manifest.digest,
     files,
   })
+}
+
+fn canonical_package_bytes(bytes: Vec<u8>) -> Vec<u8> {
+  match String::from_utf8(bytes) {
+    Ok(text) => text.replace("\r\n", "\n").into_bytes(),
+    Err(error) => error.into_bytes(),
+  }
 }
 
 fn verify_payload(name: &str, package: &PackagePayload) -> Result<()> {
@@ -776,6 +783,53 @@ mod tests {
     contents.push_str("\n<!-- same-version update fixture -->\n");
     fs::write(skill, contents).unwrap();
     package_from_directory(&destination, name).unwrap()
+  }
+
+  #[test]
+  fn local_package_payload_uses_manifest_canonical_bytes() {
+    let temporary = tempfile::tempdir().unwrap();
+    let name = "assess-code-quality";
+    let source = repository_root().join("skills").join(name);
+    let destination = temporary.path().join(name);
+    for entry in WalkDir::new(&source) {
+      let entry = entry.unwrap();
+      let relative = entry.path().strip_prefix(&source).unwrap();
+      let target = destination.join(relative);
+      if entry.file_type().is_dir() {
+        fs::create_dir_all(&target).unwrap();
+      } else {
+        fs::copy(entry.path(), &target).unwrap();
+      }
+    }
+    let skill = destination.join("SKILL.md");
+    let contents = fs::read_to_string(&skill).unwrap();
+    fs::write(&skill, contents.replace("\r\n", "\n").replace('\n', "\r\n")).unwrap();
+    let binary = destination.join("asset.bin");
+    fs::write(&binary, [0xff, b'\r', b'\n']).unwrap();
+
+    let package = package_from_directory(&destination, name).unwrap();
+
+    let skill = package
+      .files
+      .iter()
+      .find(|file| file.path == "SKILL.md")
+      .unwrap();
+    assert!(
+      !hex_decode(&skill.content_hex)
+        .unwrap()
+        .windows(2)
+        .any(|bytes| bytes == b"\r\n")
+    );
+    let binary = package
+      .files
+      .iter()
+      .find(|file| file.path == "asset.bin")
+      .unwrap();
+    assert_eq!(
+      hex_decode(&binary.content_hex).unwrap(),
+      [0xff, b'\r', b'\n']
+    );
+    verify_payload(name, &package).unwrap();
   }
 
   #[test]
