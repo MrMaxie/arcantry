@@ -1,6 +1,7 @@
 # Tasks
 
 - [x] Normalize UTF-8 line endings for skill package file hashes.
+- [x] Transport canonical LF bytes for UTF-8 skill update payloads while preserving binary bytes.
 - [x] Preserve exact hashing for non-UTF-8 resources.
 - [x] Regenerate the canonical package manifest.
 - [x] Add a cross-platform line-ending regression test.
