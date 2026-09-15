@@ -9,8 +9,8 @@ interface Props {
 const { variant = 'button', label = 'Copy agent prompt' } = Astro.props;
 const agentPrompt = `Install Arcantry on this computer using the official getting-started guide.
 
-- Detect the operating system, architecture, and whether a Node package launcher is already available before choosing a method.
-- Use only the documented npm-compatible launcher or the official GitHub Release installer or archive. Use the documented source installation only as a fallback.
+- Detect the operating system, architecture, and whether npm and npx are already available before choosing a method.
+- Use only the documented npx, npm, PowerShell, sh, or GitHub Release download route. Use the documented source installation only as a fallback.
 - Ask me only if the available methods differ in installation scope, required permissions, PATH changes, or another choice I need to make.
 - Before running a command, show it to me and explain where Arcantry will be installed and whether it changes PATH or installs globally.
 - Do not adopt Arcantry into a repository or change project files unless I ask.

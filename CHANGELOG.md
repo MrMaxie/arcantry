@@ -143,6 +143,11 @@ Documentation navigation exposes every skill through clear nested families, cons
 
 The documentation overview explains Arcantry's value through concrete outcomes, clear recommended adoption paths, an interactive source configuration map, one cross-platform command picker, and complete project footer details.
 
+<!-- openspec: refine-public-install-options -->
+#### Make installation choices shorter and easier to scan
+
+Arcantry's installation picker now leads with `npx`, followed by `npm`, PowerShell and `sh`, with direct GitHub Release downloads available as the final link. pnpm and Nub no longer appear as installation choices.
+
 <!-- openspec: restore-verified-release-publishing -->
 #### Publish one verified Arcantry 1.0 distribution
 
