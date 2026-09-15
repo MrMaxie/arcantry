@@ -793,7 +793,8 @@ mod tests {
     apply_locked(&data, std::slice::from_ref(&target), &plan).unwrap();
 
     let linked = dunce::canonicalize(target.join("assess-code-quality")).unwrap();
-    assert!(linked.starts_with(data.join("snapshots/assess-code-quality")));
+    let snapshot_root = dunce::canonicalize(data.join("snapshots/assess-code-quality")).unwrap();
+    assert!(linked.starts_with(snapshot_root));
     let error = apply_locked(&data, std::slice::from_ref(&target), &plan).unwrap_err();
     assert!(error.to_string().contains("receipt changed"));
   }

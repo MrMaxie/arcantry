@@ -4,7 +4,7 @@ Skill package manifests were generated from checkout bytes, so equivalent UTF-8 
 
 # What changes
 
-Normalize CRLF to LF when hashing UTF-8 skill resources while retaining exact byte hashing for binary resources. Regenerate the canonical manifest and protect the behavior with a cross-platform regression test. Keep package identity checks hermetic, verify projection copying in the projection owner's own temporary fixture, and read the final version line after package-manager progress output during package smoke tests.
+Normalize CRLF to LF when hashing UTF-8 skill resources while retaining exact byte hashing for binary resources. Regenerate the canonical manifest and protect the behavior with a cross-platform regression test. Keep package identity checks hermetic, verify projection copying in the projection owner's own temporary fixture, read the final version line after package-manager progress output during package smoke tests, and compare canonical snapshot paths in skill update tests.
 
 # Out of scope
 
