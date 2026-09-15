@@ -1,4 +1,5 @@
 use crate::native_targets::{self, NativeTarget, TARGETS};
+use crate::tooling;
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -43,6 +44,7 @@ pub fn package(
   }
 
   let root = absolute(root)?;
+  let nub = tooling::mise_program(&root, "nub")?;
   let output = absolute(output)?;
   let artifacts = artifacts.map(absolute).transpose()?;
   let binaries = if let Some(artifact_root) = artifacts.as_deref() {
@@ -75,14 +77,14 @@ pub fn package(
     copy(&source.join("README.md"), &stage.join("README.md"))?;
     copy(&root.join("LICENSE"), &stage.join("LICENSE"))?;
     copy(&binary, &stage.join("bin").join(target.executable))?;
-    assert_platform_package(&stage, target.executable)?;
-    archives.push(pack(&stage, &output)?);
+    assert_platform_package(&nub, &stage, target.executable)?;
+    archives.push(pack(&nub, &stage, &output)?);
   }
 
   if include_main {
     let main = root.join("packages/arcantry");
-    assert_main_package(&main)?;
-    archives.push(pack(&main, &output)?);
+    assert_main_package(&nub, &main)?;
+    archives.push(pack(&nub, &main, &output)?);
   }
 
   archives.sort();
@@ -140,8 +142,9 @@ fn copy(source: &Path, destination: &Path) -> Result<()> {
   Ok(())
 }
 
-fn pack(package_root: &Path, output: &Path) -> Result<String> {
+fn pack(nub: &Path, package_root: &Path, output: &Path) -> Result<String> {
   let result = run_nub(
+    nub,
     package_root,
     [
       OsString::from("pack"),
@@ -164,8 +167,9 @@ fn pack(package_root: &Path, output: &Path) -> Result<String> {
     })
 }
 
-fn dry_run_files(package_root: &Path) -> Result<Vec<String>> {
+fn dry_run_files(nub: &Path, package_root: &Path) -> Result<Vec<String>> {
   let result = run_nub(
+    nub,
     package_root,
     ["pack", "--dry-run", "--json", "--ignore-scripts"].map(OsString::from),
   )?;
@@ -177,9 +181,9 @@ fn dry_run_files(package_root: &Path) -> Result<Vec<String>> {
   )
 }
 
-fn run_nub<const N: usize>(package_root: &Path, args: [OsString; N]) -> Result<Output> {
+fn run_nub<const N: usize>(nub: &Path, package_root: &Path, args: [OsString; N]) -> Result<Output> {
   let clean_environment = std::env::vars_os().filter(|(key, _)| key != "NODE_OPTIONS");
-  let output = Command::new("nub")
+  let output = Command::new(nub)
     .args(args)
     .current_dir(package_root)
     .env_clear()
@@ -201,8 +205,8 @@ fn parse_pack(stdout: &[u8]) -> Result<Vec<PackResult>> {
   serde_json::from_slice(stdout).context("nub pack returned invalid JSON")
 }
 
-fn assert_platform_package(package_root: &Path, executable: &str) -> Result<()> {
-  let actual = dry_run_files(package_root)?
+fn assert_platform_package(nub: &Path, package_root: &Path, executable: &str) -> Result<()> {
+  let actual = dry_run_files(nub, package_root)?
     .into_iter()
     .collect::<BTreeSet<_>>();
   let expected = [
@@ -223,7 +227,7 @@ fn assert_platform_package(package_root: &Path, executable: &str) -> Result<()> 
   Ok(())
 }
 
-fn assert_main_package(package_root: &Path) -> Result<()> {
+fn assert_main_package(nub: &Path, package_root: &Path) -> Result<()> {
   let manifest: Value = serde_json::from_slice(&fs::read(package_root.join("package.json"))?)?;
   if manifest.pointer("/bin/arcantry").and_then(Value::as_str) != Some("bin/arcantry.js") {
     bail!("main package must expose bin/arcantry.js as the arcantry launcher");
@@ -233,7 +237,7 @@ fn assert_main_package(package_root: &Path) -> Result<()> {
       bail!("launcher-only main package must not declare {field}");
     }
   }
-  let files = dry_run_files(package_root)?;
+  let files = dry_run_files(nub, package_root)?;
   let allowed_files = ["package.json", "catalog.json", "README.md", "LICENSE"];
   let allowed_prefixes = [
     ".claude-plugin/",
