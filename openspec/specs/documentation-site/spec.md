@@ -73,13 +73,14 @@ Documentation and interactive copy surfaces MUST derive or validate the `npx` an
 
 ### Requirement: Installation guidance distinguishes native and npm use
 
-The documentation MUST present direct GitHub Release archives, checksum-verifying sh and PowerShell installers, and the `arcantry` npm package as the supported public distribution paths. The public installation picker MUST present `npx`, `npm`, PowerShell and `sh` in that order, followed by a `Download` link to the versioned GitHub Release. It MUST NOT present pnpm or Nub as installation-picker choices or accompanying public installation guidance. The documentation MUST list the supported operating-system and architecture matrix, explain that the Linux archives support both glibc and musl systems, and describe installation from the user's task without exposing launcher, optional-package, migration-oracle or build-pipeline details. It MUST NOT present unsupported distribution channels, targets, signing or automatic updates as delivered behavior.
+The documentation MUST present direct GitHub Release archives, checksum-verifying sh and PowerShell installers, and the `arcantry` npm package as the supported public distribution paths. The public installation picker MUST present `npx`, `npm`, PowerShell and `sh` in that order, followed by a `Download` link to the versioned GitHub Release. The `Download` link MUST remain outside the command tablist, align to the far right of the picker header at supported wide viewports, and use a divider plus a button-like treatment to distinguish navigation from command selection. It MUST NOT present pnpm or Nub as installation-picker choices or accompanying public installation guidance. The documentation MUST list the supported operating-system and architecture matrix, explain that the Linux archives support both glibc and musl systems, and describe installation from the user's task without exposing launcher, optional-package, migration-oracle or build-pipeline details. It MUST NOT present unsupported distribution channels, targets, signing or automatic updates as delivered behavior.
 
 #### Scenario: A user chooses an installation path
 
 - **WHEN** the reader opens the CLI installation guidance
 - **THEN** the choices appear as `npx`, `npm`, PowerShell, `sh` and `Download`
-- **AND** `Download` is a link to the versioned GitHub Release rather than a copyable command tab
+- **AND** `Download` is a right-aligned link to the versioned GitHub Release rather than a copyable command tab
+- **AND** a divider and button-like treatment distinguish `Download` from the command tabs
 - **AND** pnpm and Nub are absent from the installation choices and accompanying installation copy
 - **AND** they can select the archive matching Windows, macOS or Linux on x64 or ARM64
 - **AND** they can run the same `arcantry` command after installation

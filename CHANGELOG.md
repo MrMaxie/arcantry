@@ -103,6 +103,11 @@ Arcantry presents one canonical product identity through platform-appropriate Co
 
 Saved plans retain source hashes, refuse stale inputs and preserve ambiguous interrupted state for explicit recovery instead of overwriting project content.
 
+<!-- openspec: distinguish-download-action -->
+#### Distinguish direct downloads from command choices
+
+The GitHub Release download is now a separate right-aligned action with a divider and button treatment, instead of looking like another selectable command tab.
+
 <!-- openspec: establish-arcantry-dev-public-domain -->
 #### Publish Arcantry from its own public domain
 
