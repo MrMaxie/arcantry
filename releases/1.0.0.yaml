@@ -20,6 +20,7 @@ changes:
   - focus-initial-release-platforms
   - harden-native-cli-verification-gates
   - improve-configurator-responsive-reflow
+  - keep-public-installation-on-release-channels
   - make-cli-documentation-verifiable
   - model-audience-based-release-projection
   - normalize-cross-platform-skill-manifests

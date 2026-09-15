@@ -89,12 +89,19 @@ fn keeps_authored_installation_and_launcher_examples_aligned() {
   }
   assert!(picker.contains("margin-left: auto"));
   assert!(picker.contains("border-left: 1px solid"));
-  assert!(getting_started.contains("cargo install --locked --path crates/arcantry-cli"));
+  for forbidden in [
+    "cargo install --locked --path crates/arcantry-cli",
+    "install the native CLI from a checkout",
+    "documented source installation",
+    "documented fallback",
+  ] {
+    assert!(!getting_started.contains(forbidden), "{forbidden}");
+    assert!(!prompt.contains(forbidden), "{forbidden}");
+  }
   assert!(
     getting_started
       .contains("Native downloads support Windows x64, macOS x64 and ARM64, and Linux x64.")
   );
-  assert!(getting_started.contains("supported public distribution channels for 1.0"));
   assert!(getting_started.contains("<ArcantryAgentPrompt variant=\"full\" />"));
   assert!(
     prompt.contains("Install Arcantry on this computer using the official getting-started guide.")

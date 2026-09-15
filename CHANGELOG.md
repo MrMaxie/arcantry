@@ -128,6 +128,11 @@ Arcantry presents recognizable project outcomes, adoption trade-offs and compati
 
 Arcantry's initial release provides native packages for Windows x64, macOS x64 and ARM64, and Linux x64, reducing the first-publication package set while preserving the common developer platforms.
 
+<!-- openspec: keep-public-installation-on-release-channels -->
+#### Keep installation guidance on supported channels
+
+The public installation guide now stays focused on npm and verified GitHub Release downloads without directing end users to build Arcantry from a source checkout.
+
 <!-- openspec: make-cli-documentation-verifiable -->
 #### Keep the CLI reference aligned and readable
 
