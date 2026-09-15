@@ -369,7 +369,7 @@ fn rejects_directory_relocation_that_would_drop_a_symbolic_link() {
   assert!(!repository.path().join("moved").exists());
 }
 
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 #[test]
 fn accepts_a_non_utf8_cwd_path() {
   use std::ffi::OsString;

@@ -7,4 +7,5 @@
 - [x] Make package identity and projection checks independent from ignored local build output.
 - [x] Accept package-manager progress before the native version result in smoke tests.
 - [x] Compare canonical snapshot paths in skill update tests across macOS path aliases.
+- [x] Scope raw non-UTF-8 path coverage to supported Linux filesystems.
 - [x] Verify generation on Windows and Linux.
