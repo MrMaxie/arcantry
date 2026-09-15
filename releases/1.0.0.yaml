@@ -1,4 +1,4 @@
-# First public release sealed after cross-platform CI and package verification.
+# First public release sealed after cross-platform CI, package, and skill update verification.
 version: 1.0.0
 date: 2026-09-14
 changes:
