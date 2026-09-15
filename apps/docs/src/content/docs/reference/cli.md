@@ -37,10 +37,10 @@ Initialization does not create package-manager, runtime, task-runner, OpenSpec, 
 ### `repo inspect`
 
 ```text
-arcantry repo inspect [--json]
+arcantry repo inspect [--detailed|--json]
 ```
 
-Reports the active and shadowed configuration and every discovered or configured source without writing.
+Reports the project boundary, active and shadowed configuration, present and absent standard sources, applicable methodologies, and `.local` policy without writing. `--detailed` expands the human-readable evidence. `--json` returns the complete versioned data model.
 
 ### `repo plan`
 

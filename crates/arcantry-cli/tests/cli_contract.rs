@@ -68,6 +68,17 @@ fn repository() -> tempfile::TempDir {
   directory
 }
 
+fn git(root: &Path, arguments: &[&str]) {
+  assert!(
+    ProcessCommand::new("git")
+      .args(arguments)
+      .current_dir(root)
+      .status()
+      .unwrap()
+      .success()
+  );
+}
+
 fn run(root: &Path, arguments: &[&str]) -> Output {
   let mut command = binary();
   command.arg("--cwd").arg(root).args(arguments);
@@ -326,6 +337,12 @@ fn execute_scenario(id: &str, command: &str) {
     | ("skills-link", "skills link")
     | ("skills-unlink", "skills unlink")
     | ("skills-doctor", "skills doctor") => assert_successful_behavior(command),
+    ("repo-inspect-bounded-context", "repo inspect") => {
+      repository_inspection_reports_absent_sources_and_detailed_context()
+    }
+    ("repo-inspect-local-policy", "repo inspect") => {
+      repository_inspection_reports_partial_configuration_and_local_conflicts()
+    }
     ("repo-inspect-read-only", "repo inspect") => assert_read_only_repo_command("inspect"),
     ("repo-plan-read-only", "repo plan") => assert_read_only_repo_command("plan"),
     ("repo-apply-rejects-drift", "repo apply") => assert_apply_rejects_drift(),
@@ -955,7 +972,101 @@ fn configuration_discovery_uses_the_nearest_project_and_honors_an_explicit_confi
   assert!(output.status.success());
   let inspection: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
   assert_eq!(inspection["mode"], "configured");
-  assert_eq!(inspection["sources"][0]["id"], "tasks");
+  assert!(
+    inspection["sources"]
+      .as_array()
+      .unwrap()
+      .iter()
+      .any(|source| source["id"] == "tasks")
+  );
+}
+
+#[test]
+fn repository_inspection_reports_absent_sources_and_detailed_context() {
+  let directory = tempfile::tempdir().unwrap();
+
+  let (json, _) = success(directory.path(), &["repo", "inspect", "--json"]);
+  let inspection: serde_json::Value = serde_json::from_str(&json).unwrap();
+  assert_eq!(inspection["schemaVersion"], 1);
+  assert_eq!(inspection["sources"].as_array().unwrap().len(), 6);
+  assert!(
+    inspection["sources"]
+      .as_array()
+      .unwrap()
+      .iter()
+      .all(|source| source["exists"] == false)
+  );
+  assert_eq!(inspection["localBoundary"]["status"], "not-git");
+  assert_eq!(inspection["methodologies"].as_array().unwrap().len(), 5);
+
+  let (detailed, _) = success(directory.path(), &["repo", "inspect", "--detailed"]);
+  assert!(detailed.contains("Sources: 0 present, 6 absent"));
+  assert!(detailed.contains("Source openspec:"));
+  assert!(detailed.contains("Methodology agent-guidance: state=absent"));
+  assert!(detailed.contains(".local details: git=false"));
+}
+
+#[test]
+fn repository_inspection_reports_partial_configuration_and_local_conflicts() {
+  let repository = repository();
+  write(
+    repository.path(),
+    "arcantry.toml",
+    "config_version = 1\n\n[sources.tasks]\nkind = \"todo-txt\"\npath = \"tasks.txt\"\nadapter = \"todo-txt@1\"\n",
+  );
+  write(repository.path(), ".local/tracked.txt", "tracked\n");
+  git(
+    repository.path(),
+    &["config", "user.name", "Arcantry Tests"],
+  );
+  git(
+    repository.path(),
+    &["config", "user.email", "tests@arcantry.invalid"],
+  );
+  git(
+    repository.path(),
+    &["add", ".local/tracked.txt", "arcantry.toml"],
+  );
+  git(
+    repository.path(),
+    &["commit", "--quiet", "-m", "test: add context"],
+  );
+  git(
+    repository.path(),
+    &[
+      "remote",
+      "add",
+      "origin",
+      "https://example.invalid/repository.git",
+    ],
+  );
+  git(
+    repository.path(),
+    &["update-ref", "refs/remotes/origin/master", "HEAD"],
+  );
+  git(
+    repository.path(),
+    &[
+      "symbolic-ref",
+      "refs/remotes/origin/HEAD",
+      "refs/remotes/origin/master",
+    ],
+  );
+
+  let (json, _) = success(repository.path(), &["repo", "inspect", "--json"]);
+  let inspection: serde_json::Value = serde_json::from_str(&json).unwrap();
+  let sources = inspection["sources"].as_array().unwrap();
+  let tasks = sources
+    .iter()
+    .find(|source| source["id"] == "tasks")
+    .unwrap();
+  assert_eq!(tasks["origin"], "configured");
+  assert_eq!(tasks["exists"], false);
+  assert_eq!(inspection["localBoundary"]["status"], "remote-tracked");
+  assert_eq!(
+    inspection["localBoundary"]["remoteReference"],
+    "refs/remotes/origin/master"
+  );
 }
 
 #[test]

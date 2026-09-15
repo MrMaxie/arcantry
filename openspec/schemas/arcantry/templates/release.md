@@ -1,11 +1,12 @@
 ---
-category: changed
 impact: patch
 visibility: public
 components:
   - repository-lifecycle
 ---
 
-# Release title
+## Changed
 
-<!-- Describe the delivered outcome in one short paragraph. No commit-level implementation details. -->
+### Release title
+
+<!-- Describe one consumer outcome. Add another level-three outcome or standard level-two category only when the same coherent change delivered a materially distinct consumer result. No commit-level implementation details. -->

@@ -54,6 +54,14 @@ pub enum Visibility {
   Shared,
   Private,
 }
+impl Visibility {
+  pub fn name(self) -> &'static str {
+    match self {
+      Self::Shared => "shared",
+      Self::Private => "private",
+    }
+  }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

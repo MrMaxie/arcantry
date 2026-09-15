@@ -7,7 +7,7 @@ Define the stable public command surface for repository adoption and skill disco
 
 ### Requirement: Arcantry exposes one namespaced command line interface
 
-Arcantry MUST expose one public `arcantry` command. The authoritative command implementation MUST be a compiled Rust executable that does not require Node.js, Bun, Python or another language runtime. Repository operations MUST be nested under `arcantry repo`, and skill operations MUST be nested under `arcantry skills`. The CLI MUST NOT expose top-level install or update aliases. Package-manager launchers MAY dispatch to the native executable but MUST NOT provide a separate command implementation.
+Arcantry MUST expose one public `arcantry` command. All command behavior and domain operations MUST be implemented by the compiled Rust executable and its Rust core. The executable MUST NOT require Node.js, Bun, Python or another language runtime. Repository operations MUST be nested under `arcantry repo`, and skill operations MUST be nested under `arcantry skills`. The CLI MUST NOT expose top-level install or update aliases. Package-manager launchers MAY dispatch to the native executable but MUST NOT provide a separate command or domain implementation.
 
 #### Scenario: A user inspects the command surface
 
@@ -21,9 +21,15 @@ Arcantry MUST expose one public `arcantry` command. The authoritative command im
 - **THEN** every supported CLI command remains available
 - **AND** the executable does not attempt to install or invoke another language runtime
 
+#### Scenario: A new command capability is implemented
+
+- **WHEN** Arcantry adds or changes public command behavior
+- **THEN** the behavior is implemented in Rust and exercised through the compiled executable
+- **AND** no TypeScript or JavaScript command implementation is added
+
 ### Requirement: Repository commands have stable responsibilities
 
-The `repo` group MUST expose `init`, `update`, `doctor`, `validate`, and `remove`. `init`, `update`, and `remove` MUST require `--scope shared|private` and MUST report the repository artifacts they create, update, or remove. `init` and `update` MAY accept `--compat claude` to add a branded adapter that imports the canonical guidance for the selected scope. `doctor` and `validate` MUST be read-only and MUST use explicit or discovered TOML configuration.
+The `repo` group MUST expose `inspect`, `plan`, `apply`, `init`, `update`, `doctor`, `validate`, and `remove`. `repo inspect` MUST be read-only, MUST support concise and detailed human views and stable JSON output, and MUST report the resolved project context without requiring configuration. `init`, `update`, and `remove` MUST require `--scope shared|private` and MUST report the repository artifacts they create, update, or remove. `doctor` and `validate` MUST remain read-only and MUST use explicit or discovered TOML configuration.
 
 #### Scenario: Private repository state is initialized
 
@@ -47,6 +53,18 @@ The `repo` group MUST expose `init`, `update`, `doctor`, `validate`, and `remove
 
 - **WHEN** the user runs `arcantry repo validate` in a configured repository
 - **THEN** Arcantry validates managed artifact metadata and repository policy without changing files
+
+#### Scenario: Repository context is inspected concisely
+
+- **WHEN** a user runs repository inspection without a detail override
+- **THEN** the command reports the project boundary, selected configuration, recognized and absent standard sources, methodology summary and `.local` boundary health
+- **AND** does not change repository or private state
+
+#### Scenario: Repository context is consumed by an agent
+
+- **WHEN** a caller requests JSON output
+- **THEN** the result contains stable typed records for every detailed context field
+- **AND** no operating-system-specific command output is exposed as the contract
 
 ### Requirement: Skill commands support discovery and local adoption
 

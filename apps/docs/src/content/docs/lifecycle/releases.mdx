@@ -13,25 +13,32 @@ This repository currently uses continuous 1.0 delivery. Product and distributabl
 
 ## `release.md`
 
-Each Arcantry change carries its release-facing outcome and version impact:
+Each Arcantry change carries its version impact and one or more release-facing consumer outcomes:
 
 ```md
 ---
-category: changed
 impact: minor
 visibility: public
 components:
   - repository-lifecycle
 ---
 
-# Configurable farm layout
+## Added
+
+### Configure the farm layout
 
 The farm layout is configurable without replacing the map wholesale.
+
+## Fixed
+
+### Preserve existing farm objects
+
+Changing the layout no longer removes objects that remain valid in the selected layout.
 ```
 
-The body describes the delivered outcome, not an implementation summary.
+Each level-two heading is one standard changelog category: `Added`, `Changed`, `Fixed`, `Deprecated`, `Removed`, or `Security`. Each level-three heading and its body describe one distinct consumer outcome, not an implementation summary. A category may contain several outcomes.
 
-`category` is `added`, `changed`, `fixed`, `deprecated`, `removed`, or `security`.
+Existing release artifacts may retain the legacy `category` frontmatter with one level-one title and body. New artifacts use the categorized body shown above. One file cannot mix the two structures.
 
 Completed changes record `patch`, `minor`, or `major` impact. When a release is authorized, planning rejects an unassigned `none` change and uses the highest impact in the release set. Recording impact does not authorize a version change.
 
@@ -39,7 +46,7 @@ Completed changes record `patch`, `minor`, or `major` impact. When a release is 
 
 `components` lists one or more stable affected Arcantry surfaces, such as `cli`, `catalog`, `docs`, `repository-adoption`, or `skill:<name>`.
 
-Projects using `openspec-release@2` may add `unit_impacts` when the same outcome has a different SemVer effect in each matching unit. The scalar `impact` remains the fallback. A composed parent outcome may add `dependency_updates` to acknowledge newer direct dependencies. The title, body, category and visibility remain shared: materially different consumer stories belong in separate OpenSpec changes.
+Projects using `openspec-release@2` may add `unit_impacts` when the same change has a different SemVer effect in each matching unit. The scalar `impact` remains the fallback. A composed parent change may add `dependency_updates` to acknowledge newer direct dependencies. Impact, visibility, components, unit impacts and dependency updates remain shared by every outcome in the change. Independently acceptable or releasable stories belong in separate OpenSpec changes; one coherent change may still describe several distinct consumer outcomes.
 
 Arcantry resolves each change's schema from `.openspec.yaml`, with fallback to its OpenSpec source `config.yaml`. A schema whose `release` artifact generates `release.md` is release-bearing. A schema without that artifact is intentionally non-release and must not add `release.md`; it is skipped without using `impact: none`.
 
@@ -101,13 +108,13 @@ The commit that introduces an authorized release manifest is the Arcantry releas
 
 Arcantry's public release adapter renders Keep a Changelog 2.0 with its preamble, `Unreleased`, dated bracketed versions, and standard categories. It can compose archived meaning from one or several explicit OpenSpec paths in a monorepo. Existing release prose is never reconstructed from Git.
 
-Published entries carry an invisible OpenSpec source marker:
+Every published outcome carries an invisible OpenSpec source marker:
 
 ```html
 <!-- openspec: configurable-farm-layout -->
 ```
 
-This keeps generated output traceable without adding noise for readers.
+This keeps every generated outcome traceable without adding noise for readers. Several markers may therefore identify the same change when it delivered several outcomes.
 
 ## Git history
 

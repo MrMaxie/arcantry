@@ -2,6 +2,7 @@ use crate::config::{
   Management, RawSourceConfig, ResolvedProject, SourceKind, Visibility, effective_visibility,
   normalize_path_lexically,
 };
+use crate::repository::{LocalBoundaryInspection, inspect_local_boundary};
 use anyhow::Result;
 use serde::Serialize;
 use std::collections::BTreeSet;
@@ -31,13 +32,24 @@ pub struct ProjectSource {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KnowledgeInspection {
+  pub schema_version: u32,
   pub root: PathBuf,
   pub mode: &'static str,
   pub config_path: Option<PathBuf>,
   pub config_scope: Option<&'static str>,
   pub shadowed_config_paths: Vec<PathBuf>,
   pub sources: Vec<ProjectSource>,
+  pub methodologies: Vec<MethodologyInspection>,
+  pub local_boundary: LocalBoundaryInspection,
   pub diagnostics: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MethodologyInspection {
+  pub id: &'static str,
+  pub active: bool,
+  pub evidence: Vec<String>,
 }
 
 pub fn inspect(project: &ResolvedProject) -> Result<KnowledgeInspection> {
@@ -60,13 +72,14 @@ pub fn inspect(project: &ResolvedProject) -> Result<KnowledgeInspection> {
       sources.push(item);
     }
   }
-  for (id, kind, path, visibility, directory) in [
+  for (id, kind, path, visibility, directory, default_adapter) in [
     (
       "openspec",
       SourceKind::Openspec,
       "openspec",
       Visibility::Shared,
       true,
+      "openspec@1",
     ),
     (
       "openspec-local",
@@ -74,6 +87,7 @@ pub fn inspect(project: &ResolvedProject) -> Result<KnowledgeInspection> {
       ".local/openspec",
       Visibility::Private,
       true,
+      "openspec@1",
     ),
     (
       "changelog",
@@ -81,6 +95,7 @@ pub fn inspect(project: &ResolvedProject) -> Result<KnowledgeInspection> {
       "CHANGELOG.md",
       Visibility::Shared,
       false,
+      "keep-a-changelog@2",
     ),
     (
       "changelog-local",
@@ -88,6 +103,7 @@ pub fn inspect(project: &ResolvedProject) -> Result<KnowledgeInspection> {
       ".local/CHANGELOG.md",
       Visibility::Private,
       false,
+      "keep-a-changelog@2",
     ),
     (
       "todo-root",
@@ -95,6 +111,7 @@ pub fn inspect(project: &ResolvedProject) -> Result<KnowledgeInspection> {
       "todo.txt",
       Visibility::Shared,
       false,
+      "todo-txt@1",
     ),
     (
       "todo-local",
@@ -102,16 +119,23 @@ pub fn inspect(project: &ResolvedProject) -> Result<KnowledgeInspection> {
       ".local/todo.txt",
       Visibility::Private,
       false,
+      "todo-txt@1",
     ),
   ] {
     let absolute = project.root.join(path);
-    if configured_paths.contains(&normalize(&absolute))
-      || (directory && !absolute.is_dir())
-      || (!directory && !absolute.is_file())
-    {
+    if configured_paths.contains(&normalize(&absolute)) {
       continue;
     }
-    let (adapter, confidence) = detect_adapter(&kind, &absolute)?;
+    let exists = if directory {
+      absolute.is_dir()
+    } else {
+      absolute.is_file()
+    };
+    let (adapter, confidence) = if exists {
+      detect_adapter(&kind, &absolute)?
+    } else {
+      (default_adapter.to_owned(), "none")
+    };
     let source = RawSourceConfig {
       kind,
       path: path.to_owned(),
@@ -123,20 +147,64 @@ pub fn inspect(project: &ResolvedProject) -> Result<KnowledgeInspection> {
       scope: ".".to_owned(),
     };
     let unique = unique_id(id, &sources);
-    let item = finalize(&unique, &source, absolute, true, "discovered", confidence);
+    let item = finalize(
+      &unique,
+      &source,
+      absolute,
+      exists,
+      if exists { "discovered" } else { "standard" },
+      confidence,
+    );
     append_diagnostic(&item, &mut diagnostics);
     sources.push(item);
   }
   sources.sort_by(|left, right| left.id.cmp(&right.id));
+  let methodologies = inspect_methodologies(&project.root, &sources);
   Ok(KnowledgeInspection {
+    schema_version: 1,
     root: project.root.clone(),
     mode: project.mode,
     config_path: project.config_path.clone(),
     config_scope: project.scope,
     shadowed_config_paths: project.shadowed_config_paths.clone(),
     sources,
+    methodologies,
+    local_boundary: inspect_local_boundary(&project.root)?,
     diagnostics,
   })
+}
+
+fn inspect_methodologies(root: &Path, sources: &[ProjectSource]) -> Vec<MethodologyInspection> {
+  let source_methodology = |id, kind| MethodologyInspection {
+    id,
+    active: sources
+      .iter()
+      .any(|source| source.kind == kind && source.exists),
+    evidence: sources
+      .iter()
+      .filter(|source| source.kind == kind && source.exists)
+      .map(|source| source.path.clone())
+      .collect(),
+  };
+  let marker_methodology = |id, paths: &[&str]| MethodologyInspection {
+    id,
+    active: paths.iter().any(|path| root.join(path).exists()),
+    evidence: paths
+      .iter()
+      .filter(|path| root.join(path).exists())
+      .map(|path| (*path).to_owned())
+      .collect(),
+  };
+  vec![
+    source_methodology("openspec", SourceKind::Openspec),
+    source_methodology("todo-txt", SourceKind::TodoTxt),
+    source_methodology("keep-a-changelog", SourceKind::Changelog),
+    marker_methodology("agent-guidance", &["AGENTS.md", ".local/AGENTS.md"]),
+    marker_methodology(
+      "agent-skills",
+      &["skills", ".agents/skills", ".local/skills"],
+    ),
+  ]
 }
 
 pub fn adapter_status(kind: &SourceKind, adapter: &str) -> &'static str {
@@ -250,5 +318,70 @@ fn normalize(path: &Path) -> String {
     value.to_lowercase()
   } else {
     value
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn reports_absent_standard_sources_and_bounded_methodologies() {
+    let directory = tempfile::tempdir().unwrap();
+    fs::write(directory.path().join("AGENTS.md"), "# Guidance\n").unwrap();
+    let project = ResolvedProject {
+      root: directory.path().to_path_buf(),
+      config_path: None,
+      config: None,
+      mode: "wild",
+      scope: None,
+      shadowed_config_paths: Vec::new(),
+    };
+
+    let inspection = inspect(&project).unwrap();
+
+    assert_eq!(inspection.schema_version, 1);
+    assert_eq!(inspection.sources.len(), 6);
+    assert!(inspection.sources.iter().all(|source| !source.exists));
+    assert!(
+      inspection
+        .methodologies
+        .iter()
+        .any(|item| item.id == "agent-guidance" && item.active)
+    );
+    assert_eq!(inspection.local_boundary.status, "not-git");
+  }
+
+  #[test]
+  fn reports_present_sources_without_enumerating_unrelated_content() {
+    let directory = tempfile::tempdir().unwrap();
+    fs::create_dir(directory.path().join("openspec")).unwrap();
+    fs::write(directory.path().join("todo.txt"), "Inspect context\n").unwrap();
+    fs::write(directory.path().join("unrelated.txt"), "private detail\n").unwrap();
+    let project = ResolvedProject {
+      root: directory.path().to_path_buf(),
+      config_path: None,
+      config: None,
+      mode: "wild",
+      scope: None,
+      shadowed_config_paths: Vec::new(),
+    };
+
+    let inspection = inspect(&project).unwrap();
+
+    assert_eq!(
+      inspection
+        .sources
+        .iter()
+        .filter(|source| source.exists)
+        .count(),
+      2
+    );
+    assert!(
+      inspection
+        .sources
+        .iter()
+        .all(|source| source.path != "unrelated.txt")
+    );
   }
 }

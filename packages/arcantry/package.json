@@ -4,35 +4,12 @@
   "description": "Arcantry repository adoption, skill catalog, and agent integration CLI.",
   "type": "module",
   "bin": {
-    "arcantry": "dist/cli.js"
+    "arcantry": "bin/arcantry.js"
   },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./catalog": {
-      "types": "./dist/catalog.d.ts",
-      "import": "./dist/catalog.js"
-    },
-    "./repository": {
-      "types": "./dist/repository.d.ts",
-      "import": "./dist/repository.js"
-    },
-    "./project": {
-      "types": "./dist/project.d.ts",
-      "import": "./dist/project.js"
-    },
-    "./release": {
-      "types": "./dist/release.d.ts",
-      "import": "./dist/release.js"
-    }
-  },
-  "types": "./dist/index.d.ts",
   "files": [
     ".claude-plugin",
     ".codex-plugin",
-    "dist",
+    "bin",
     "skills",
     "catalog.json",
     "assets",
@@ -40,13 +17,6 @@
     "README.md",
     "LICENSE"
   ],
-  "scripts": {
-    "build": "tsup",
-    "package:check": "nub run prepack && nub scripts/check-package.mjs",
-    "prepack": "nub run build && nub --cwd ../.. tooling/prepare-package.ts",
-    "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
-  },
   "engines": {
     "node": ">=24.0.0"
   },
@@ -62,14 +32,6 @@
   "publishConfig": {
     "access": "public"
   },
-  "dependencies": {
-    "commander": "14.0.3",
-    "execa": "9.6.1",
-    "semver": "7.8.5",
-    "smol-toml": "1.7.1",
-    "yaml": "2.9.0",
-    "zod": "4.4.3"
-  },
   "optionalDependencies": {
     "@arcantry/cli-win32-x64": "1.0.0",
     "@arcantry/cli-win32-arm64": "1.0.0",
@@ -77,12 +39,5 @@
     "@arcantry/cli-darwin-arm64": "1.0.0",
     "@arcantry/cli-linux-x64": "1.0.0",
     "@arcantry/cli-linux-arm64": "1.0.0"
-  },
-  "devDependencies": {
-    "@types/node": "25.7.0",
-    "@types/semver": "7.8.0",
-    "tsup": "8.5.1",
-    "typescript": "6.0.3",
-    "vitest": "4.1.10"
   }
 }

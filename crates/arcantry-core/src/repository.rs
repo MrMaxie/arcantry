@@ -70,6 +70,19 @@ pub struct RepositoryReport {
   pub scope: Option<&'static str>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalBoundaryInspection {
+  pub status: &'static str,
+  pub git_repository: bool,
+  pub exists: bool,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub ignored: Option<bool>,
+  pub tracked: bool,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub remote_reference: Option<String>,
+}
+
 const SHARED_GUIDANCE: &str = "## Arcantry\n\nUse `arcantry.toml` for shared Arcantry configuration.\nTreat configured OpenSpec sources as accepted product and engineering intent.\nUse configured todo.txt sources for quick intake and changelog sources for consumer-facing release history.";
 const PRIVATE_GUIDANCE: &str = "## Arcantry local context\n\nTreat `.local/` as private operational state and read `.local/arcantry.toml` for private Arcantry configuration.\nKeep private and shared sources independent. Promote or relocate content only through an explicit reviewed operation.";
 
@@ -81,6 +94,46 @@ pub fn resolve_repository_root(cwd: &Path) -> Result<PathBuf> {
     .with_context(|| format!("No Git repository found from {}.", cwd.display()))?;
   let root = PathBuf::from(output.trim());
   Ok(dunce::canonicalize(&root).unwrap_or(root))
+}
+
+pub fn inspect_local_boundary(root: &Path) -> Result<LocalBoundaryInspection> {
+  let exists = root.join(".local").exists();
+  if resolve_repository_root(root).is_err() {
+    return Ok(LocalBoundaryInspection {
+      status: "not-git",
+      git_repository: false,
+      exists,
+      ignored: None,
+      tracked: false,
+      remote_reference: None,
+    });
+  }
+  let ignored = duct::cmd(
+    "git",
+    ["check-ignore", "--quiet", "--no-index", "--", ".local/"],
+  )
+  .dir(root)
+  .stderr_null()
+  .unchecked()
+  .run()?
+  .status
+  .success();
+  let policy = local_tracking_policy(root)?;
+  let (status, tracked, remote_reference) = match policy {
+    LocalTrackingPolicy::RemoteTracked(reference) => ("remote-tracked", true, Some(reference)),
+    LocalTrackingPolicy::IndexOnly => ("index-tracked", true, None),
+    LocalTrackingPolicy::Private if !exists => ("absent", false, None),
+    LocalTrackingPolicy::Private if ignored => ("protected", false, None),
+    LocalTrackingPolicy::Private => ("unprotected", false, None),
+  };
+  Ok(LocalBoundaryInspection {
+    status,
+    git_repository: true,
+    exists,
+    ignored: Some(ignored),
+    tracked,
+    remote_reference,
+  })
 }
 
 pub fn init(cwd: &Path, scope: Scope, compatibility: bool) -> Result<Vec<RepositoryChange>> {
@@ -687,6 +740,44 @@ mod tests {
         "refs/remotes/origin/master",
       ],
     );
+  }
+
+  #[test]
+  fn inspects_non_git_and_protected_local_boundaries() {
+    let plain = tempfile::tempdir().unwrap();
+    let boundary = inspect_local_boundary(plain.path()).unwrap();
+    assert_eq!(boundary.status, "not-git");
+    assert!(!boundary.git_repository);
+    assert_eq!(boundary.ignored, None);
+
+    let repository = repository();
+    fs::create_dir(repository.path().join(".local")).unwrap();
+    fs::write(repository.path().join(".git/info/exclude"), ".local/\n").unwrap();
+    let boundary = inspect_local_boundary(repository.path()).unwrap();
+    assert_eq!(boundary.status, "protected");
+    assert_eq!(boundary.ignored, Some(true));
+    assert!(!boundary.tracked);
+  }
+
+  #[test]
+  fn inspects_conflicting_local_tracking_policies() {
+    let repository = repository();
+    fs::create_dir(repository.path().join(".local")).unwrap();
+    fs::write(repository.path().join(".local/indexed.txt"), "indexed\n").unwrap();
+    git(repository.path(), &["add", ".local/indexed.txt"]);
+
+    let boundary = inspect_local_boundary(repository.path()).unwrap();
+    assert_eq!(boundary.status, "index-tracked");
+    assert!(boundary.tracked);
+
+    git(
+      repository.path(),
+      &["commit", "--quiet", "-m", "test: track local state"],
+    );
+    configure_remote_head(repository.path());
+    let boundary = inspect_local_boundary(repository.path()).unwrap();
+    assert_eq!(boundary.status, "remote-tracked");
+    assert!(boundary.remote_reference.is_some());
   }
 
   fn transaction_artifacts(root: &Path) -> Vec<PathBuf> {

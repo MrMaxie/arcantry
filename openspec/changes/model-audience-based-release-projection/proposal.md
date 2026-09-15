@@ -1,6 +1,6 @@
 # Why
 
-The current public-or-internal release classification cannot distinguish customer outcomes, user-felt fixes, significant technical work and code-only maintenance. It also assumes that each included OpenSpec change becomes its own changelog entry, while real release communication may consolidate several accepted outcomes or omit small maintenance work. Manually maintained histories can therefore remain useful while differing from managed categories, baselines, source markers and consolidation rules.
+The current public-or-internal release classification cannot distinguish customer outcomes, user-felt fixes, significant technical work and code-only maintenance. It also cannot intentionally consolidate outcomes from several OpenSpec changes or omit small maintenance work. Manually maintained histories can therefore remain useful while differing from managed categories, baselines, source markers and consolidation rules.
 
 # What changes
 

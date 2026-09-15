@@ -11,7 +11,7 @@ Use this flow when a source must be adopted, rebound, cut over, migrated, or rel
 arcantry repo inspect
 ```
 
-Inspection reports the resolved root, configuration mode, source ids, paths, kinds, adapters, visibility, management, existence, and compatibility. Add `--json` for the complete machine-readable result.
+The concise result reports the resolved root, configuration mode, present and absent standard sources, applicable methodologies, and `.local` policy. Add `--detailed` for source ids, paths, kinds, adapters, visibility, management, existence, compatibility, and marker evidence. Add `--json` for the complete versioned machine-readable result.
 
 Use the reported source id in the next step. Inspection does not create a configuration or source.
 

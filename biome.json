@@ -7,7 +7,7 @@
       "apps/docs/src/**/*.ts",
       "apps/docs/src/**/*.js",
       "apps/docs/src/**/*.css",
-      "tooling/**/*.ts",
+      "packages/arcantry/bin/*.js",
       "!apps/docs/src/content/docs/_generated",
       "!apps/docs/src/generated"
     ]
@@ -59,16 +59,6 @@
           },
           "style": {
             "noDescendingSpecificity": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["tooling/package-identity.test.ts"],
-      "linter": {
-        "rules": {
-          "suspicious": {
-            "noTemplateCurlyInString": "off"
           }
         }
       }

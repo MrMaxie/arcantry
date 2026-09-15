@@ -56,16 +56,20 @@ pub struct ReleasePlan {
   pub ready: Option<bool>,
 }
 #[derive(Debug, Clone)]
-struct Artifact {
+struct ReleaseOutcome {
   category: String,
+  title: String,
+  body: String,
+}
+#[derive(Debug, Clone)]
+struct Artifact {
   impact: String,
   visibility: String,
   components: Vec<String>,
   unit_impacts: BTreeMap<String, String>,
   dependency_updates: BTreeMap<String, Vec<String>>,
   source_id: Option<String>,
-  title: String,
-  body: String,
+  outcomes: Vec<ReleaseOutcome>,
 }
 #[derive(Debug)]
 struct Configuration {
@@ -154,6 +158,15 @@ pub fn baseline(
 
 pub fn inspect(project: &ResolvedProject, unit: Option<&str>) -> Result<ReleasePlan> {
   inspect_configuration(&configuration(project, unit)?)
+}
+
+pub fn latest_standard_release_version(root: &Path) -> Result<String> {
+  Ok(
+    read_manifest_directory(&root.join("releases"), None)?
+      .last()
+      .map(|manifest| manifest.version.clone())
+      .unwrap_or_else(|| "0.0.0".to_owned()),
+  )
 }
 
 pub fn cut(project: &ResolvedProject, date: &str, unit: Option<&str>) -> Result<ProjectPlan> {
@@ -254,6 +267,15 @@ pub fn render(project: &ResolvedProject, unit: Option<&str>) -> Result<ProjectPl
 }
 
 pub fn check(project: &ResolvedProject, sealed: bool, unit: Option<&str>) -> Result<()> {
+  check_with_pull_request_head(project, sealed, unit, None)
+}
+
+pub fn check_with_pull_request_head(
+  project: &ResolvedProject,
+  sealed: bool,
+  unit: Option<&str>,
+  pull_request_head: Option<&str>,
+) -> Result<()> {
   let release = project
     .config
     .as_ref()
@@ -268,17 +290,55 @@ pub fn check(project: &ResolvedProject, sealed: bool, unit: Option<&str>) -> Res
       );
     }
     if let Some(unit) = unit {
-      return check_configuration(&configuration(project, Some(unit))?, sealed);
+      return check_configuration(
+        &configuration(project, Some(unit))?,
+        sealed,
+        pull_request_head,
+      );
     }
     for unit in release.units.keys() {
-      check_configuration(&configuration(project, Some(unit))?, false)?;
+      check_configuration(&configuration(project, Some(unit))?, false, None)?;
     }
     return Ok(());
   }
-  check_configuration(&configuration(project, unit)?, sealed)
+  check_configuration(&configuration(project, unit)?, sealed, pull_request_head)
 }
 
-fn check_configuration(configuration: &Configuration, sealed: bool) -> Result<()> {
+pub fn validate_publication_state(
+  project: &ResolvedProject,
+  unit: Option<&str>,
+  pull_request_head: Option<&str>,
+) -> Result<()> {
+  let configuration = configuration(project, unit)?;
+  let state = state(&configuration)?;
+  let latest = state
+    .manifests
+    .last()
+    .context("publication requires a release manifest")?;
+  validate_versions(&configuration, &latest.version)?;
+  validate_git_seal(&configuration, &state, pull_request_head)
+}
+
+pub fn github_pull_request_head() -> Option<String> {
+  github_pull_request_head_from(|key| std::env::var(key).ok())
+}
+
+fn github_pull_request_head_from(get: impl Fn(&str) -> Option<String>) -> Option<String> {
+  if get("GITHUB_ACTIONS").as_deref() != Some("true")
+    || get("GITHUB_EVENT_NAME").as_deref() != Some("pull_request")
+  {
+    return None;
+  }
+  get("ARCANTRY_PULL_REQUEST_HEAD_SHA")
+    .map(|value| value.trim().to_owned())
+    .filter(|value| !value.is_empty())
+}
+
+fn check_configuration(
+  configuration: &Configuration,
+  sealed: bool,
+  pull_request_head: Option<&str>,
+) -> Result<()> {
   let state = state(configuration)?;
   validate_versions(
     configuration,
@@ -333,7 +393,7 @@ fn check_configuration(configuration: &Configuration, sealed: bool) -> Result<()
         unassigned.join(", ")
       );
     }
-    validate_git_seal(configuration, &state)?;
+    validate_git_seal(configuration, &state, pull_request_head)?;
   }
   Ok(())
 }
@@ -347,7 +407,11 @@ fn unassigned_changes(state: &State) -> Vec<String> {
     .collect()
 }
 
-fn validate_git_seal(configuration: &Configuration, state: &State) -> Result<()> {
+fn validate_git_seal(
+  configuration: &Configuration,
+  state: &State,
+  pull_request_head: Option<&str>,
+) -> Result<()> {
   let latest = state
     .manifests
     .last()
@@ -379,14 +443,37 @@ fn validate_git_seal(configuration: &Configuration, state: &State) -> Result<()>
   if manifest_commit.trim().is_empty() {
     bail!("latest release manifest is not committed: {manifest_path}");
   }
-  let head = duct::cmd("git", ["rev-parse", "HEAD"])
+  let repository_head = duct::cmd("git", ["rev-parse", "HEAD"])
     .dir(&configuration.root)
     .read()?;
-  if head.trim() != manifest_commit.trim() {
+  let release_head = if let Some(pull_request_head) = pull_request_head {
+    duct::cmd(
+      "git",
+      [
+        "rev-parse",
+        "--verify",
+        &format!("{pull_request_head}^{{commit}}"),
+      ],
+    )
+    .dir(&configuration.root)
+    .read()?
+  } else {
+    repository_head.clone()
+  };
+  if release_head.trim() != manifest_commit.trim() {
     bail!(
       "repository HEAD is not sealed by release {}",
       latest.version
     );
+  }
+  if release_head.trim() != repository_head.trim() {
+    let parents = duct::cmd("git", ["show", "-s", "--format=%P", repository_head.trim()])
+      .dir(&configuration.root)
+      .read()?;
+    let parents = parents.split_whitespace().collect::<Vec<_>>();
+    if parents.len() != 2 || !parents.contains(&release_head.trim()) {
+      bail!("pull request release head is not a direct parent of the checked-out merge commit");
+    }
   }
   Ok(())
 }
@@ -887,7 +974,7 @@ fn read_archived(configuration: &Configuration) -> Result<BTreeMap<String, Artif
 
 #[derive(Deserialize)]
 struct ArtifactMetadata {
-  category: String,
+  category: Option<String>,
   impact: String,
   visibility: String,
   components: Vec<String>,
@@ -905,11 +992,15 @@ fn parse_artifact(source: &str, v2: bool) -> Result<Artifact> {
     .find("\n---")
     .context("release.md must start with YAML frontmatter")?;
   let metadata: ArtifactMetadata = serde_saphyr::from_str(&body[..end])?;
-  if !matches!(
-    metadata.category.as_str(),
-    "added" | "changed" | "fixed" | "deprecated" | "removed" | "security"
-  ) {
-    bail!("invalid release category: {}", metadata.category);
+  if metadata
+    .category
+    .as_deref()
+    .is_some_and(|category| !valid_category(category))
+  {
+    bail!(
+      "invalid release category: {}",
+      metadata.category.as_deref().unwrap_or_default()
+    );
   }
   if v2 && metadata.impact == "none" {
     bail!("openspec-release@2 does not support impact: none; use a non-release schema");
@@ -948,28 +1039,188 @@ fn parse_artifact(source: &str, v2: bool) -> Result<Artifact> {
     bail!("dependency_updates must map unit ids to dependency id arrays");
   }
   let content = body[end + 4..].trim();
-  let mut lines = content.lines();
-  let title = lines
-    .next()
-    .and_then(|line| line.strip_prefix("# "))
-    .context("release.md must contain a level-one title")?
-    .trim()
-    .to_owned();
-  let body = lines.collect::<Vec<_>>().join("\n").trim().to_owned();
-  if body.is_empty() {
-    bail!("release.md must describe the delivered outcome");
-  }
+  let outcomes = match metadata.category.as_deref() {
+    Some(category) => vec![parse_legacy_outcome(content, category)?],
+    None => parse_canonical_outcomes(content)?,
+  };
   Ok(Artifact {
-    category: metadata.category,
     impact: metadata.impact,
     visibility: metadata.visibility,
     components: metadata.components,
     unit_impacts: metadata.unit_impacts,
     dependency_updates: metadata.dependency_updates,
     source_id: None,
+    outcomes,
+  })
+}
+
+fn valid_category(category: &str) -> bool {
+  matches!(
+    category,
+    "added" | "changed" | "fixed" | "deprecated" | "removed" | "security"
+  )
+}
+
+fn category_heading(category: &str) -> &'static str {
+  match category {
+    "added" => "Added",
+    "changed" => "Changed",
+    "deprecated" => "Deprecated",
+    "removed" => "Removed",
+    "fixed" => "Fixed",
+    "security" => "Security",
+    _ => unreachable!("validated release category"),
+  }
+}
+
+fn category_from_heading(heading: &str) -> Option<&'static str> {
+  match heading {
+    "Added" => Some("added"),
+    "Changed" => Some("changed"),
+    "Deprecated" => Some("deprecated"),
+    "Removed" => Some("removed"),
+    "Fixed" => Some("fixed"),
+    "Security" => Some("security"),
+    _ => None,
+  }
+}
+
+fn heading<'a>(line: &'a str, marker: &str) -> Option<&'a str> {
+  let rest = line.strip_prefix(marker)?;
+  rest
+    .starts_with([' ', '\t'])
+    .then(|| rest.trim_matches([' ', '\t']))
+}
+
+fn parse_legacy_outcome(content: &str, category: &str) -> Result<ReleaseOutcome> {
+  let mut lines = content.lines();
+  let title = lines
+    .next()
+    .and_then(|line| heading(line, "#"))
+    .context("release.md must contain a level-one title")?
+    .trim()
+    .to_owned();
+  if title.is_empty() {
+    bail!("release.md must contain a level-one title");
+  }
+  let body = lines.collect::<Vec<_>>().join("\n").trim().to_owned();
+  if body.is_empty() {
+    bail!("release.md must describe the delivered outcome");
+  }
+  Ok(ReleaseOutcome {
+    category: category.to_owned(),
     title,
     body,
   })
+}
+
+fn finish_canonical_outcome(
+  category: Option<&str>,
+  title: &mut Option<String>,
+  body: &mut Vec<String>,
+  outcomes: &mut Vec<ReleaseOutcome>,
+  outcomes_in_category: &mut usize,
+) -> Result<()> {
+  let Some(title) = title.take() else {
+    return Ok(());
+  };
+  let body = std::mem::take(body).join("\n").trim().to_owned();
+  if body.is_empty() {
+    bail!("release outcome must describe the delivered result: {title}");
+  }
+  outcomes.push(ReleaseOutcome {
+    category: category
+      .context("release outcome must follow a level-two category heading")?
+      .to_owned(),
+    title,
+    body,
+  });
+  *outcomes_in_category += 1;
+  Ok(())
+}
+
+fn parse_canonical_outcomes(content: &str) -> Result<Vec<ReleaseOutcome>> {
+  let mut seen_categories = BTreeSet::new();
+  let mut outcomes = Vec::new();
+  let mut current_category: Option<&str> = None;
+  let mut current_title = None;
+  let mut current_body = Vec::new();
+  let mut outcomes_in_category = 0;
+
+  for line in content.lines() {
+    if let Some(category_name) = heading(line, "##") {
+      finish_canonical_outcome(
+        current_category,
+        &mut current_title,
+        &mut current_body,
+        &mut outcomes,
+        &mut outcomes_in_category,
+      )?;
+      if let Some(category) = current_category
+        && outcomes_in_category == 0
+      {
+        bail!(
+          "release category must contain an outcome: {}",
+          category_heading(category)
+        );
+      }
+      let category = category_from_heading(category_name)
+        .with_context(|| format!("invalid release category heading: {category_name}"))?;
+      if !seen_categories.insert(category) {
+        bail!("duplicate release category heading: {category_name}");
+      }
+      current_category = Some(category);
+      outcomes_in_category = 0;
+      continue;
+    }
+
+    if let Some(title) = heading(line, "###") {
+      if current_category.is_none() {
+        bail!("release outcome must follow a level-two category heading");
+      }
+      finish_canonical_outcome(
+        current_category,
+        &mut current_title,
+        &mut current_body,
+        &mut outcomes,
+        &mut outcomes_in_category,
+      )?;
+      let title = title.trim();
+      if title.is_empty() {
+        bail!("release outcome title must not be empty");
+      }
+      current_title = Some(title.to_owned());
+      continue;
+    }
+
+    if current_title.is_none() {
+      if !line.trim().is_empty() {
+        bail!("release content must use level-two categories and level-three outcome titles");
+      }
+      continue;
+    }
+    current_body.push(line.to_owned());
+  }
+
+  finish_canonical_outcome(
+    current_category,
+    &mut current_title,
+    &mut current_body,
+    &mut outcomes,
+    &mut outcomes_in_category,
+  )?;
+  if let Some(category) = current_category
+    && outcomes_in_category == 0
+  {
+    bail!(
+      "release category must contain an outcome: {}",
+      category_heading(category)
+    );
+  }
+  if outcomes.is_empty() {
+    bail!("release.md must contain at least one categorized outcome");
+  }
+  Ok(outcomes)
 }
 
 #[derive(Deserialize)]
@@ -1095,6 +1346,13 @@ fn valid_component(id: &str) -> bool {
 
 fn read_manifests(configuration: &Configuration) -> Result<Vec<ReleaseManifest>> {
   let directory = configuration.root.join(&configuration.releases);
+  read_manifest_directory(&directory, Some(configuration))
+}
+
+fn read_manifest_directory(
+  directory: &Path,
+  configuration: Option<&Configuration>,
+) -> Result<Vec<ReleaseManifest>> {
   if !directory.exists() {
     return Ok(Vec::new());
   }
@@ -1116,7 +1374,8 @@ fn read_manifests(configuration: &Configuration) -> Result<Vec<ReleaseManifest>>
     if manifest.baseline != Some(true) && manifest.changes.is_empty() {
       bail!("non-baseline release must assign changes");
     }
-    if configuration.adapter == "openspec-release@2" {
+    if let Some(configuration) = configuration.filter(|value| value.adapter == "openspec-release@2")
+    {
       if manifest.format != Some(2) {
         bail!("release manifest must use format 2");
       }
@@ -1222,14 +1481,16 @@ fn render_changelog(configuration: &Configuration, state: &State) -> String {
     .rev()
     .filter(|manifest| manifest.baseline != Some(true))
   {
-    let mut grouped: BTreeMap<&str, Vec<(&str, &Artifact)>> = BTreeMap::new();
+    let mut grouped: BTreeMap<&str, Vec<(&str, &ReleaseOutcome)>> = BTreeMap::new();
     for id in &manifest.changes {
       let artifact = &state.archived[id];
       if artifact.visibility == "public" {
-        grouped
-          .entry(&artifact.category)
-          .or_default()
-          .push((id, artifact));
+        for outcome in &artifact.outcomes {
+          grouped
+            .entry(&outcome.category)
+            .or_default()
+            .push((id, outcome));
+        }
       }
     }
     if grouped.is_empty() {
@@ -1248,11 +1509,11 @@ fn render_changelog(configuration: &Configuration, state: &State) -> String {
       if let Some(entries) = grouped.get(category) {
         lines.push(format!("### {heading}"));
         lines.push(String::new());
-        for (id, artifact) in entries {
+        for (id, outcome) in entries {
           lines.push(format!("<!-- openspec: {id} -->"));
-          lines.push(format!("#### {}", artifact.title));
+          lines.push(format!("#### {}", outcome.title));
           lines.push(String::new());
-          lines.push(artifact.body.clone());
+          lines.push(outcome.body.clone());
           lines.push(String::new());
         }
       }
@@ -1514,15 +1775,17 @@ mod tests {
       archived: BTreeMap::from([(
         "pending".to_owned(),
         Artifact {
-          category: "fixed".to_owned(),
           impact: "patch".to_owned(),
           visibility: "public".to_owned(),
           components: vec!["cli".to_owned()],
           unit_impacts: BTreeMap::new(),
           dependency_updates: BTreeMap::new(),
           source_id: None,
-          title: "Pending".to_owned(),
-          body: "Pending change.".to_owned(),
+          outcomes: vec![ReleaseOutcome {
+            category: "fixed".to_owned(),
+            title: "Pending".to_owned(),
+            body: "Pending change.".to_owned(),
+          }],
         },
       )]),
       manifests: Vec::new(),
@@ -1542,6 +1805,26 @@ mod tests {
           .contains("full stable SemVer")
       );
     }
+  }
+
+  #[test]
+  fn reads_the_latest_standard_release_for_generated_artifacts() {
+    let directory = tempfile::tempdir().unwrap();
+    let root = directory.path();
+    assert_eq!(latest_standard_release_version(root).unwrap(), "0.0.0");
+    fs::create_dir(root.join("releases")).unwrap();
+    fs::write(
+      root.join("releases/1.0.0.yaml"),
+      "version: 1.0.0\ndate: 2026-08-20\nchanges: []\nbaseline: true\n",
+    )
+    .unwrap();
+    fs::write(
+      root.join("releases/1.2.0.yaml"),
+      "version: 1.2.0\ndate: 2026-08-21\nchanges:\n  - later\n",
+    )
+    .unwrap();
+
+    assert_eq!(latest_standard_release_version(root).unwrap(), "1.2.0");
   }
 
   #[test]
@@ -1588,15 +1871,17 @@ mod tests {
       archived: BTreeMap::from([(
         "new-cli".to_owned(),
         Artifact {
-          category: "added".to_owned(),
           impact: "minor".to_owned(),
           visibility: "public".to_owned(),
           components: vec!["cli".to_owned()],
           unit_impacts: BTreeMap::new(),
           dependency_updates: BTreeMap::new(),
           source_id: None,
-          title: "Native CLI".to_owned(),
-          body: "Run the native CLI.".to_owned(),
+          outcomes: vec![ReleaseOutcome {
+            category: "added".to_owned(),
+            title: "Native CLI".to_owned(),
+            body: "Run the native CLI.".to_owned(),
+          }],
         },
       )]),
       manifests: vec![
@@ -1671,17 +1956,130 @@ mod tests {
       assigned: BTreeSet::new(),
     };
     let configuration = release_configuration(root);
-    validate_git_seal(&configuration, &state).unwrap();
+    validate_git_seal(&configuration, &state, None).unwrap();
 
     fs::write(root.join("later.txt"), "later\n").unwrap();
     git(root, &["add", "later.txt"]);
     git(root, &["commit", "--quiet", "-m", "feat: add later work"]);
 
     assert!(
-      validate_git_seal(&configuration, &state)
+      validate_git_seal(&configuration, &state, None)
         .unwrap_err()
         .to_string()
         .contains("repository HEAD is not sealed")
     );
   }
+
+  #[test]
+  fn reads_pull_request_head_only_for_github_pull_requests() {
+    let pull_request = |key: &str| match key {
+      "GITHUB_ACTIONS" => Some("true".to_owned()),
+      "GITHUB_EVENT_NAME" => Some("pull_request".to_owned()),
+      "ARCANTRY_PULL_REQUEST_HEAD_SHA" => Some(" abc ".to_owned()),
+      _ => None,
+    };
+    assert_eq!(
+      github_pull_request_head_from(pull_request).as_deref(),
+      Some("abc")
+    );
+    assert_eq!(
+      github_pull_request_head_from(|_| Some("false".to_owned())),
+      None
+    );
+  }
+
+  #[test]
+  fn accepts_a_sealed_pull_request_head_in_a_synthetic_merge() {
+    let directory = tempfile::tempdir().unwrap();
+    let root = directory.path();
+    git(root, &["init", "--quiet"]);
+    git(root, &["config", "user.name", "Arcantry Tests"]);
+    git(root, &["config", "user.email", "tests@arcantry.invalid"]);
+    fs::write(root.join("base.txt"), "base\n").unwrap();
+    git(root, &["add", "base.txt"]);
+    git(root, &["commit", "--quiet", "-m", "chore: initialize"]);
+    let base = duct::cmd("git", ["rev-parse", "HEAD"])
+      .dir(root)
+      .read()
+      .unwrap();
+
+    git(root, &["checkout", "--quiet", "-b", "release"]);
+    fs::create_dir(root.join("releases")).unwrap();
+    fs::write(root.join("releases/1.0.0.yaml"), "version: 1.0.0\n").unwrap();
+    git(root, &["add", "releases/1.0.0.yaml"]);
+    git(root, &["commit", "--quiet", "-m", "release: add manifest"]);
+    let release_head = duct::cmd("git", ["rev-parse", "HEAD"])
+      .dir(root)
+      .read()
+      .unwrap();
+
+    git(root, &["checkout", "--quiet", "-b", "base", base.trim()]);
+    fs::write(root.join("base-change.txt"), "base change\n").unwrap();
+    git(root, &["add", "base-change.txt"]);
+    git(root, &["commit", "--quiet", "-m", "fix: base change"]);
+    git(
+      root,
+      &[
+        "merge",
+        "--quiet",
+        "--no-ff",
+        release_head.trim(),
+        "-m",
+        "test: synthetic pull request merge",
+      ],
+    );
+
+    let state = sealed_state();
+    let configuration = release_configuration(root);
+    assert!(validate_git_seal(&configuration, &state, None).is_err());
+    validate_git_seal(&configuration, &state, Some(release_head.trim())).unwrap();
+  }
+
+  #[test]
+  fn rejects_a_pull_request_release_head_that_is_not_a_direct_merge_parent() {
+    let directory = tempfile::tempdir().unwrap();
+    let root = directory.path();
+    fs::create_dir(root.join("releases")).unwrap();
+    fs::write(root.join("releases/1.0.0.yaml"), "version: 1.0.0\n").unwrap();
+    git(root, &["init", "--quiet"]);
+    git(root, &["config", "user.name", "Arcantry Tests"]);
+    git(root, &["config", "user.email", "tests@arcantry.invalid"]);
+    git(root, &["add", "releases/1.0.0.yaml"]);
+    git(root, &["commit", "--quiet", "-m", "release: add manifest"]);
+    let release_head = duct::cmd("git", ["rev-parse", "HEAD"])
+      .dir(root)
+      .read()
+      .unwrap();
+    fs::write(root.join("later.txt"), "later\n").unwrap();
+    git(root, &["add", "later.txt"]);
+    git(root, &["commit", "--quiet", "-m", "fix: later work"]);
+
+    let error = validate_git_seal(
+      &release_configuration(root),
+      &sealed_state(),
+      Some(release_head.trim()),
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("not a direct parent"));
+  }
+
+  fn sealed_state() -> State {
+    State {
+      archived: BTreeMap::new(),
+      manifests: vec![ReleaseManifest {
+        format: None,
+        unit: None,
+        version: "1.0.0".to_owned(),
+        date: "2026-08-20".to_owned(),
+        changes: Vec::new(),
+        baseline: Some(true),
+        dependencies: BTreeMap::new(),
+      }],
+      assigned: BTreeSet::new(),
+    }
+  }
 }
+
+#[cfg(test)]
+#[path = "../tests/unit/release_contract.rs"]
+mod contract_tests;

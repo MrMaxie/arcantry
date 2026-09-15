@@ -1,26 +1,13 @@
+use crate::native_targets;
 use anyhow::{Context, Result, bail};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-const TARGETS: [&str; 6] = [
-  "x86_64-pc-windows-msvc",
-  "aarch64-pc-windows-msvc",
-  "x86_64-apple-darwin",
-  "aarch64-apple-darwin",
-  "x86_64-unknown-linux-musl",
-  "aarch64-unknown-linux-musl",
-];
-
 pub fn target_binary(root: &Path, target: &str) -> Result<PathBuf> {
-  if !TARGETS.contains(&target) {
-    bail!("unsupported native target: {target}");
-  }
-  let executable = if target.ends_with("windows-msvc") {
-    "arcantry.exe"
-  } else {
-    "arcantry"
-  };
-  Ok(root.join(target).join("dist").join(executable))
+  Ok(native_targets::built_binary(
+    root,
+    native_targets::find(target)?,
+  ))
 }
 
 pub fn verify_binary(path: PathBuf, expected_version: &str) -> Result<()> {

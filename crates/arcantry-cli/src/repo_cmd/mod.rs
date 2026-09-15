@@ -21,12 +21,12 @@ pub fn execute(
   cwd_explicit: bool,
 ) -> Result<i32> {
   match command {
-    RepoCommand::Inspect { json } => {
+    RepoCommand::Inspect { json, detailed } => {
       let inspection = project_inspection(cwd, config, cwd_explicit)?;
       if json {
         println!("{}", serde_json::to_string_pretty(&inspection)?);
       } else {
-        render_inspection(&inspection);
+        render_inspection(&inspection, detailed);
       }
       Ok(0)
     }
@@ -194,7 +194,8 @@ pub(super) fn add_private_exclude_operation(
   Ok(())
 }
 
-fn render_inspection(inspection: &KnowledgeInspection) {
+fn render_inspection(inspection: &KnowledgeInspection, detailed: bool) {
+  println!("Project: {}", inspection.root.display());
   println!("Mode: {}", inspection.mode);
   println!(
     "Config: {}",
@@ -210,23 +211,110 @@ fn render_inspection(inspection: &KnowledgeInspection) {
   for path in &inspection.shadowed_config_paths {
     println!("Shadowed config: {}", path.display());
   }
-  if inspection.sources.is_empty() {
-    println!("No knowledge sources detected.");
-  }
-  for source in &inspection.sources {
+  let present = inspection
+    .sources
+    .iter()
+    .filter(|source| source.exists)
+    .count();
+  println!(
+    "Sources: {present} present, {} absent",
+    inspection.sources.len() - present
+  );
+  println!(
+    "Present: {}",
+    joined_ids(
+      inspection
+        .sources
+        .iter()
+        .filter(|source| source.exists)
+        .map(|source| source.id.as_str())
+    )
+  );
+  println!(
+    "Absent: {}",
+    joined_ids(
+      inspection
+        .sources
+        .iter()
+        .filter(|source| !source.exists)
+        .map(|source| source.id.as_str())
+    )
+  );
+  println!(
+    "Methodologies: {}",
+    joined_ids(
+      inspection
+        .methodologies
+        .iter()
+        .filter(|item| item.active)
+        .map(|item| item.id)
+    )
+  );
+  println!(".local: {}", inspection.local_boundary.status);
+  if detailed {
+    for source in &inspection.sources {
+      println!(
+        "Source {}: kind={}, scope={}, visibility={}, management={}, adapter={}, status={}, state={}, origin={}, path={}, from={}",
+        source.id,
+        source.kind.name(),
+        source.scope,
+        source.visibility.name(),
+        source.management.name(),
+        source.adapter,
+        source.adapter_status,
+        if source.exists { "present" } else { "absent" },
+        source.origin,
+        source.path,
+        if source.from.is_empty() {
+          "none".to_owned()
+        } else {
+          source.from.join(",")
+        }
+      );
+    }
+    for methodology in &inspection.methodologies {
+      println!(
+        "Methodology {}: state={}, evidence={}",
+        methodology.id,
+        if methodology.active {
+          "active"
+        } else {
+          "absent"
+        },
+        if methodology.evidence.is_empty() {
+          "none".to_owned()
+        } else {
+          methodology.evidence.join(",")
+        }
+      );
+    }
     println!(
-      "{}\t{}\t{}\t{}\t{}\t{}\t{}",
-      source.id,
-      source.kind.name(),
-      source.management.name(),
-      source.adapter,
-      source.confidence,
-      if source.exists { "present" } else { "missing" },
-      source.path
+      ".local details: git={}, exists={}, ignored={}, tracked={}, remote={}",
+      inspection.local_boundary.git_repository,
+      inspection.local_boundary.exists,
+      inspection
+        .local_boundary
+        .ignored
+        .map_or("n/a".to_owned(), |value| value.to_string()),
+      inspection.local_boundary.tracked,
+      inspection
+        .local_boundary
+        .remote_reference
+        .as_deref()
+        .unwrap_or("none")
     );
   }
   for diagnostic in &inspection.diagnostics {
     println!("WARNING: {diagnostic}");
+  }
+}
+
+fn joined_ids<'a>(values: impl Iterator<Item = &'a str>) -> String {
+  let values = values.collect::<Vec<_>>();
+  if values.is_empty() {
+    "none".to_owned()
+  } else {
+    values.join(", ")
   }
 }
 
