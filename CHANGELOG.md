@@ -123,6 +123,11 @@ The native CLI now proves its documented command surface and repository effects 
 
 Arcantry presents recognizable project outcomes, adoption trade-offs and compatibility with mature engineering practices before requiring readers to learn its source model. It makes clear that shared project-work configuration does not automatically integrate Arcantry into product runtime, build, CI or publication workflows.
 
+<!-- openspec: focus-initial-release-platforms -->
+#### Focus the initial native distribution
+
+Arcantry's initial release provides native packages for Windows x64, macOS x64 and ARM64, and Linux x64, reducing the first-publication package set while preserving the common developer platforms.
+
 <!-- openspec: make-cli-documentation-verifiable -->
 #### Keep the CLI reference aligned and readable
 

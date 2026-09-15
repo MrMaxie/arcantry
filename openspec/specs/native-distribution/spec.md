@@ -7,7 +7,7 @@ TBD - created by archiving change ship-native-rust-cli. Update Purpose after arc
 
 ### Requirement: Native releases support the declared platform matrix
 
-Arcantry MUST publish native executables for `x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc`, `x86_64-apple-darwin`, `aarch64-apple-darwin`, `x86_64-unknown-linux-musl` and `aarch64-unknown-linux-musl`. Each executable MUST run without Node.js, Bun, Python or another language runtime.
+Arcantry MUST publish native executables for `x86_64-pc-windows-msvc`, `x86_64-apple-darwin`, `aarch64-apple-darwin` and `x86_64-unknown-linux-musl`. Each executable MUST run without Node.js, Bun, Python or another language runtime.
 
 #### Scenario: A supported platform installs Arcantry
 
@@ -23,11 +23,11 @@ Arcantry MUST publish native executables for `x86_64-pc-windows-msvc`, `aarch64-
 
 ### Requirement: Native archives and installers are deterministic and verifiable
 
-Every sealed release MUST attach one ZIP archive for each Windows target, one TAR.XZ archive for each macOS and Linux target, one `SHA256SUMS` manifest covering all six archives, `arcantry-installer.sh` and `arcantry-installer.ps1`. Archive names and embedded CLI versions MUST derive from the sealed release version. Each archive MUST contain the target executable and the public license and MUST exclude source-only, private, local and repository-management state. The installers MUST use cargo-dist's supported PATH and unmanaged-install behavior, select only a declared target archive and verify the same SHA-256 digest recorded for that archive in `SHA256SUMS` before installation.
+Every sealed release MUST attach one ZIP archive for the Windows target, one TAR.XZ archive for each macOS target, one TAR.XZ archive for the Linux target, one `SHA256SUMS` manifest covering all four archives, `arcantry-installer.sh` and `arcantry-installer.ps1`. Archive names and embedded CLI versions MUST derive from the sealed release version. Each archive MUST contain the target executable and the public license and MUST exclude source-only, private, local and repository-management state. The installers MUST use cargo-dist's supported PATH and unmanaged-install behavior, select only a declared target archive and verify the same SHA-256 digest recorded for that archive in `SHA256SUMS` before installation.
 
 #### Scenario: A native release is prepared
 
-- **WHEN** the six release archives are built from a sealed release
+- **WHEN** the four release archives are built from a sealed release
 - **THEN** their names, executable versions and checksum manifest identify the same release and target triples
 - **AND** recomputing every archive checksum matches `SHA256SUMS`
 

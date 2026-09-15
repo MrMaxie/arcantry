@@ -5,11 +5,9 @@ import { createRequire } from 'node:module';
 
 const platformPackages = {
   'win32-x64': '@arcantry/cli-win32-x64',
-  'win32-arm64': '@arcantry/cli-win32-arm64',
   'darwin-x64': '@arcantry/cli-darwin-x64',
   'darwin-arm64': '@arcantry/cli-darwin-arm64',
   'linux-x64': '@arcantry/cli-linux-x64',
-  'linux-arm64': '@arcantry/cli-linux-arm64',
 };
 
 function resolveNativeExecutable() {

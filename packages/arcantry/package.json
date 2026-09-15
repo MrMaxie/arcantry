@@ -41,10 +41,8 @@
   },
   "optionalDependencies": {
     "@arcantry/cli-win32-x64": "1.0.0",
-    "@arcantry/cli-win32-arm64": "1.0.0",
     "@arcantry/cli-darwin-x64": "1.0.0",
     "@arcantry/cli-darwin-arm64": "1.0.0",
-    "@arcantry/cli-linux-x64": "1.0.0",
-    "@arcantry/cli-linux-arm64": "1.0.0"
+    "@arcantry/cli-linux-x64": "1.0.0"
   }
 }

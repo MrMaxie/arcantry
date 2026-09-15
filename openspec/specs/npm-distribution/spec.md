@@ -80,7 +80,7 @@ The public package MUST retain the unscoped name `arcantry` and expose the `arca
 
 ### Requirement: Platform packages are exact and complete before launcher publication
 
-The `arcantry` package MUST declare exact-version optional dependencies on `@arcantry/cli-win32-x64`, `@arcantry/cli-win32-arm64`, `@arcantry/cli-darwin-x64`, `@arcantry/cli-darwin-arm64`, `@arcantry/cli-linux-x64` and `@arcantry/cli-linux-arm64`. Each platform package MUST declare matching npm `os` and `cpu` constraints and contain only its native executable and allowlisted package metadata. Linux packages MUST omit npm's `libc` constraint. The main package MUST NOT be published until all six exact platform versions are available and match their verified archives. Retry preflight MUST accept any existing platform or main package only when its registry integrity matches the retained archive exactly.
+The `arcantry` package MUST declare exact-version optional dependencies on `@arcantry/cli-win32-x64`, `@arcantry/cli-darwin-x64`, `@arcantry/cli-darwin-arm64` and `@arcantry/cli-linux-x64`. Each platform package MUST declare matching npm `os` and `cpu` constraints and contain only its native executable and allowlisted package metadata. The Linux package MUST omit npm's `libc` constraint. The main package MUST NOT be published until all four exact platform versions are available and match their verified archives. Retry preflight MUST accept any existing platform or main package only when its registry integrity matches the retained archive exactly.
 
 #### Scenario: A complete platform set is ready
 

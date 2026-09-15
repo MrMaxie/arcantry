@@ -12,7 +12,7 @@ pub struct NativeTarget {
   pub archive: &'static str,
 }
 
-pub const TARGETS: [NativeTarget; 6] = [
+pub const TARGETS: [NativeTarget; 4] = [
   NativeTarget {
     triple: "x86_64-pc-windows-msvc",
     os: "win32",
@@ -21,15 +21,6 @@ pub const TARGETS: [NativeTarget; 6] = [
     package_name: "@arcantry/cli-win32-x64",
     executable: "arcantry.exe",
     archive: "arcantry-cli-x86_64-pc-windows-msvc.zip",
-  },
-  NativeTarget {
-    triple: "aarch64-pc-windows-msvc",
-    os: "win32",
-    cpu: "arm64",
-    package_directory: "cli-win32-arm64",
-    package_name: "@arcantry/cli-win32-arm64",
-    executable: "arcantry.exe",
-    archive: "arcantry-cli-aarch64-pc-windows-msvc.zip",
   },
   NativeTarget {
     triple: "x86_64-apple-darwin",
@@ -57,15 +48,6 @@ pub const TARGETS: [NativeTarget; 6] = [
     package_name: "@arcantry/cli-linux-x64",
     executable: "arcantry",
     archive: "arcantry-cli-x86_64-unknown-linux-musl.tar.xz",
-  },
-  NativeTarget {
-    triple: "aarch64-unknown-linux-musl",
-    os: "linux",
-    cpu: "arm64",
-    package_directory: "cli-linux-arm64",
-    package_name: "@arcantry/cli-linux-arm64",
-    executable: "arcantry",
-    archive: "arcantry-cli-aarch64-unknown-linux-musl.tar.xz",
   },
 ];
 
@@ -116,7 +98,7 @@ mod tests {
 
   #[test]
   fn target_metadata_is_unique_and_complete() {
-    assert_eq!(TARGETS.len(), 6);
+    assert_eq!(TARGETS.len(), 4);
     assert_eq!(
       TARGETS
         .iter()

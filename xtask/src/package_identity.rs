@@ -90,6 +90,10 @@ fn keeps_authored_installation_and_launcher_examples_aligned() {
   assert!(picker.contains("margin-left: auto"));
   assert!(picker.contains("border-left: 1px solid"));
   assert!(getting_started.contains("cargo install --locked --path crates/arcantry-cli"));
+  assert!(
+    getting_started
+      .contains("Native downloads support Windows x64, macOS x64 and ARM64, and Linux x64.")
+  );
   assert!(getting_started.contains("supported public distribution channels for 1.0"));
   assert!(getting_started.contains("<ArcantryAgentPrompt variant=\"full\" />"));
   assert!(
@@ -152,6 +156,10 @@ fn main_package_declares_both_plugin_manifests() {
 #[test]
 fn keeps_native_target_metadata_aligned_with_platform_packages() {
   let main = json("packages/arcantry/package.json");
+  assert_eq!(
+    main["optionalDependencies"].as_object().unwrap().len(),
+    TARGETS.len()
+  );
   for target in TARGETS {
     let manifest = json(&format!(
       "packages/{}/package.json",

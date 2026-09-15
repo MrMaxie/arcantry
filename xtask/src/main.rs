@@ -127,7 +127,7 @@ enum Task {
     #[arg(long, default_value = "target")]
     root: PathBuf,
   },
-  /// Collect the six cargo-dist archives downloaded from native jobs.
+  /// Collect the declared cargo-dist archives downloaded from native jobs.
   CollectRelease {
     #[arg(long)]
     input: PathBuf,

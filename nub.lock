@@ -56,15 +56,9 @@ importers:
       '@arcantry/cli-darwin-x64':
         specifier: 1.0.0
         version: link:../cli-darwin-x64
-      '@arcantry/cli-linux-arm64':
-        specifier: 1.0.0
-        version: link:../cli-linux-arm64
       '@arcantry/cli-linux-x64':
         specifier: 1.0.0
         version: link:../cli-linux-x64
-      '@arcantry/cli-win32-arm64':
-        specifier: 1.0.0
-        version: link:../cli-win32-arm64
       '@arcantry/cli-win32-x64':
         specifier: 1.0.0
         version: link:../cli-win32-x64
@@ -73,11 +67,7 @@ importers:
 
   packages/cli-darwin-x64: {}
 
-  packages/cli-linux-arm64: {}
-
   packages/cli-linux-x64: {}
-
-  packages/cli-win32-arm64: {}
 
   packages/cli-win32-x64: {}
 
