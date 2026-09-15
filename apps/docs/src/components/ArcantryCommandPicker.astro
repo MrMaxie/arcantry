@@ -60,7 +60,9 @@ const commandOptions = [
         </button>
       ))}
     </div>
-    <a class="download-link" href={releasePage}>Download</a>
+    <div class="download-action">
+      <a class="download-link" href={releasePage}>Download</a>
+    </div>
   </div>
   {commandOptions.map((option, index) => (
     <div
@@ -250,11 +252,11 @@ if (!customElements.get('arcantry-command-picker')) {
   }
   .command-tabs {
     display: flex;
+    flex: 0 1 auto;
     align-items: stretch;
     gap: 0.1rem;
   }
-  .command-tabs button,
-  .download-link {
+  .command-tabs button {
     position: relative;
     display: inline-flex;
     align-items: center;
@@ -276,8 +278,32 @@ if (!customElements.get('arcantry-command-picker')) {
       color 150ms ease,
       background-color 150ms ease;
   }
+  .download-action {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    margin-left: auto;
+    padding-left: 0.55rem;
+    border-left: 1px solid color-mix(in srgb, var(--ar-text-soft) 32%, var(--ar-border));
+  }
   .download-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.55rem;
+    padding: 0 0.58rem;
+    border: 1px solid color-mix(in srgb, var(--ar-text-soft) 38%, var(--ar-border));
+    border-radius: 0.18rem;
+    background: color-mix(in srgb, var(--ar-surface-raised) 72%, transparent);
+    color: var(--ar-text);
+    font-family: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif !important;
+    font-size: 0.76rem !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
     text-decoration: none;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease;
   }
   .command-tabs .platform-icon,
   .command-tabs .platform-icons :global(svg) {
@@ -291,8 +317,12 @@ if (!customElements.get('arcantry-command-picker')) {
     align-items: center;
     gap: 0.12rem;
   }
-  .command-tabs button:hover,
   .download-link:hover {
+    border-color: var(--ar-text-soft);
+    background: var(--ar-bg-subtle);
+    color: var(--ar-text);
+  }
+  .command-tabs button:hover {
     color: var(--ar-text);
   }
   .command-tabs button[aria-selected='true'] {
@@ -363,10 +393,22 @@ if (!customElements.get('arcantry-command-picker')) {
     display: block;
   }
   @media (max-width: 49.99rem) {
-    .command-options,
-    .command-tabs {
+    .command-options {
       flex-wrap: wrap;
       overflow: visible;
+    }
+    .command-tabs {
+      flex: 1 1 100%;
+      flex-wrap: wrap;
+      overflow: visible;
+    }
+    .download-action {
+      flex: 1 1 100%;
+      justify-content: flex-end;
+      margin-left: 0;
+      padding: 0.45rem 0 0;
+      border-top: 1px solid color-mix(in srgb, var(--ar-text-soft) 24%, var(--ar-border));
+      border-left: 0;
     }
     .command-row {
       padding-inline: 0.8rem;

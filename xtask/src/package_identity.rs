@@ -56,6 +56,7 @@ fn keeps_authored_installation_and_launcher_examples_aligned() {
     "value: `npm install --global ${packageName}`",
     "arcantry-installer.ps1",
     "arcantry-installer.sh",
+    "class=\"download-action\"",
     "href={releasePage}>Download</a>",
   ] {
     assert!(picker.contains(expected), "{expected}");
@@ -86,6 +87,8 @@ fn keeps_authored_installation_and_launcher_examples_aligned() {
       pair[1]
     );
   }
+  assert!(picker.contains("margin-left: auto"));
+  assert!(picker.contains("border-left: 1px solid"));
   assert!(getting_started.contains("cargo install --locked --path crates/arcantry-cli"));
   assert!(getting_started.contains("supported public distribution channels for 1.0"));
   assert!(getting_started.contains("<ArcantryAgentPrompt variant=\"full\" />"));
