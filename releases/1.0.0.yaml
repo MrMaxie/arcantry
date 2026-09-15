@@ -17,6 +17,7 @@ changes:
   - explain-arcantry-fit-and-adoption-tradeoffs
   - expose-generic-release-cli
   - extend-configurator-adoption-scenarios
+  - focus-initial-release-platforms
   - harden-native-cli-verification-gates
   - improve-configurator-responsive-reflow
   - make-cli-documentation-verifiable

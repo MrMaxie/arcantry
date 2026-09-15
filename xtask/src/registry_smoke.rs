@@ -40,7 +40,10 @@ pub fn smoke(root: &Path, archives: &Path) -> Result<()> {
   let stop_result = stop_registry(&mut registry);
   result?;
   stop_result?;
-  println!("Local registry smoke passed for all six npm platform packages.");
+  println!(
+    "Local registry smoke passed for all {} npm platform packages.",
+    TARGETS.len()
+  );
   Ok(())
 }
 
@@ -323,8 +326,12 @@ fn npm_archives(root: &Path) -> Result<Vec<PathBuf>> {
     .filter(|path| path.extension() == Some(OsStr::new("tgz")))
     .collect::<Vec<_>>();
   archives.sort();
-  if archives.len() != 7 {
-    bail!("Expected seven npm archives, received {}.", archives.len());
+  let expected = TARGETS.len() + 1;
+  if archives.len() != expected {
+    bail!(
+      "Expected {expected} npm archives, received {}.",
+      archives.len()
+    );
   }
   Ok(archives)
 }

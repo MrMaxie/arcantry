@@ -144,10 +144,10 @@ For releases after the first public version:
 
 The first publication is a one-time bootstrap because npm requires a package to exist before it can trust a CI publisher. The same tagged workflow still builds and verifies the release:
 
-1. Push the protected release tag and let `.github/workflows/release.yml` build all native targets, test both installers, create the seven exact npm archives and open the draft GitHub Release.
+1. Push the protected release tag and let `.github/workflows/release.yml` build all native targets, test both installers, create the five exact npm archives and open the draft GitHub Release.
 2. Leave the protected `npm` job waiting for maintainer approval.
 3. Download the retained `release-v<version>` artifact from that workflow run without rebuilding it locally.
-4. As an authorized npm maintainer with 2FA, publish the six platform archives in the workflow's declared order, then publish the main `arcantry` archive.
+4. As an authorized npm maintainer with 2FA, publish the four platform archives in the workflow's declared order, then publish the main `arcantry` archive.
 5. Configure the GitHub Actions trusted publisher for every package with repository `MrMaxie/arcantry`, workflow `release.yml`, environment `npm`, and publication permission. Verify each relationship with `npm trust list <package>`.
 6. Approve the protected `npm` job. It rechecks each registry integrity, skips exact matches and stops on any mismatch before making the GitHub Release public.
 7. Require 2FA and disallow token-based publication after all trusted publishers have been verified.

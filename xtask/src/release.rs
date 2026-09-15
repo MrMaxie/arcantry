@@ -83,7 +83,8 @@ pub fn assemble_release(artifacts: &Path, installer_artifacts: &Path) -> Result<
   fs::write(artifacts.join("SHA256SUMS"), format!("{checksums}\n"))?;
 
   println!(
-    "Assembled six native archives, two installers, and SHA256SUMS in {}.",
+    "Assembled {} native archives, two installers, and SHA256SUMS in {}.",
+    TARGETS.len(),
     artifacts.display()
   );
   Ok(())
