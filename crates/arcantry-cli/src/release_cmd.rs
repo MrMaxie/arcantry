@@ -89,7 +89,13 @@ pub fn execute(
       json,
     ),
     ReleaseCommand::Check { unit, sealed } => {
-      arcantry_core::release::check(&project, sealed, unit.as_deref())?;
+      let pull_request_head = arcantry_core::release::github_pull_request_head();
+      arcantry_core::release::check_with_pull_request_head(
+        &project,
+        sealed,
+        unit.as_deref(),
+        pull_request_head.as_deref(),
+      )?;
       println!(
         "{}",
         if sealed {

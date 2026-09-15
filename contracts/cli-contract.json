@@ -7,7 +7,7 @@
     { "syntax": "-V, --version", "evidence": "root-version" }
   ],
   "commands": [
-    { "path": "repo inspect", "syntax": "repo inspect [--json]", "evidence": "repo-inspect" },
+    { "path": "repo inspect", "syntax": "repo inspect [--detailed|--json]", "evidence": "repo-inspect" },
     { "path": "repo plan", "syntax": "repo plan --source <id> --transition <strategy> [--to-path <path>] [--to-adapter <adapter>] [--from <source...>] [--managed-from <version>] [--delete-source] [--json]", "evidence": "repo-plan" },
     { "path": "repo apply", "syntax": "repo apply --plan <path|-> [--allow-outside <path>...]", "evidence": "repo-apply" },
     { "path": "repo init", "syntax": "repo init --scope <shared|private> [--compat claude]", "evidence": "repo-init" },
@@ -44,6 +44,8 @@
     { "id": "root-help", "command": "arcantry" },
     { "id": "root-version", "command": "arcantry" },
     { "id": "repo-inspect", "command": "repo inspect" },
+    { "id": "repo-inspect-bounded-context", "command": "repo inspect" },
+    { "id": "repo-inspect-local-policy", "command": "repo inspect" },
     { "id": "repo-plan", "command": "repo plan" },
     { "id": "repo-apply", "command": "repo apply" },
     { "id": "repo-init", "command": "repo init" },

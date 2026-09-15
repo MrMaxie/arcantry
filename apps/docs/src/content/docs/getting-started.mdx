@@ -48,7 +48,7 @@ Use `--cwd` to inspect another directory:
 arcantry --cwd ../project repo inspect
 ```
 
-Add `--json` when another tool needs the complete machine-readable result.
+Add `--detailed` to expand adapter, management, methodology, and `.local` evidence. Add `--json` when another tool needs the complete versioned machine-readable result.
 
 ## Read the result
 
@@ -58,6 +58,8 @@ Inspection reports:
 - discovered or configured OpenSpec, changelog, and todo.txt sources;
 - each source's path, visibility, management level, adapter, and compatibility;
 - missing sources as valid absence rather than an initialization error.
+- applicable agent guidance, Agent Skills, and project-work methodologies;
+- whether `.local` is absent, protected, unprotected, or tracked by Git.
 
 An empty result is valid. Git and `arcantry.toml` are not prerequisites.
 

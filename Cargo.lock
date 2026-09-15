@@ -3558,8 +3558,12 @@ name = "xtask"
 version = "1.0.0"
 dependencies = [
  "anyhow",
+ "arcantry-core",
  "assert_cmd",
+ "base64 0.23.1",
+ "chrono",
  "clap",
+ "serde",
  "serde_json",
  "sha2",
  "tempfile",

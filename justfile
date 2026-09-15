@@ -9,19 +9,16 @@ setup:
 
 [private]
 ci-setup: setup
-  nub tooling/ci-setup.ts
+  cargo run -p xtask -- ci-setup
 
 check:
-  nub tooling/generate.ts --check
-  nub tooling/generate.ts --docs-only
+  cargo run -p xtask -- typescript-boundary
+  cargo run -p xtask -- generate --check
+  cargo run -p xtask -- generate --docs-only
   nub exec biome check
   nub exec --cwd apps/docs astro sync
-  nub exec tsc --noEmit
-  nub exec --cwd packages/arcantry tsc -p tsconfig.json --noEmit
-  nub exec vitest run tooling --exclude ".local/**"
-  nub exec --cwd packages/arcantry vitest run
-  nub tooling/validate-catalog.ts
-  nub tooling/release.ts check
+  cargo run -p xtask -- catalog-validate
+  cargo run -p xtask -- repository-release check
   nub exec --cwd apps/docs astro check
   just --fmt --check
   cargo fmt --all -- --check
@@ -30,10 +27,9 @@ check:
   mise exec -- cargo deny check
 
 build:
-  nub tooling/generate.ts --docs-only
-  nub exec --cwd packages/arcantry tsup
+  cargo run -p xtask -- generate --docs-only
   nub exec --cwd apps/docs astro build
-  nub tooling/verify-docs-output.ts
+  cargo run -p xtask -- docs-output
   cargo build --workspace
 
 format:
@@ -69,8 +65,7 @@ native-target-check target tag="v1.0.0":
   just package-target-smoke {{ quote(target) }}
 
 rust-coverage:
-  mise exec rust@nightly-2026-08-24 -- nub tooling/rust-coverage.ts
-  nub tooling/verify-rust-coverage.ts target/rust-coverage.lcov
+  mise exec rust@nightly-2026-08-24 -- cargo run --target-dir target/xtask-runner -p xtask -- rust-coverage
 
 linux-system-test:
   cargo run -p xtask -- linux-system-test
@@ -80,60 +75,56 @@ dist-plan:
   mise exec -- dist plan --tag v1.0.0 --allow-dirty
 
 docs port="9796":
-  nub tooling/generate.ts --docs-only
+  cargo run -p xtask -- generate --docs-only
   nub exec --cwd apps/docs astro dev --host 127.0.0.1 --port {{ port }} --force
 
 generate:
-  nub tooling/generate.ts
+  cargo run -p xtask -- generate
 
 [private]
 generate-check:
-  nub tooling/generate.ts --check
+  cargo run -p xtask -- generate --check
 
 [private]
 catalog-validate:
-  nub tooling/validate-catalog.ts
+  cargo run -p xtask -- catalog-validate
 
 package-check:
-  nub exec --cwd packages/arcantry tsup
-  nub tooling/prepare-package.ts
+  cargo run -p xtask -- prepare-package
   cargo build -p arcantry-cli
-  nub tooling/package-smoke.ts --binary target/debug/arcantry{{ if os_family() == "windows" { ".exe" } else { "" } }}
+  cargo run -p xtask -- package-smoke --binary target/debug/arcantry{{ if os_family() == "windows" { ".exe" } else { "" } }}
 
 [private]
 package-target-smoke target:
-  nub exec --cwd packages/arcantry tsup
-  nub tooling/prepare-package.ts
-  nub tooling/package-smoke.ts --target {{ quote(target) }}
+  cargo run -p xtask -- prepare-package
+  cargo run -p xtask -- package-smoke --target {{ quote(target) }}
 
 [private]
 package-release artifacts output:
-  nub exec --cwd packages/arcantry tsup
-  nub tooling/prepare-package.ts
-  nub tooling/package-native.ts --output {{ quote(output) }} --main --artifacts {{ quote(artifacts) }}
+  cargo run -p xtask -- prepare-package
+  cargo run -p xtask -- package-native --output {{ quote(output) }} --main --artifacts {{ quote(artifacts) }}
 
 [private]
 package-archive output:
-  nub exec --cwd packages/arcantry tsup
-  nub tooling/prepare-package.ts
+  cargo run -p xtask -- prepare-package
   cargo build -p arcantry-cli
-  nub tooling/package-smoke.ts --binary target/debug/arcantry{{ if os_family() == "windows" { ".exe" } else { "" } }} --output {{ quote(output) }}
+  cargo run -p xtask -- package-smoke --binary target/debug/arcantry{{ if os_family() == "windows" { ".exe" } else { "" } }} --output {{ quote(output) }}
 
 [private]
 package-native target binary output:
-  nub tooling/package-native.ts --output {{ quote(output) }} --binary {{ quote(target + "=" + binary) }}
+  cargo run -p xtask -- package-native --output {{ quote(output) }} --binary {{ quote(target + "=" + binary) }}
 
 [private]
 registry-smoke archives:
-  nub tooling/registry-smoke.ts --archives {{ quote(archives) }}
+  cargo run -p xtask -- registry-smoke --archives {{ quote(archives) }}
 
 [private]
 installer-smoke artifacts:
-  nub tooling/installer-smoke.ts --artifacts {{ quote(artifacts) }}
+  cargo run -p xtask -- installer-smoke --artifacts {{ quote(artifacts) }}
 
 [private]
 arcantry-build:
-  nub exec --cwd packages/arcantry tsup
+  cargo build -p arcantry-cli
 
 [private]
 arcantry-native-build:
@@ -156,22 +147,22 @@ arcantry-skills-doctor: arcantry-native-build
   target/debug/arcantry{{ if os_family() == "windows" { ".exe" } else { "" } }} --cwd . skills doctor
 
 release-plan:
-  nub tooling/release.ts plan
+  cargo run -p xtask -- repository-release plan
 
 release-cut:
-  nub tooling/release.ts cut
+  cargo run -p xtask -- repository-release cut --apply
 
 release-render:
-  nub tooling/release.ts render
+  cargo run -p xtask -- repository-release render --apply
 
 release-check:
-  nub tooling/release.ts check
+  cargo run -p xtask -- repository-release check
 
 release-seal:
-  nub tooling/release.ts seal
+  cargo run -p xtask -- repository-release check --sealed
 
 publish-check tag:
-  nub tooling/publish.ts check --tag {{ quote(tag) }}
+  cargo run -p xtask -- publish check --tag {{ quote(tag) }}
 
 openspec-validate:
   nub exec openspec schema validate arcantry

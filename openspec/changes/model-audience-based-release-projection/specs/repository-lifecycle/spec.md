@@ -49,10 +49,11 @@ Migration from a manual or detached release story MUST inspect and preserve curr
 
 ### Requirement: Earlier release adapters remain supported
 
-Repositories using `openspec-release@1` or `openspec-release@2` MUST retain their existing classification and rendering contracts until they explicitly migrate. A newer Arcantry version MUST NOT reinterpret their visibility or one-change-one-entry behavior through the audience-based adapter.
+Repositories using `openspec-release@1` or `openspec-release@2` MUST retain their existing classification, release-artifact and rendering contracts until they explicitly migrate. A newer Arcantry version MUST NOT infer audience-based fields, omission or many-to-one projection groups for those adapters.
 
 #### Scenario: An existing v2 repository is inspected
 
 - **WHEN** no migration has been accepted
 - **THEN** release planning and validation continue under the v2 contract
+- **AND** existing single-outcome or multi-outcome release artifacts keep their v2 meaning
 - **AND** audience-based fields are not inferred or written

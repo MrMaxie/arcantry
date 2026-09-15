@@ -1,40 +1,9 @@
+use crate::native_targets::TARGETS;
 use anyhow::{Context, Result, bail};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
-
-struct Archive {
-  target: &'static str,
-  name: &'static str,
-}
-
-const ARCHIVES: [Archive; 6] = [
-  Archive {
-    target: "x86_64-pc-windows-msvc",
-    name: "arcantry-cli-x86_64-pc-windows-msvc.zip",
-  },
-  Archive {
-    target: "aarch64-pc-windows-msvc",
-    name: "arcantry-cli-aarch64-pc-windows-msvc.zip",
-  },
-  Archive {
-    target: "x86_64-apple-darwin",
-    name: "arcantry-cli-x86_64-apple-darwin.tar.xz",
-  },
-  Archive {
-    target: "aarch64-apple-darwin",
-    name: "arcantry-cli-aarch64-apple-darwin.tar.xz",
-  },
-  Archive {
-    target: "x86_64-unknown-linux-musl",
-    name: "arcantry-cli-x86_64-unknown-linux-musl.tar.xz",
-  },
-  Archive {
-    target: "aarch64-unknown-linux-musl",
-    name: "arcantry-cli-aarch64-unknown-linux-musl.tar.xz",
-  },
-];
 
 const INSTALLERS: [(&str, &str); 2] = [
   ("arcantry-cli-installer.sh", "arcantry-installer.sh"),
@@ -43,15 +12,18 @@ const INSTALLERS: [(&str, &str); 2] = [
 
 pub fn collect_release_artifacts(input: &Path, output: &Path) -> Result<()> {
   fs::create_dir_all(output)?;
-  for archive in &ARCHIVES {
+  for target in &TARGETS {
     let source = input
-      .join(format!("native-{}", archive.target))
+      .join(format!("native-{}", target.triple))
       .join("distrib");
-    for name in [archive.name.to_owned(), format!("{}.sha256", archive.name)] {
+    for name in [
+      target.archive.to_owned(),
+      format!("{}.sha256", target.archive),
+    ] {
       fs::copy(source.join(&name), output.join(&name)).with_context(|| {
         format!(
           "failed to collect {} for native target {}",
-          name, archive.target
+          name, target.triple
         )
       })?;
     }
@@ -68,19 +40,19 @@ pub fn assemble_release(artifacts: &Path, installer_artifacts: &Path) -> Result<
     );
   }
   let mut archive_digests = BTreeMap::new();
-  for archive in &ARCHIVES {
-    if !artifacts.join(archive.name).is_file() {
-      bail!("required cargo-dist archive is missing: {}", archive.name);
+  for target in &TARGETS {
+    if !artifacts.join(target.archive).is_file() {
+      bail!("required cargo-dist archive is missing: {}", target.archive);
     }
-    let bytes = fs::read(artifacts.join(archive.name))?;
+    let bytes = fs::read(artifacts.join(target.archive))?;
     let digest = sha256(&bytes);
     let cargo_dist_checksum =
-      fs::read_to_string(artifacts.join(format!("{}.sha256", archive.name)))
-        .with_context(|| format!("cargo-dist checksum is missing for {}", archive.name))?;
+      fs::read_to_string(artifacts.join(format!("{}.sha256", target.archive)))
+        .with_context(|| format!("cargo-dist checksum is missing for {}", target.archive))?;
     if cargo_dist_checksum.split_whitespace().next() != Some(digest.as_str()) {
-      bail!("cargo-dist checksum does not match {}", archive.name);
+      bail!("cargo-dist checksum does not match {}", target.archive);
     }
-    archive_digests.insert(archive.name.to_owned(), digest);
+    archive_digests.insert(target.archive.to_owned(), digest);
   }
   for (source, destination) in INSTALLERS {
     let content = fs::read_to_string(installer_artifacts.join(source))
@@ -94,9 +66,9 @@ pub fn assemble_release(artifacts: &Path, installer_artifacts: &Path) -> Result<
       .with_context(|| format!("failed to stage {destination} from cargo-dist output"))?;
   }
 
-  let mut public_files = ARCHIVES
+  let mut public_files = TARGETS
     .iter()
-    .map(|archive| archive.name.to_owned())
+    .map(|target| target.archive.to_owned())
     .collect::<Vec<_>>();
   public_files.extend(INSTALLERS.map(|(_, destination)| destination.to_owned()));
   public_files.sort();

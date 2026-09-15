@@ -99,9 +99,9 @@ jobs:
       - name: Build seven npm archives
         run: just package-release .artifacts/native target/npm
       - name: Verify npm trusted-publishing support
-        run: nub tooling/publish.ts verify-npm-cli
+        run: cargo run -p xtask -- publish verify-npm-cli
       - name: Verify all npm packages through a local registry
-        run: nub tooling/registry-smoke.ts --archives target/npm
+        run: cargo run -p xtask -- registry-smoke --archives target/npm
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: release-v1.0.0
@@ -156,14 +156,14 @@ jobs:
           name: release-v1.0.0
           path: target
       - name: Verify existing npm versions for retry-safe publication
-        run: nub tooling/publish.ts preflight-npm --archives target/npm --output target/npm/existing-packages.txt
+        run: cargo run -p xtask -- publish preflight-npm --archives target/npm --output target/npm/existing-packages.txt
       - name: Create draft GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: nub tooling/publish.ts create-draft-release --tag "$GITHUB_REF_NAME" --artifacts target/distrib
+        run: cargo run -p xtask -- publish create-draft-release --tag "$GITHUB_REF_NAME" --artifacts target/distrib
       - name: Publish platform packages, then the main package
-        run: nub tooling/publish.ts publish-npm --archives target/npm --existing target/npm/existing-packages.txt
+        run: cargo run -p xtask -- publish publish-npm --archives target/npm --existing target/npm/existing-packages.txt
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: nub tooling/publish.ts publish-release --tag "$GITHUB_REF_NAME"
+        run: cargo run -p xtask -- publish publish-release --tag "$GITHUB_REF_NAME"

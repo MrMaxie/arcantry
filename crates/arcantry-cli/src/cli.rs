@@ -58,6 +58,12 @@ pub enum RepoCommand {
   Inspect {
     #[arg(long, help = "Write the complete machine-readable inspection.")]
     json: bool,
+    #[arg(
+      long,
+      conflicts_with = "json",
+      help = "Expand source, methodology, and private-boundary details."
+    )]
+    detailed: bool,
   },
   #[command(about = "Plan one explicit source transition without changing the project.")]
   Plan(RepoPlanArgs),

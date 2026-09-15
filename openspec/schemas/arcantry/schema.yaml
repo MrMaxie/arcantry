@@ -23,7 +23,7 @@ artifacts:
     template: tasks.md
     requires: [specs, design]
   - id: release
-    description: Describe the release-facing outcome and SemVer impact of the change.
+    description: Describe the release-facing consumer outcomes and SemVer impact of the change.
     generates: release.md
     template: release.md
     requires: [proposal]

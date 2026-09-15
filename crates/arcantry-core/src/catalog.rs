@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, bail};
 use directories::UserDirs;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -29,6 +29,38 @@ pub struct SkillMetadata {
   pub schema: String,
   pub summary: String,
   pub scenarios: Vec<SkillScenario>,
+  #[serde(default)]
+  pub compatibility: Option<SkillCompatibility>,
+  #[serde(default)]
+  pub learning: Option<SkillLearning>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillCompatibility {
+  pub source_kinds: Vec<String>,
+  #[serde(default)]
+  pub adapters: Option<Vec<SkillAdapter>>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkillAdapter {
+  pub name: String,
+  pub versions: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkillLearning {
+  #[serde(default)]
+  pub prerequisites: Option<Vec<String>>,
+  pub outcomes: Vec<String>,
+}
+#[derive(Debug, Clone, Deserialize)]
+struct SkillAgentDocument {
+  interface: SkillAgent,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkillAgent {
+  pub display_name: String,
+  pub short_description: String,
+  pub default_prompt: String,
 }
 #[derive(Debug, Clone)]
 pub struct SkillInspection {
@@ -138,6 +170,8 @@ pub fn validate(root: &Path) -> (bool, Vec<String>, Option<Catalog>) {
     Err(error) => return (false, vec![error.to_string()], None),
   };
   let mut errors = Vec::new();
+  let mut descriptions = BTreeMap::new();
+  let mut summaries = BTreeMap::new();
   let names: Vec<_> = catalog
     .skills
     .iter()
@@ -196,27 +230,140 @@ pub fn validate(root: &Path) -> (bool, Vec<String>, Option<Catalog>) {
         if description.len() < 30 {
           errors.push(format!("skills/{} description is too short.", entry.name));
         }
+        let normalized = normalize_text(&description);
+        if let Some(existing) = descriptions.insert(normalized, entry.name.clone()) {
+          errors.push(format!(
+            "skills/{} description duplicates skills/{existing}.",
+            entry.name
+          ));
+        }
       }
       Err(error) => errors.push(format!("skills/{}/SKILL.md: {error}", entry.name)),
     }
-    if let Err(error) = load_skill_metadata(root, &entry.name) {
-      errors.push(error.to_string());
+    match load_skill_metadata(root, &entry.name) {
+      Ok(metadata) => {
+        let normalized = normalize_text(&metadata.summary);
+        if let Some(existing) = summaries.insert(normalized, entry.name.clone()) {
+          errors.push(format!(
+            "skills/{} summary duplicates skills/{existing}.",
+            entry.name
+          ));
+        }
+      }
+      Err(error) => errors.push(error.to_string()),
     }
-    match fs::read_to_string(directory.join("agents").join("openai.yaml")) {
-      Ok(source) if !source.contains(&format!("${}", entry.name)) => {
-        errors.push(format!(
-          "skills/{}/agents/openai.yaml must mention ${}.",
-          entry.name, entry.name
-        ));
+    match load_skill_agent_file(&directory.join("agents").join("openai.yaml")) {
+      Ok(agent) => {
+        if agent.display_name.trim().len() < 3 {
+          errors.push(format!("skills/{} display_name is too short.", entry.name));
+        }
+        if agent.short_description.trim().len() < 15 || agent.short_description.len() > 80 {
+          errors.push(format!(
+            "skills/{} short_description must contain 15-80 characters.",
+            entry.name
+          ));
+        }
+        if !agent.default_prompt.contains(&format!("${}", entry.name)) {
+          errors.push(format!(
+            "skills/{}/agents/openai.yaml must mention ${}.",
+            entry.name, entry.name
+          ));
+        }
       }
       Err(error) => errors.push(format!("skills/{}/agents/openai.yaml: {error}", entry.name)),
-      _ => {}
     }
+    validate_markdown_links(root, &directory, &mut errors);
   }
   (errors.is_empty(), errors, Some(catalog))
 }
 
-fn load_skill_metadata(root: &Path, name: &str) -> Result<SkillMetadata> {
+fn normalize_text(value: &str) -> String {
+  value
+    .split_whitespace()
+    .collect::<Vec<_>>()
+    .join(" ")
+    .to_lowercase()
+}
+
+fn load_skill_agent_file(path: &Path) -> Result<SkillAgent> {
+  let document: SkillAgentDocument = serde_saphyr::from_str(&fs::read_to_string(path)?)?;
+  Ok(document.interface)
+}
+
+pub fn load_skill_agent(root: &Path, name: &str) -> Result<SkillAgent> {
+  load_skill_agent_file(&root.join("skills").join(name).join("agents/openai.yaml"))
+}
+
+pub fn load_skill_frontmatter(root: &Path, name: &str) -> Result<(String, String)> {
+  read_frontmatter(&fs::read_to_string(
+    root.join("skills").join(name).join("SKILL.md"),
+  )?)
+}
+
+fn validate_markdown_links(root: &Path, directory: &Path, errors: &mut Vec<String>) {
+  for entry in walkdir::WalkDir::new(directory) {
+    let entry = match entry {
+      Ok(entry) => entry,
+      Err(error) => {
+        errors.push(error.to_string());
+        continue;
+      }
+    };
+    let path = entry.path();
+    if !entry.file_type().is_file()
+      || path.extension().and_then(|value| value.to_str()) != Some("md")
+    {
+      continue;
+    }
+    let source = match fs::read_to_string(path) {
+      Ok(source) => source,
+      Err(error) => {
+        errors.push(format!("{}: {error}", project_path(root, path)));
+        continue;
+      }
+    };
+    for target in markdown_link_targets(&source) {
+      let relative = target.split('#').next().unwrap_or_default();
+      if relative.is_empty()
+        || relative.starts_with("http:")
+        || relative.starts_with("https:")
+        || relative.starts_with("mailto:")
+      {
+        continue;
+      }
+      if !path.parent().unwrap_or(directory).join(relative).exists() {
+        errors.push(format!(
+          "{} references missing {relative}.",
+          project_path(root, path)
+        ));
+      }
+    }
+  }
+}
+
+fn markdown_link_targets(source: &str) -> Vec<&str> {
+  let mut targets = Vec::new();
+  let mut remaining = source;
+  while let Some(start) = remaining.find("](") {
+    let target = &remaining[start + 2..];
+    let Some(end) = target.find(')') else {
+      break;
+    };
+    targets.push(&target[..end]);
+    remaining = &target[end + 1..];
+  }
+  targets
+}
+
+fn project_path(root: &Path, path: &Path) -> String {
+  path
+    .strip_prefix(root)
+    .unwrap_or(path)
+    .to_string_lossy()
+    .replace('\\', "/")
+}
+
+pub fn load_skill_metadata(root: &Path, name: &str) -> Result<SkillMetadata> {
   let path = root.join("skills").join(name).join("arcantry.json");
   let value: serde_json::Value = serde_json::from_str(&fs::read_to_string(&path)?)?;
   validate_json_document(
@@ -667,6 +814,63 @@ mod tests {
     (fixture, source)
   }
 
+  fn catalog_fixture() -> tempfile::TempDir {
+    let fixture = tempfile::tempdir().unwrap();
+    let schemas = fixture.path().join("schemas");
+    let skill = fixture.path().join("skills").join("example-skill");
+    fs::create_dir_all(skill.join("agents")).unwrap();
+    fs::create_dir_all(&schemas).unwrap();
+    let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    for schema in ["catalog.schema.json", "skill-metadata.schema.json"] {
+      fs::copy(workspace.join("schemas").join(schema), schemas.join(schema)).unwrap();
+    }
+    fs::write(
+      fixture.path().join("catalog.json"),
+      serde_json::to_string_pretty(&serde_json::json!({
+        "$schema": "./schemas/catalog.schema.json",
+        "skills": [{
+          "name": "example-skill",
+          "family": "repo-safely",
+          "tags": ["example"]
+        }]
+      }))
+      .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+      skill.join("SKILL.md"),
+      "---\nname: example-skill\ndescription: Use this example skill for a concrete catalog validation task.\n---\n\n# Example\n",
+    )
+    .unwrap();
+    fs::write(
+      skill.join("arcantry.json"),
+      serde_json::to_string_pretty(&serde_json::json!({
+        "$schema": "../../schemas/skill-metadata.schema.json",
+        "summary": "Validate one complete skill package in the Arcantry catalog.",
+        "scenarios": [
+          {
+            "title": "First case",
+            "prompt": "Use the example skill for the first task.",
+            "outcome": "The first task is complete."
+          },
+          {
+            "title": "Second case",
+            "prompt": "Use the example skill for the second task.",
+            "outcome": "The second task is complete."
+          }
+        ]
+      }))
+      .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+      skill.join("agents").join("openai.yaml"),
+      "interface:\n  display_name: Example\n  short_description: Validate an example package\n  default_prompt: Use $example-skill to validate this example.\n",
+    )
+    .unwrap();
+    fixture
+  }
+
   #[test]
   fn link_preflights_every_target_before_creating_any_link() {
     let fixture = tempfile::tempdir().unwrap();
@@ -853,6 +1057,49 @@ mod tests {
         "skills/example/arcantry.json"
       )
       .is_err()
+    );
+  }
+
+  #[test]
+  fn catalog_validation_accepts_a_complete_canonical_package() {
+    let fixture = catalog_fixture();
+
+    let (valid, errors, _) = validate(fixture.path());
+
+    assert!(valid, "{errors:?}");
+    assert!(errors.is_empty());
+  }
+
+  #[test]
+  fn catalog_validation_rejects_membership_prompt_and_resource_drift() {
+    let fixture = catalog_fixture();
+    fs::create_dir_all(fixture.path().join("skills").join("unlisted-skill")).unwrap();
+    fs::write(
+      fixture
+        .path()
+        .join("skills/example-skill/agents/openai.yaml"),
+      "interface:\n  display_name: Example\n  short_description: Validate an example package\n  default_prompt: Validate this example.\n",
+    )
+    .unwrap();
+    fs::write(
+      fixture.path().join("skills/example-skill/SKILL.md"),
+      "---\nname: example-skill\ndescription: Use this example skill for a concrete catalog validation task.\n---\n\n[Missing](references/missing.md)\n",
+    )
+    .unwrap();
+
+    let (valid, errors, _) = validate(fixture.path());
+
+    assert!(!valid);
+    assert!(errors.iter().any(|error| error.contains("membership")));
+    assert!(
+      errors
+        .iter()
+        .any(|error| error.contains("must mention $example-skill"))
+    );
+    assert!(
+      errors
+        .iter()
+        .any(|error| error.contains("references missing references/missing.md"))
     );
   }
 }

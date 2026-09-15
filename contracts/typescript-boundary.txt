@@ -1,0 +1,3 @@
+# Documentation-owned TypeScript. These are the final allowed entries.
+apps/docs/astro.config.ts
+apps/docs/src/content.config.ts
