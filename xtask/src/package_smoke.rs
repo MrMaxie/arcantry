@@ -1,10 +1,11 @@
 use crate::ci_setup;
 use crate::native_targets;
 use crate::package_native;
+use crate::tooling;
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -38,6 +39,7 @@ pub fn smoke(
       host.triple
     );
   }
+  let nub = tooling::mise_program(&root, "nub")?;
   let binary = match binary {
     Some(path) => absolute(path)?,
     None => native_targets::built_binary(
@@ -105,11 +107,11 @@ pub fn smoke(
       }))?
     ),
   )?;
-  run("nub", ["install", "--ignore-scripts"], &install_root)?;
+  run(&nub, ["install", "--ignore-scripts"], &install_root)?;
 
   let package_root = install_root.join("node_modules/arcantry");
   let cli = package_root.join("bin/arcantry.js");
-  let node = ci_setup::nub_node_executable()?;
+  let node = ci_setup::nub_node_executable(&nub)?;
   let version_output = run(
     &node,
     [cli.as_os_str(), OsStr::new("--version")],
@@ -120,7 +122,12 @@ pub fn smoke(
     bail!("packed native CLI reported {actual_version}, expected {version}");
   }
   for (runner, arguments) in package_runners() {
-    let output = run(runner, arguments, &install_root)?;
+    let program = if runner == "nub" {
+      nub.as_os_str()
+    } else {
+      OsStr::new(runner)
+    };
+    let output = run(program, arguments, &install_root)?;
     let actual = reported_version(&output)?;
     if actual != version {
       bail!("{runner} reported {actual}, expected {version} from the packed native CLI");
@@ -216,7 +223,7 @@ where
   S: AsRef<OsStr>,
 {
   let clean_environment = std::env::vars_os().filter(|(key, _)| key != "NODE_OPTIONS");
-  let program = platform_program(command.as_ref());
+  let program = tooling::platform_program(command.as_ref());
   let output = Command::new(&program)
     .args(args)
     .current_dir(cwd)
@@ -296,19 +303,6 @@ fn reported_version(output: &[u8]) -> Result<String> {
     .context("package runner produced no version output")
 }
 
-fn platform_program(command: &OsStr) -> OsString {
-  #[cfg(windows)]
-  if ["npm", "npx", "pnpm"]
-    .iter()
-    .any(|candidate| command == OsStr::new(candidate))
-  {
-    let mut program = command.to_os_string();
-    program.push(".cmd");
-    return program;
-  }
-  command.to_os_string()
-}
-
 fn absolute(path: &Path) -> Result<PathBuf> {
   if path.is_absolute() {
     Ok(path.to_path_buf())
@@ -320,6 +314,15 @@ fn absolute(path: &Path) -> Result<PathBuf> {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn resolves_nub_through_the_platform_command_wrapper() {
+    let expected = if cfg!(windows) { "nub.cmd" } else { "nub" };
+    assert_eq!(
+      tooling::platform_program(OsStr::new("nub")),
+      std::ffi::OsString::from(expected)
+    );
+  }
 
   #[test]
   fn reads_the_version_after_package_manager_progress() {

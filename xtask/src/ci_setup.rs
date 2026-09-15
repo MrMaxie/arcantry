@@ -1,3 +1,4 @@
+use crate::tooling;
 use anyhow::{Context, Result, bail};
 use std::env;
 use std::fs::OpenOptions;
@@ -7,14 +8,15 @@ use std::process::Command;
 
 pub fn configure() -> Result<()> {
   let github_path = env::var_os("GITHUB_PATH").context("GITHUB_PATH is required for CI setup.")?;
-  let node_executable = nub_node_executable()?;
+  let nub = tooling::mise_program(Path::new("."), "nub")?;
+  let node_executable = nub_node_executable(&nub)?;
   append_node_directory(Path::new(&github_path), Path::new(&node_executable))?;
   println!("Added Nub's Node directory to GITHUB_PATH.");
   Ok(())
 }
 
-pub(crate) fn nub_node_executable() -> Result<String> {
-  let output = Command::new("nub")
+pub(crate) fn nub_node_executable(nub: &Path) -> Result<String> {
+  let output = Command::new(nub)
     .args(["--node", "-p", "process.execPath"])
     .output()
     .context("CI setup could not run Nub's Node runtime")?;

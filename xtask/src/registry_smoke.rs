@@ -1,7 +1,8 @@
 use crate::native_targets::{self, TARGETS};
+use crate::tooling;
 use anyhow::{Context, Result, bail};
 use serde_json::{Map, Value, json};
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -15,6 +16,7 @@ const REGISTRY_PASSWORD: &str = "arcantry-local-registry-smoke";
 
 pub fn smoke(root: &Path, archives: &Path) -> Result<()> {
   let root = absolute(root)?;
+  let nub = tooling::mise_program(&root, "nub")?;
   let archives = absolute(archives)?;
   let temporary = Builder::new()
     .prefix("arcantry-registry-smoke-")
@@ -24,10 +26,11 @@ pub fn smoke(root: &Path, archives: &Path) -> Result<()> {
   let config = temporary.path().join("verdaccio.yaml");
   fs::write(&config, registry_config(temporary.path())?)?;
   let log_path = temporary.path().join("verdaccio.log");
-  let mut registry = start_registry(&root, &config, &log_path, port)?;
+  let mut registry = start_registry(&nub, &root, &config, &log_path, port)?;
 
   let result = run_smoke(
     &root,
+    &nub,
     &archives,
     temporary.path(),
     port,
@@ -43,6 +46,7 @@ pub fn smoke(root: &Path, archives: &Path) -> Result<()> {
 
 fn run_smoke(
   root: &Path,
+  nub: &Path,
   archives_root: &Path,
   temporary: &Path,
   port: u16,
@@ -73,7 +77,7 @@ fn run_smoke(
       Some(&user_config),
     )?;
     run(
-      "nub",
+      nub,
       [
         OsStr::new("publish"),
         OsStr::new("--registry"),
@@ -100,7 +104,7 @@ fn run_smoke(
       install_manifest(target.os, target.cpu, target.package_name, &version)?,
     )?;
     run(
-      "nub",
+      nub,
       [
         OsStr::new("install"),
         OsStr::new("--registry"),
@@ -128,7 +132,7 @@ fn run_smoke(
     )
     .with_context(|| format!("registry install omitted {}", target.package_name))?;
     run(
-      "nub",
+      nub,
       [
         OsStr::new("--node"),
         OsStr::new("-e"),
@@ -141,7 +145,12 @@ fn run_smoke(
     )?;
     if target == host {
       for (runner, arguments) in registry_runners() {
-        let output = run(runner, arguments, &install, Some(&user_config))?;
+        let program = if runner == "nub" {
+          nub.as_os_str()
+        } else {
+          OsStr::new(runner)
+        };
+        let output = run(program, arguments, &install, Some(&user_config))?;
         let actual = String::from_utf8(output)?.trim().to_owned();
         if actual != version {
           bail!("{runner} reported {actual}, expected {version} from the registry-installed CLI.");
@@ -165,11 +174,17 @@ fn registry_config(temporary: &Path) -> Result<String> {
   ))
 }
 
-fn start_registry(root: &Path, config: &Path, log_path: &Path, port: u16) -> Result<Child> {
+fn start_registry(
+  nub: &Path,
+  root: &Path,
+  config: &Path,
+  log_path: &Path,
+  port: u16,
+) -> Result<Child> {
   let log = File::create(log_path)?;
   let error_log = log.try_clone()?;
   let clean_environment = std::env::vars_os().filter(|(key, _)| key != "NODE_OPTIONS");
-  Command::new("nub")
+  Command::new(nub)
     .args([
       OsStr::new("exec"),
       OsStr::new("verdaccio"),
@@ -396,7 +411,7 @@ where
   S: AsRef<OsStr>,
 {
   let clean_environment = std::env::vars_os().filter(|(key, _)| key != "NODE_OPTIONS");
-  let program = platform_program(command.as_ref());
+  let program = tooling::platform_program(command.as_ref());
   let mut process = Command::new(&program);
   process
     .args(arguments)
@@ -422,19 +437,6 @@ where
     );
   }
   Ok(output.stdout)
-}
-
-fn platform_program(command: &OsStr) -> OsString {
-  #[cfg(windows)]
-  if ["npm", "npx", "pnpm"]
-    .iter()
-    .any(|candidate| command == OsStr::new(candidate))
-  {
-    let mut program = command.to_os_string();
-    program.push(".cmd");
-    return program;
-  }
-  command.to_os_string()
 }
 
 fn stop_registry(registry: &mut Child) -> Result<()> {

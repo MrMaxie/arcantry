@@ -69,7 +69,7 @@ fn keeps_authored_installation_and_launcher_examples_aligned() {
     assert!(!picker.contains(forbidden), "{forbidden}");
   }
   assert!(getting_started.contains("cargo install --locked --path crates/arcantry-cli"));
-  assert!(getting_started.contains("public 1.0 package or GitHub Release"));
+  assert!(getting_started.contains("supported public distribution channels for 1.0"));
   assert!(getting_started.contains("<ArcantryAgentPrompt variant=\"full\" />"));
   assert!(
     prompt.contains("Install Arcantry on this computer using the official getting-started guide.")
@@ -78,6 +78,10 @@ fn keeps_authored_installation_and_launcher_examples_aligned() {
     prompt
       .contains("Do not adopt Arcantry into a repository or change project files unless I ask.")
   );
+  for forbidden in ["Homebrew", "Scoop", "Winget", "Chocolatey"] {
+    assert!(!getting_started.contains(forbidden), "{forbidden}");
+    assert!(!prompt.contains(forbidden), "{forbidden}");
+  }
 }
 
 #[test]

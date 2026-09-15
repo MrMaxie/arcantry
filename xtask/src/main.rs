@@ -16,6 +16,7 @@ mod registry_smoke;
 mod release;
 mod repository_release;
 mod smoke;
+mod tooling;
 mod typescript_boundary;
 
 use anyhow::Result;
