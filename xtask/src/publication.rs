@@ -477,6 +477,14 @@ fn process_error(output: &ProcessOutput, fallback: &str) -> String {
 mod tests {
   use super::*;
 
+  fn release_workflow_source() -> String {
+    fs::read_to_string(
+      Path::new(env!("CARGO_MANIFEST_DIR")).join("../.github/workflows/release.yml"),
+    )
+    .unwrap()
+    .replace("\r\n", "\n")
+  }
+
   #[test]
   fn accepts_only_stable_canonical_release_tags() {
     assert!(is_stable_tag("v1.0.0"));
@@ -560,10 +568,7 @@ mod tests {
 
   #[test]
   fn pins_every_github_artifact_action_to_a_full_commit_sha() {
-    let workflow = fs::read_to_string(
-      Path::new(env!("CARGO_MANIFEST_DIR")).join("../.github/workflows/release.yml"),
-    )
-    .unwrap();
+    let workflow = release_workflow_source();
     let actions = workflow
       .split_whitespace()
       .filter(|token| {
@@ -581,10 +586,7 @@ mod tests {
 
   #[test]
   fn keeps_release_publication_behind_verified_artifacts_and_environment_approval() {
-    let workflow = fs::read_to_string(
-      Path::new(env!("CARGO_MANIFEST_DIR")).join("../.github/workflows/release.yml"),
-    )
-    .unwrap();
+    let workflow = release_workflow_source();
     assert!(workflow.contains("name: release-${{ github.ref_name }}"));
     assert!(!workflow.contains("release-v1.0.0"));
     assert!(
