@@ -60,7 +60,7 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install --yes musl-tools
       - name: Verify native target and package
-        run: just native-target-check "${{ matrix.target }}" "${{ github.ref_name }}"
+        run: mise exec -- just native-target-check "${{ matrix.target }}" "${{ github.ref_name }}"
       - name: Smoke static Linux executable on Alpine musl
         if: runner.os == 'Linux'
         run: docker run --rm -v "$PWD:/work" -w /work alpine:3.23 "/work/target/${{ matrix.target }}/dist/arcantry" --version

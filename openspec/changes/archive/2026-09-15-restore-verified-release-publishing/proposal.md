@@ -4,7 +4,7 @@ Arcantry has a complete local release toolchain, but its CI and release workflow
 
 # What changes
 
-Restore remote CI and the verified native release workflow, finalize the existing untagged `1.0.0` candidate with every accepted release-bearing change, and support the one-time npm bootstrap without weakening later OIDC trusted publishing. The workflow builds and executes every supported target, retains the exact npm archives, creates a draft GitHub Release before the protected npm job, accepts only byte-identical existing package versions during retry, and publishes the GitHub Release only after the complete npm set is verified.
+Restore remote CI and the verified native release workflow, finalize the existing untagged `1.0.0` candidate with every accepted release-bearing change, and support the one-time npm bootstrap without weakening later OIDC trusted publishing. The workflow builds and executes every supported target, enters the repository's pinned Mise context before isolated package validation, retains the exact npm archives, creates a draft GitHub Release before the protected npm job, accepts only byte-identical existing package versions during retry, and publishes the GitHub Release only after the complete npm set is verified.
 
 The release history, workflow contract, package verification and public release notes are coupled because publishing any one of them without the others would expose an incomplete or unverifiable `1.0.0` release.
 

@@ -1,4 +1,4 @@
-# First public release sealed after cross-platform CI, canonical package transport, skill update, workflow, and filesystem verification.
+# First public release sealed after cross-platform CI, pinned isolated package tooling, canonical package transport, skill update, workflow, and filesystem verification.
 version: 1.0.0
 date: 2026-09-14
 changes:
