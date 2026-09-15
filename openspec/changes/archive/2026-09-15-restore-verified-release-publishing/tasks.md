@@ -2,6 +2,7 @@
 
 - [x] Restore pull-request and `master` CI with the repository's Rust-owned checks.
 - [x] Restore the tag-triggered release workflow with dynamic artifact identity and a protected publication job.
+- [x] Keep native package validation inside the pinned Mise tool context while package work runs in isolated directories.
 - [x] Create or refresh the draft GitHub Release with OpenSpec-derived notes before npm publication.
 - [x] Accept existing npm packages only when their registry integrity matches the retained archives, including the main package.
 - [x] Update contributor guidance, public documentation and workflow contracts for active CI and release automation.
