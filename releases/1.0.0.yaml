@@ -26,6 +26,7 @@ changes:
   - preserve-todo-queue-conventions
   - refine-documentation-navigation
   - refine-overview-product-story
+  - refine-public-install-options
   - restore-verified-release-publishing
   - retire-typescript-core-and-tooling
   - ship-native-rust-cli

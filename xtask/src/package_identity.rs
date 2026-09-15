@@ -52,21 +52,39 @@ fn keeps_authored_installation_and_launcher_examples_aligned() {
   let prompt = text("apps/docs/src/components/ArcantryAgentPrompt.astro");
   for expected in [
     "const packageName = packageManifest.name",
-    "value: `npm install --global ${packageName}`",
     "value: `npx ${packageName} repo inspect`",
-    "value: `pnpm dlx ${packageName} repo inspect`",
-    "value: `nubx ${packageName} repo inspect`",
+    "value: `npm install --global ${packageName}`",
     "arcantry-installer.ps1",
     "arcantry-installer.sh",
+    "href={releasePage}>Download</a>",
   ] {
     assert!(picker.contains(expected), "{expected}");
   }
   for forbidden in [
+    "id: 'pnpm'",
+    "id: 'nub'",
+    "value: `pnpm dlx ${packageName} repo inspect`",
+    "value: `nubx ${packageName} repo inspect`",
     "value: `bunx ${packageName} repo inspect`",
     "Install native CLI",
     "Run once",
   ] {
     assert!(!picker.contains(forbidden), "{forbidden}");
+  }
+  let ordered_choices = [
+    "id: 'npx'",
+    "id: 'npm'",
+    "id: 'powershell'",
+    "id: 'shell'",
+    "class=\"download-link\"",
+  ];
+  for pair in ordered_choices.windows(2) {
+    assert!(
+      picker.find(pair[0]).unwrap() < picker.find(pair[1]).unwrap(),
+      "{} must precede {}",
+      pair[0],
+      pair[1]
+    );
   }
   assert!(getting_started.contains("cargo install --locked --path crates/arcantry-cli"));
   assert!(getting_started.contains("supported public distribution channels for 1.0"));
@@ -78,7 +96,7 @@ fn keeps_authored_installation_and_launcher_examples_aligned() {
     prompt
       .contains("Do not adopt Arcantry into a repository or change project files unless I ask.")
   );
-  for forbidden in ["Homebrew", "Scoop", "Winget", "Chocolatey"] {
+  for forbidden in ["Homebrew", "Scoop", "Winget", "Chocolatey", "pnpm", "Nub"] {
     assert!(!getting_started.contains(forbidden), "{forbidden}");
     assert!(!prompt.contains(forbidden), "{forbidden}");
   }

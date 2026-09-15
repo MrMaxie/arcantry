@@ -10,26 +10,17 @@ interface Props {
 const { idPrefix, variant = 'content' } = Astro.props;
 const packageName = packageManifest.name;
 const releaseBase = `https://github.com/MrMaxie/arcantry/releases/download/v${packageManifest.version}`;
+const releasePage = `https://github.com/MrMaxie/arcantry/releases/tag/v${packageManifest.version}`;
 const commandOptions = [
-  {
-    id: 'npm',
-    label: 'npm',
-    value: `npm install --global ${packageName}`,
-  },
   {
     id: 'npx',
     label: 'npx',
     value: `npx ${packageName} repo inspect`,
   },
   {
-    id: 'pnpm',
-    label: 'pnpm',
-    value: `pnpm dlx ${packageName} repo inspect`,
-  },
-  {
-    id: 'nub',
-    label: 'Nub',
-    value: `nubx ${packageName} repo inspect`,
+    id: 'npm',
+    label: 'npm',
+    value: `npm install --global ${packageName}`,
   },
   {
     id: 'powershell',
@@ -45,9 +36,9 @@ const commandOptions = [
 ---
 
 <arcantry-command-picker class:list={['command-picker', 'not-content', `${variant}-command`]}>
-  <div class="command-tabs" role="tablist" aria-label="Install or run Arcantry">
-    {commandOptions.map((option, index) => (
-      <>
+  <div class="command-options">
+    <div class="command-tabs" role="tablist" aria-label="Install or run Arcantry">
+      {commandOptions.map((option, index) => (
         <button
           type="button"
           role="tab"
@@ -67,8 +58,9 @@ const commandOptions = [
           )}
           <span>{option.label}</span>
         </button>
-      </>
-    ))}
+      ))}
+    </div>
+    <a class="download-link" href={releasePage}>Download</a>
   </div>
   {commandOptions.map((option, index) => (
     <div
@@ -243,7 +235,7 @@ if (!customElements.get('arcantry-command-picker')) {
     width: 100%;
     margin-block: 1.25rem;
   }
-  .command-tabs {
+  .command-options {
     display: flex;
     align-items: stretch;
     gap: 0.1rem;
@@ -253,10 +245,16 @@ if (!customElements.get('arcantry-command-picker')) {
     border-bottom: 1px solid color-mix(in srgb, var(--ar-accent-violet) 18%, var(--ar-border));
     scrollbar-width: none;
   }
-  .command-tabs::-webkit-scrollbar {
+  .command-options::-webkit-scrollbar {
     display: none;
   }
-  .command-tabs button {
+  .command-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 0.1rem;
+  }
+  .command-tabs button,
+  .download-link {
     position: relative;
     display: inline-flex;
     align-items: center;
@@ -278,6 +276,9 @@ if (!customElements.get('arcantry-command-picker')) {
       color 150ms ease,
       background-color 150ms ease;
   }
+  .download-link {
+    text-decoration: none;
+  }
   .command-tabs .platform-icon,
   .command-tabs .platform-icons :global(svg) {
     width: 0.78rem;
@@ -290,7 +291,8 @@ if (!customElements.get('arcantry-command-picker')) {
     align-items: center;
     gap: 0.12rem;
   }
-  .command-tabs button:hover {
+  .command-tabs button:hover,
+  .download-link:hover {
     color: var(--ar-text);
   }
   .command-tabs button[aria-selected='true'] {
@@ -361,6 +363,7 @@ if (!customElements.get('arcantry-command-picker')) {
     display: block;
   }
   @media (max-width: 49.99rem) {
+    .command-options,
     .command-tabs {
       flex-wrap: wrap;
       overflow: visible;
