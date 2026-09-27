@@ -57,7 +57,7 @@ fn keeps_authored_installation_and_launcher_examples_aligned() {
     "arcantry-installer.ps1",
     "arcantry-installer.sh",
     "class=\"download-action\"",
-    "href={releasePage}>Download</a>",
+    "href={releasePage}><Icon name=\"download\" />Download</a>",
   ] {
     assert!(picker.contains(expected), "{expected}");
   }
@@ -88,7 +88,12 @@ fn keeps_authored_installation_and_launcher_examples_aligned() {
     );
   }
   assert!(picker.contains("margin-left: auto"));
-  assert!(picker.contains("border-left: 1px solid"));
+  assert!(!picker.contains(
+    "border-left: 1px solid color-mix(in srgb, var(--ar-text-soft) 32%, var(--ar-border));"
+  ));
+  assert!(!picker.contains(
+    "border-top: 1px solid color-mix(in srgb, var(--ar-text-soft) 24%, var(--ar-border));"
+  ));
   for forbidden in [
     "cargo install --locked --path crates/arcantry-cli",
     "install the native CLI from a checkout",
@@ -114,6 +119,21 @@ fn keeps_authored_installation_and_launcher_examples_aligned() {
     assert!(!getting_started.contains(forbidden), "{forbidden}");
     assert!(!prompt.contains(forbidden), "{forbidden}");
   }
+}
+
+#[test]
+fn recommended_overview_setup_keeps_user_scoped_skills() {
+  let graph = text("apps/docs/src/components/ArcantryKnowledgeGraph.astro");
+  let recommended = graph
+    .split("id: 'full'")
+    .nth(1)
+    .unwrap()
+    .split("id: 'private'")
+    .next()
+    .unwrap();
+
+  assert!(recommended.contains("'computer-skills': 'User'"));
+  assert!(recommended.contains("'repository-skills': 'Project'"));
 }
 
 #[test]
