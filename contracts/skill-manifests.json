@@ -113,13 +113,13 @@
   },
   {
     "name": "audience-scope-discipline",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "role": "supporting",
-    "digest": "774b156d75e7655ecdc6faa145d167469b8d5db30b8508f6aeacca319d29b547",
+    "digest": "e2ace37a230ee51a5c5a2e8c823151fdbe632887950d74f807e978af7c6be511",
     "files": [
       {
         "path": "SKILL.md",
-        "sha256": "8d298eeb4ddddcb9209e0f983ec3f98f777ea30e6169532c25e95135183436ea"
+        "sha256": "5014653dd624bd984b3b89d87cc00ceed52203c11e88dcfbfe10f03ad1d54b77"
       },
       {
         "path": "agents/openai.yaml",
@@ -127,11 +127,15 @@
       },
       {
         "path": "arcantry.json",
-        "sha256": "793f49b7adb572129635ca65e9907d835f80b0ad9d9e20a6e1d1677b2c5b8cbe"
+        "sha256": "b0b2d7ed43ca5065a916997718e98149687aed1969097cf38d509b42369b30db"
       },
       {
         "path": "references/evaluation-rubric.md",
         "sha256": "527c8a0d3e9f2d7dc11fd59a6b40fbc9e83d7517950efbb7cb28e190d777ddf0"
+      },
+      {
+        "path": "references/requirement-to-result-examples.md",
+        "sha256": "81ff4e9bdfbf0aa5f538f9521ae3ed6cd98a31785fad73dc14321cb93d5d0ff5"
       },
       {
         "path": "references/scenarios.md",
@@ -139,6 +143,12 @@
       }
     ],
     "history": [
+      {
+        "change": "strengthen-audience-output-discipline",
+        "date": "Unreleased",
+        "title": "Keep requirements out of reader-facing copy by default",
+        "summary": "Audience guidance now admits a visible detail only when the request, established audience or current reader task requires it, with focused examples for preserving exact evidence and actionable recovery without exposing unrelated implementation data."
+      },
       {
         "change": "preserve-derived-artifact-fidelity",
         "date": "2026-08-18",
