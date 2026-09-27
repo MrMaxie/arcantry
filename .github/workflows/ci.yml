@@ -27,6 +27,7 @@ jobs:
       - run: just ci-setup
       - run: just openspec-validate check-host
         env:
+          MISE_EXEC_AUTO_INSTALL: "false"
           ARCANTRY_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
   linux-system-test:
