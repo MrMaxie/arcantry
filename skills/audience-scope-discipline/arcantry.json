@@ -1,13 +1,19 @@
 {
   "$schema": "../../schemas/skill-metadata.schema.json",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "role": "supporting",
   "summary": "Protect the intended audience, authorized scope, privacy boundary, and established structure of an artifact.",
+  "learning": {
+    "outcomes": [
+      "Distinguish implementation inputs from information the intended reader actually needs.",
+      "Preserve exact evidence and recovery details only when an established audience task requires them."
+    ]
+  },
   "scenarios": [
     {
-      "title": "Trim a technical product screen",
-      "prompt": "Use the audience-scope-discipline skill to review this settings screen. Keep only information customers need to decide or act.",
-      "outcome": "An audience-based content decision that moves operational and diagnostic detail out of the default view."
+      "title": "Turn requirements into audience-fit output",
+      "prompt": "Use the audience-scope-discipline skill to turn these requirements into reader-facing content without exposing every available field.",
+      "outcome": "Only details admitted by the reader's current task become visible, while required exact evidence remains usable."
     },
     {
       "title": "Guard a narrow implementation",
