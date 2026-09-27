@@ -12,16 +12,49 @@ env:
   MISE_JOBS: "1"
 
 jobs:
-  check:
+  host:
+    name: Host checks
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
       - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4
+        with:
+          install_args: just nub pnpm aqua:oven-sh/bun rust cargo:cargo-deny
       - run: just ci-setup
-      - run: just ci
+      - run: just openspec-validate check-host
         env:
+          MISE_EXEC_AUTO_INSTALL: "false"
           ARCANTRY_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+  linux-system-test:
+    name: Linux system test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4
+        with:
+          install_args: just rust
+      - run: just linux-system-test
+
+  check:
+    name: check
+    if: ${{ always() }}
+    needs: [host, linux-system-test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every CI gate
+        env:
+          HOST_RESULT: ${{ needs.host.result }}
+          LINUX_RESULT: ${{ needs.linux-system-test.result }}
+        run: |
+          test "$HOST_RESULT" = "success"
+          test "$LINUX_RESULT" = "success"

@@ -51,6 +51,13 @@ fn append_node_directory(github_path: &Path, node_executable: &Path) -> Result<(
 mod tests {
   use super::*;
 
+  fn ci_workflow() -> String {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    std::fs::read_to_string(root.join(".github/workflows/ci.yml"))
+      .unwrap()
+      .replace("\r\n", "\n")
+  }
+
   #[test]
   fn appends_the_node_directory_to_github_path() {
     let root = tempfile::tempdir().unwrap();
@@ -63,5 +70,51 @@ mod tests {
       content.trim_end(),
       node_executable.parent().unwrap().display().to_string()
     );
+  }
+
+  #[test]
+  fn ci_runs_host_and_linux_gates_in_parallel_before_the_required_check() {
+    let workflow = ci_workflow();
+    let host_job = workflow
+      .split("\n  host:\n")
+      .nth(1)
+      .unwrap()
+      .split("\n  linux-system-test:\n")
+      .next()
+      .unwrap();
+    let linux_job = workflow
+      .split("\n  linux-system-test:\n")
+      .nth(1)
+      .unwrap()
+      .split("\n  check:\n")
+      .next()
+      .unwrap();
+    let required_check = workflow.split("\n  check:\n").nth(1).unwrap();
+
+    assert!(host_job.contains("timeout-minutes: 15"));
+    assert!(
+      host_job.contains("install_args: just nub pnpm aqua:oven-sh/bun rust cargo:cargo-deny")
+    );
+    assert!(host_job.contains("run: just openspec-validate check-host"));
+    assert!(!host_job.contains("linux-system-test"));
+    for unused in ["cargo:cargo-dist", "cargo:cargo-llvm-cov"] {
+      assert!(
+        !host_job.contains(unused),
+        "host bootstrap installs {unused}"
+      );
+    }
+
+    assert!(linux_job.contains("timeout-minutes: 15"));
+    assert!(linux_job.contains("install_args: just rust"));
+    assert!(linux_job.contains("run: just linux-system-test"));
+    assert!(!linux_job.contains("ci-setup"));
+    assert!(!linux_job.contains("check-host"));
+
+    assert!(required_check.contains("name: check"));
+    assert!(required_check.contains("needs: [host, linux-system-test]"));
+    assert!(required_check.contains("if: ${{ always() }}"));
+    assert!(required_check.contains("timeout-minutes: 5"));
+    assert!(required_check.contains("needs.host.result"));
+    assert!(required_check.contains("needs.linux-system-test.result"));
   }
 }
