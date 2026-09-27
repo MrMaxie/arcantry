@@ -92,15 +92,12 @@ mod tests {
     let required_check = workflow.split("\n  check:\n").nth(1).unwrap();
 
     assert!(host_job.contains("timeout-minutes: 15"));
-    assert!(host_job.contains("install_args: just nub rust cargo:cargo-deny"));
+    assert!(
+      host_job.contains("install_args: just nub pnpm aqua:oven-sh/bun rust cargo:cargo-deny")
+    );
     assert!(host_job.contains("run: just openspec-validate check-host"));
     assert!(!host_job.contains("linux-system-test"));
-    for unused in [
-      "pnpm",
-      "aqua:oven-sh/bun",
-      "cargo:cargo-dist",
-      "cargo:cargo-llvm-cov",
-    ] {
+    for unused in ["cargo:cargo-dist", "cargo:cargo-llvm-cov"] {
       assert!(
         !host_job.contains(unused),
         "host bootstrap installs {unused}"
