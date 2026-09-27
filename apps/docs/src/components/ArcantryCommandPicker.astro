@@ -61,7 +61,7 @@ const commandOptions = [
       ))}
     </div>
     <div class="download-action">
-      <a class="download-link" href={releasePage}>Download</a>
+      <a class="download-link" href={releasePage}><Icon name="download" />Download</a>
     </div>
   </div>
   {commandOptions.map((option, index) => (
@@ -284,12 +284,12 @@ if (!customElements.get('arcantry-command-picker')) {
     align-self: stretch;
     margin-left: auto;
     padding-left: 0.55rem;
-    border-left: 1px solid color-mix(in srgb, var(--ar-text-soft) 32%, var(--ar-border));
   }
   .download-link {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.35rem;
     min-height: 1.55rem;
     padding: 0 0.58rem;
     border: 1px solid color-mix(in srgb, var(--ar-text-soft) 38%, var(--ar-border));
@@ -304,6 +304,11 @@ if (!customElements.get('arcantry-command-picker')) {
     transition:
       background-color 150ms ease,
       border-color 150ms ease;
+  }
+  .download-link :global(svg) {
+    width: 0.78rem;
+    height: 0.78rem;
+    flex: 0 0 auto;
   }
   .command-tabs .platform-icon,
   .command-tabs .platform-icons :global(svg) {
@@ -407,7 +412,6 @@ if (!customElements.get('arcantry-command-picker')) {
       justify-content: flex-end;
       margin-left: 0;
       padding: 0.45rem 0 0;
-      border-top: 1px solid color-mix(in srgb, var(--ar-text-soft) 24%, var(--ar-border));
       border-left: 0;
     }
     .command-row {
