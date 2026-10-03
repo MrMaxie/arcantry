@@ -67,7 +67,7 @@ native-conformance:
   cargo build -p arcantry-cli
   cargo test -p arcantry-cli --test cli_contract
 
-native-target-check target tag="v1.0.0":
+native-target-check target tag:
   cargo test --workspace
   mise exec -- dist build --artifacts=local --target={{ quote(target) }} --tag={{ quote(tag) }} --allow-dirty
   cargo run -p xtask -- smoke-target --target {{ quote(target) }}
@@ -80,8 +80,8 @@ linux-system-test:
   cargo run -p xtask -- linux-system-test
 
 [private]
-dist-plan:
-  mise exec -- dist plan --tag v1.0.0 --allow-dirty
+dist-plan tag:
+  mise exec -- dist plan --tag {{ quote(tag) }} --allow-dirty
 
 docs port="9796":
   cargo run -p xtask -- generate --docs-only
