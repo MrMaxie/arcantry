@@ -1,4 +1,4 @@
-# First public release finalized after cross-platform CI, repository trust hardening, canonical package transport, skill update, workflow, and filesystem verification.
+# First public release finalized after cross-platform CI and native bootstrap, repository trust hardening, canonical package transport, skill update, workflow, and filesystem verification.
 version: 1.0.0
 date: 2026-10-03
 changes:
