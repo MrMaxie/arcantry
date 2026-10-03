@@ -58,7 +58,7 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install --yes musl-tools
       - name: Verify native target and package
-        run: mise exec -- just native-target-check "${{ matrix.target }}" "${{ github.ref_name }}"
+        run: just native-target-check "${{ matrix.target }}" "${{ github.ref_name }}"
       - name: Smoke static Linux executable on Alpine musl
         if: runner.os == 'Linux'
         run: >-
