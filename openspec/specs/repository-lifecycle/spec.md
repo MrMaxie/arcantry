@@ -372,21 +372,6 @@ The public configuration MUST expose only `openspec-release@1`. That adapter MUS
 - **THEN** unit selectors, manifests, dependency pins and changelogs retain their defined behavior
 - **AND** no second adapter identifier is required
 
-### Requirement: An unsealed first public release can be finalized in place
-
-The latest internal release manifest MAY be finalized without a version change only when no matching Git tag, npm package or public GitHub Release exists. Finalization MUST retain the selected version, assign every accepted release-bearing change, use an explicit release date and regenerate the managed changelog from those OpenSpec outcomes. A tagged or externally published release MUST remain immutable.
-
-#### Scenario: The internal candidate has never been published
-
-- **WHEN** `1.0.0` exists only as an untagged internal manifest and the maintainer authorizes it as the first public release
-- **THEN** the manifest may add every later accepted release-bearing change and record the authorized release date
-- **AND** all product and distributable version sources remain `1.0.0`
-
-#### Scenario: The release already has an external identity
-
-- **WHEN** a matching tag, npm version or public GitHub Release exists
-- **THEN** finalization refuses to change that manifest or its release date
-
 ### Requirement: Protected automation keeps incomplete releases private
 
 The release workflow MUST create or refresh a draft GitHub Release only after repository, native artifact and installer verification pass. npm and final GitHub publication MUST run behind the tag-scoped `npm` environment. The GitHub Release MUST remain a draft when package preflight, trusted publishing, environment approval or npm publication fails.
@@ -401,3 +386,36 @@ The release workflow MUST create or refresh a draft GitHub Release only after re
 
 - **WHEN** every exact package archive is published or confirmed with matching registry integrity
 - **THEN** the workflow may make the matching GitHub Release public
+
+### Requirement: Changelog rendering has a bounded output
+
+Custom and preset changelog rendering MUST stop before generated managed content exceeds one MiB. Template source and execution fuel limits remain independent safeguards.
+
+#### Scenario: A template amplifies release content
+
+- **WHEN** repeated interpolation would produce more than one MiB of managed changelog output
+- **THEN** rendering fails with a bounded-output error before retaining the oversized result
+
+### Requirement: An unpublished first public release can be finalized in place
+
+The latest internal release manifest MAY be finalized without a version change only when neither its main package version nor a public GitHub Release exists. Finalization MUST retain the selected version, assign every accepted release-bearing change, use an explicit release date and regenerate the managed changelog from those OpenSpec outcomes. A failed Git tag or draft GitHub Release MAY be replaced only through an explicitly authorized reseal. A live npm version or public GitHub Release MUST remain immutable.
+
+#### Scenario: The internal candidate has never been published
+
+- **WHEN** `1.0.0` has no main npm package and no public GitHub Release
+- **THEN** every later accepted release-bearing change may be assigned to the finalized 1.0.0 manifest
+- **AND** an explicitly authorized failed tag may be replaced with the final seal
+
+#### Scenario: The release already has an external identity
+
+- **WHEN** the main npm version or public GitHub Release exists
+- **THEN** later work requires a new version computed from OpenSpec impact
+
+### Requirement: Repository release plans align every product version
+
+The Arcantry repository release adapter MUST update the Rust workspace version, internal Arcantry dependency pins, lockfile workspace package versions, main npm package version and optional dependencies, every platform package version and both plugin manifest versions in one plan.
+
+#### Scenario: A future patch release is cut
+
+- **WHEN** release planning advances 1.0.0 to 1.0.1
+- **THEN** every product and distribution version source is updated to 1.0.1 without manual follow-up edits

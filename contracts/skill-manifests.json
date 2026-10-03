@@ -145,7 +145,7 @@
     "history": [
       {
         "change": "strengthen-audience-output-discipline",
-        "date": "Unreleased",
+        "date": "2026-10-03",
         "title": "Keep requirements out of reader-facing copy by default",
         "summary": "Audience guidance now admits a visible detail only when the request, established audience or current reader task requires it, with focused examples for preserving exact evidence and actionable recovery without exposing unrelated implementation data."
       },

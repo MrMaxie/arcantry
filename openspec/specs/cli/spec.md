@@ -2,7 +2,9 @@
 
 ## Purpose
 Define the stable public command surface for repository adoption and skill discovery.
+
 ## Requirements
+
 ### Requirement: Arcantry exposes one namespaced command line interface
 
 Arcantry MUST expose one public `arcantry` command. All command behavior and domain operations MUST be implemented by the compiled Rust executable and its Rust core. The executable MUST NOT require Node.js, Bun, Python or another language runtime. Repository operations MUST be nested under `arcantry repo`, and skill operations MUST be nested under `arcantry skills`. The CLI MUST NOT expose top-level install or update aliases. Package-manager launchers MAY dispatch to the native executable but MUST NOT provide a separate command or domain implementation.
@@ -299,3 +301,13 @@ The native CLI MUST provide `skills status [<name>] [--scope <user|repo>] [--tar
 - **WHEN** `skills apply --plan` receives a valid unchanged plan
 - **THEN** only the planned skill targets and ownership receipt change
 - **AND** the command reports the applied version, revision and digest
+
+### Requirement: Human output is terminal-safe
+
+Human-readable CLI output MUST preserve printable text, line feeds and tabs while rendering all other control characters visibly. JSON and MCP values MUST preserve the original repository value.
+
+#### Scenario: Repository text contains terminal controls
+
+- **WHEN** next, explain or todo output includes ESC, OSC, BEL, DEL, C1 or bare carriage return characters
+- **THEN** human stdout contains no raw terminal control sequence
+- **AND** structured output retains the original value
