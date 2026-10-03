@@ -1,6 +1,6 @@
-# First public release sealed after cross-platform CI, pinned isolated package tooling, canonical package transport, skill update, workflow, and filesystem verification.
+# First public release finalized after cross-platform CI, repository trust hardening, canonical package transport, skill update, workflow, and filesystem verification.
 version: 1.0.0
-date: 2026-09-14
+date: 2026-10-03
 changes:
   - add-agent-prompt-configurator
   - add-code-quality-skills
@@ -19,6 +19,7 @@ changes:
   - extend-configurator-adoption-scenarios
   - focus-initial-release-platforms
   - harden-native-cli-verification-gates
+  - harden-repository-trust-boundaries
   - improve-configurator-responsive-reflow
   - keep-public-installation-on-release-channels
   - make-cli-documentation-verifiable
@@ -28,12 +29,15 @@ changes:
   - preserve-cli-intent-provenance
   - preserve-todo-queue-conventions
   - refine-documentation-navigation
+  - refine-overview-download-and-recommended-setup
   - refine-overview-product-story
   - refine-public-install-options
   - restore-verified-release-publishing
+  - resume-normal-semver-releases
   - retire-typescript-core-and-tooling
   - ship-native-rust-cli
   - stabilize-arcantry-1-0
+  - strengthen-audience-output-discipline
   - support-composable-release-units
   - support-multiple-agent-hosts
   - support-multiple-release-outcomes

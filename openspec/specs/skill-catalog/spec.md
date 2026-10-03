@@ -2,7 +2,9 @@
 
 ## Purpose
 Define the canonical skill catalog, its generated public projections and distribution boundaries.
+
 ## Requirements
+
 ### Requirement: Catalog projections derive from canonical skill packages
 
 The public skill catalog MUST be generated deterministically from validated skill metadata. Canonical metadata MUST provide a distinct provider-neutral summary for every skill. Generated catalog, plugin, and documentation projections MUST NOT become competing authored sources.
@@ -105,7 +107,7 @@ Every public skill MUST declare its own semantic version and one role from `prim
 
 - **WHEN** an accepted skill revision changes package content without an Arcantry release
 - **THEN** its exact revision and content digest change independently
-- **AND** the Arcantry product and CLI remain at version `1.0.0`
+- **AND** the Arcantry product and CLI version remain unchanged
 
 #### Scenario: A text package is checked out on different platforms
 
@@ -144,3 +146,12 @@ Legacy embedded links, source-checkout links and ordinary skill directories with
 - **WHEN** no receipt proves ownership or installed bytes differ from its receipt
 - **THEN** status identifies the state and update apply refuses an implicit replacement
 - **AND** the existing files and links remain unchanged
+
+### Requirement: Repository skill targets stay inside the repository
+
+Repository and private skill linking and unlinking MUST canonicalize the nearest existing target ancestor before mutation and MUST reject a target that resolves outside the canonical repository root. Explicit user targets and user-scoped targets retain their separate authority.
+
+#### Scenario: A repository target ancestor is linked outside
+
+- **WHEN** `.agents` or `.claude` resolves through a symlink or junction outside the repository
+- **THEN** preflight rejects the operation before creating, replacing or removing any skill link

@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-09-14
+## [1.0.0] - 2026-10-03
 
 ### Added
 
@@ -153,6 +153,11 @@ Arcantry traces public CLI behavior and trust claims from authored documentation
 
 Documentation navigation exposes every skill through clear nested families, consistent icons, readable tables, and responsive process diagrams.
 
+<!-- openspec: refine-overview-download-and-recommended-setup -->
+#### Clarify the overview installation and setup choices
+
+The overview presents direct downloads as one compact framed action with a download icon and shows reusable user-scoped skills in the recommended shared and private setup.
+
 <!-- openspec: refine-overview-product-story -->
 #### Explain why and how to adopt Arcantry
 
@@ -168,10 +173,20 @@ Arcantry's installation picker now leads with `npx`, followed by `npm`, PowerShe
 
 Arcantry 1.0 ships the same sealed release through official GitHub Release archives, checksum-verifying installers, the `arcantry` npm launcher and exact platform packages. GitHub Actions executes every supported target, resolves isolated package tools from the repository-pinned toolchain, retains the verified package archives and keeps the GitHub Release as a draft until the complete npm package set is confirmed. Public installation guidance is limited to npm-compatible launchers and GitHub Release downloads.
 
+<!-- openspec: resume-normal-semver-releases -->
+#### Resume normal SemVer releases after 1.0.0
+
+The first public release now includes all accepted 1.0.0 work, after which Arcantry advances product and distribution versions from OpenSpec release impact through its standard release workflow.
+
 <!-- openspec: retire-typescript-core-and-tooling -->
 #### Use one native Rust engine for Arcantry
 
 Arcantry's CLI, repository operations and supporting project tools use one Rust implementation. The npm package remains a launcher for the native executable and no longer exposes a separate JavaScript library API.
+
+<!-- openspec: strengthen-audience-output-discipline -->
+#### Keep requirements out of reader-facing copy by default
+
+Audience guidance now admits a visible detail only when the request, established audience or current reader task requires it, with focused examples for preserving exact evidence and actionable recovery without exposing unrelated implementation data.
 
 <!-- openspec: support-private-project-artifacts-and-universal-agent-files -->
 #### Use universal agent files with private project artifacts
@@ -214,6 +229,13 @@ Arcantry previews the exact task line, reuses compatible local conventions and a
 #### Preserve the official todo.txt baseline across Arcantry writes
 
 Arcantry CLI and canonical skills use the official todo.txt baseline for new or directly changed tasks while preserving existing queue content and optional metadata.
+
+### Security
+
+<!-- openspec: harden-repository-trust-boundaries -->
+#### Enforce repository trust boundaries
+
+Arcantry now rejects repository paths that escape through configuration or filesystem links, bounds dependency and changelog processing, escapes terminal control characters in human output, and isolates the Linux release smoke test from verified artifacts.
 
 ## [0.4.3] - 2026-08-18
 
