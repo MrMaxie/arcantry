@@ -15,7 +15,7 @@ mise provisions the pinned contributor toolchain. The root `justfile` is the doc
 | `just generate` | Refresh package metadata and documentation projections from canonical sources. |
 | `just native-conformance` | Compare CLI behavior across the black-box compatibility suite. |
 | `just rust-coverage` | Produce an optional LCOV diagnostic report using cargo-llvm-cov. |
-| `just native-target-check <target>` | Verify one declared native target through tests, build, executable smoke and platform-package smoke. |
+| `just native-target-check <target> <tag>` | Verify one declared native target through tests, build, executable smoke and platform-package smoke. |
 | `just openspec-validate` | Run strict validation for the OpenSpec schema and every change. |
 | `just package-check` | Build and smoke-test the npm packages for the current platform. |
 | `just ci` | Run strict OpenSpec, Windows host and Linux container checks locally. |

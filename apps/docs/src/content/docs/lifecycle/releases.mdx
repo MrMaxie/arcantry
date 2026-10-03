@@ -9,7 +9,7 @@ This page describes how the Arcantry project releases itself. It is not a requir
 
 An Arcantry release is a dated set of archived OpenSpec changes. The internal release keeps repository state complete even when no package, Git tag, or GitHub Release is published.
 
-This repository currently uses continuous 1.0 delivery. Product and distributable versions stay at `1.0.0` until a maintainer explicitly authorizes a version change. Updating `master` or GitHub Pages is normal delivery, not a release.
+The first public release retains `1.0.0` while neither its main npm package nor a public GitHub Release exists. After publication, the repository advances versions normally from the highest accepted OpenSpec impact. Updating `master` or GitHub Pages remains normal delivery, not a release.
 
 ## `release.md`
 
@@ -108,7 +108,7 @@ Normal `arcantry release check` validates persisted release consistency while al
 
 {/* cli-evidence: release-local-only */}
 
-The commit that introduces an authorized release manifest is the Arcantry release seal. It must also contain the archived OpenSpec changes, aligned distribution versions, and generated changelog. Later work on `master` continues under the unchanged `1.0.0` policy and does not by itself authorize another release.
+The commit that introduces or explicitly reseals an authorized release manifest is the Arcantry release seal. It must also contain the archived OpenSpec changes, aligned distribution versions, dependency pins and generated changelog. Later work on `master` contributes its declared impact to the next release plan but does not by itself authorize another release.
 
 ## Changelog provenance
 
