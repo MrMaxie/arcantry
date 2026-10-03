@@ -65,6 +65,13 @@ mod tests {
       .replace("\r\n", "\n")
   }
 
+  fn justfile() -> String {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    std::fs::read_to_string(root.join("Justfile"))
+      .unwrap()
+      .replace("\r\n", "\n")
+  }
+
   #[test]
   fn appends_the_node_directory_to_github_path() {
     let root = tempfile::tempdir().unwrap();
@@ -137,6 +144,8 @@ mod tests {
       .unwrap();
 
     assert!(native_job.contains("install_args: just nub rust cargo:cargo-dist"));
+    assert!(native_job.contains("run: just native-target-check"));
+    assert!(!native_job.contains("run: mise exec -- just native-target-check"));
     for unused in [
       "pnpm",
       "aqua:oven-sh/bun",
@@ -148,5 +157,16 @@ mod tests {
         "native release bootstrap installs {unused}"
       );
     }
+
+    let native_recipe = justfile()
+      .split("\nnative-target-check target tag:\n")
+      .nth(1)
+      .unwrap()
+      .split("\nrust-coverage:\n")
+      .next()
+      .unwrap()
+      .to_owned();
+    assert!(native_recipe.contains("mise exec cargo:cargo-dist -- dist build"));
+    assert!(!native_recipe.contains("mise exec -- dist build"));
   }
 }
