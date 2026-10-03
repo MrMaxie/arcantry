@@ -1,4 +1,4 @@
-# First public release finalized after cross-platform CI, minimal explicit native tool bootstrap, isolated target-native package smoke verification, repository trust hardening, canonical package transport, skill update, workflow, and filesystem verification.
+# First public release finalized after cross-platform CI, minimal explicit native tool bootstrap, host-native installer and package smoke verification, repository trust hardening, canonical package transport, skill update, workflow, and filesystem verification.
 version: 1.0.0
 date: 2026-10-03
 changes:
