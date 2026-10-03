@@ -81,6 +81,8 @@ enum Task {
     build_root: Option<PathBuf>,
     #[arg(long)]
     output: Option<PathBuf>,
+    #[arg(long)]
+    native_only: bool,
     #[arg(long, default_value = ".")]
     root: PathBuf,
   },
@@ -171,6 +173,7 @@ fn main() -> Result<()> {
       target,
       build_root,
       output,
+      native_only,
       root,
     } => package_smoke::smoke(
       &root,
@@ -178,6 +181,7 @@ fn main() -> Result<()> {
       target.as_deref(),
       build_root.as_deref(),
       output.as_deref(),
+      native_only,
     ),
     Task::Publish { command } => publication::run(command),
     Task::RegistrySmoke { archives, root } => registry_smoke::smoke(&root, &archives),

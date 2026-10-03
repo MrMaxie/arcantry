@@ -22,6 +22,7 @@ pub fn smoke(
   target: Option<&str>,
   build_root: Option<&Path>,
   retained_output: Option<&Path>,
+  native_only: bool,
 ) -> Result<()> {
   if binary.is_none() && target.is_none() {
     bail!("one of --binary or --target is required");
@@ -121,7 +122,7 @@ pub fn smoke(
   if actual_version != version {
     bail!("packed native CLI reported {actual_version}, expected {version}");
   }
-  for (runner, arguments) in package_runners() {
+  for (runner, arguments) in package_runners(native_only) {
     let program = if runner == "nub" {
       nub.as_os_str()
     } else {
@@ -246,7 +247,10 @@ where
   Ok(output.stdout)
 }
 
-fn package_runners() -> Vec<(&'static str, Vec<&'static OsStr>)> {
+fn package_runners(native_only: bool) -> Vec<(&'static str, Vec<&'static OsStr>)> {
+  if native_only {
+    return Vec::new();
+  }
   vec![
     (
       "npm",
@@ -333,18 +337,24 @@ mod tests {
   }
 
   #[test]
+  fn native_only_avoids_external_package_runners() {
+    assert!(package_runners(true).is_empty());
+    assert_eq!(package_runners(false).len(), 5);
+  }
+
+  #[test]
   fn rejects_a_target_that_does_not_match_the_host() {
     let other = native_targets::TARGETS
       .iter()
       .find(|target| target.triple != native_targets::host().unwrap().triple)
       .unwrap();
-    let error = smoke(Path::new("."), None, Some(other.triple), None, None).unwrap_err();
+    let error = smoke(Path::new("."), None, Some(other.triple), None, None, true).unwrap_err();
     assert!(error.to_string().contains("does not match host"));
   }
 
   #[test]
   fn requires_a_binary_or_target() {
-    let error = smoke(Path::new("."), None, None, None, None).unwrap_err();
+    let error = smoke(Path::new("."), None, None, None, None, true).unwrap_err();
     assert_eq!(error.to_string(), "one of --binary or --target is required");
   }
 }
