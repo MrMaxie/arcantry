@@ -116,7 +116,7 @@ pub(super) fn plan_file_relocation(
   operations: &mut Vec<PlanOperation>,
   conflicts: &mut Vec<String>,
 ) -> Result<()> {
-  let content = fs::read_to_string(&source.absolute_path)?;
+  let content = inspection.read_source_to_string(source)?;
   let target_hash = hash_path(target)?;
   let desired_hash = hash_content(&content);
   if target_hash
@@ -192,7 +192,7 @@ pub(super) fn plan_directory_relocation(
   for entry in files {
     let child = entry.path().strip_prefix(&source.absolute_path)?;
     let target_file = target.join(child);
-    let content = fs::read_to_string(entry.path())?;
+    let content = inspection.read_authority.read_to_string(entry.path())?;
     let target_hash = hash_path(&target_file)?;
     let desired_hash = hash_content(&content);
     if target_hash

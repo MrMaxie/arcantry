@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, bail};
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
 use toml_edit::{Array, DocumentMut, TableLike, value};
@@ -235,6 +235,8 @@ pub struct ResolvedProject {
   pub mode: &'static str,
   pub scope: Option<&'static str>,
   pub shadowed_config_paths: Vec<PathBuf>,
+  #[serde(skip_serializing)]
+  pub allow_external_paths: bool,
 }
 
 pub fn parse_project_config(
@@ -731,26 +733,48 @@ fn valid_component_id(id: &str) -> bool {
 }
 
 fn validate_cycles(edges: &BTreeMap<&str, Vec<&str>>) -> Result<()> {
-  let mut pending: BTreeSet<_> = edges.keys().copied().collect();
-  while !pending.is_empty() {
-    let ready: Vec<_> = pending
-      .iter()
-      .copied()
-      .filter(|id| {
-        edges[id]
-          .iter()
-          .all(|dependency| !pending.contains(dependency))
-      })
-      .collect();
-    if ready.is_empty() {
-      bail!(
-        "dependency cycle includes {}.",
-        pending.into_iter().collect::<Vec<_>>().join(", ")
-      );
+  let nodes = edges.keys().copied().collect::<Vec<_>>();
+  let indexes = nodes
+    .iter()
+    .enumerate()
+    .map(|(index, id)| (*id, index))
+    .collect::<HashMap<_, _>>();
+  let mut indegree = vec![0usize; nodes.len()];
+  let mut dependents = vec![Vec::new(); nodes.len()];
+  for (node_index, dependencies) in edges.values().enumerate() {
+    let mut counted = HashSet::new();
+    for dependency in dependencies {
+      if counted.insert(*dependency)
+        && let Some(&dependency_index) = indexes.get(dependency)
+      {
+        indegree[node_index] += 1;
+        dependents[dependency_index].push(node_index);
+      }
     }
-    for id in ready {
-      pending.remove(id);
+  }
+  let mut ready = indegree
+    .iter()
+    .enumerate()
+    .filter_map(|(index, count)| (*count == 0).then_some(index))
+    .collect::<VecDeque<_>>();
+  let mut processed = 0usize;
+  while let Some(index) = ready.pop_front() {
+    processed += 1;
+    for dependent in &dependents[index] {
+      let count = &mut indegree[*dependent];
+      *count -= 1;
+      if *count == 0 {
+        ready.push_back(*dependent);
+      }
     }
+  }
+  if processed != nodes.len() {
+    let cycle = nodes
+      .into_iter()
+      .zip(indegree)
+      .filter_map(|(id, count)| (count > 0).then_some(id))
+      .collect::<Vec<_>>();
+    bail!("dependency cycle includes {}.", cycle.join(", "));
   }
   Ok(())
 }
@@ -883,10 +907,19 @@ pub fn resolve_project(
       mode: "wild",
       scope: None,
       shadowed_config_paths: Vec::new(),
+      allow_external_paths: false,
     });
   };
-  let content =
-    fs::read_to_string(&active).with_context(|| format!("Could not read {}.", active.display()))?;
+  let content = if explicit.is_none() {
+    let boundary = if is_private_config_path(&active) {
+      active.parent().and_then(Path::parent).unwrap_or(&cwd)
+    } else {
+      active.parent().unwrap_or(&cwd)
+    };
+    crate::path_security::ReadAuthority::new(boundary)?.read_to_string(&active)?
+  } else {
+    fs::read_to_string(&active).with_context(|| format!("Could not read {}.", active.display()))?
+  };
   let mut config = parse_project_config(&content, tool_version, explicit.is_some())?;
   let scope = if explicit.is_some() && discovered.0.as_ref() != Some(&active) {
     "external"
@@ -909,6 +942,9 @@ pub fn resolve_project(
   } else {
     config_root.to_path_buf()
   };
+  if scope != "external" && !cwd_explicit {
+    crate::path_security::ensure_within(config_root, &root, "project.root")?;
+  }
   if explicit.is_some() && active.starts_with(&root) {
     config = parse_project_config(&content, tool_version, false)?;
   }
@@ -929,6 +965,7 @@ pub fn resolve_project(
     mode: "configured",
     scope: Some(scope),
     shadowed_config_paths: shadowed,
+    allow_external_paths: scope == "external",
   })
 }
 
@@ -1083,6 +1120,152 @@ from = ["intent"]
         .unwrap_err()
         .to_string()
         .contains("require at least one OpenSpec")
+    );
+  }
+
+  #[test]
+  fn validates_large_dependency_graphs_and_external_references() {
+    let ids = (0..10_000)
+      .map(|index| format!("node-{index}"))
+      .collect::<Vec<_>>();
+    let edges = ids
+      .iter()
+      .enumerate()
+      .map(|(index, id)| {
+        let dependencies = if index == 0 {
+          vec!["external"]
+        } else {
+          vec![ids[index - 1].as_str()]
+        };
+        (id.as_str(), dependencies)
+      })
+      .collect::<BTreeMap<_, _>>();
+
+    validate_cycles(&edges).unwrap();
+  }
+
+  #[test]
+  fn reports_cycle_members_in_stable_order() {
+    let edges = BTreeMap::from([
+      ("zeta", vec!["alpha"]),
+      ("alpha", vec!["zeta"]),
+      ("ready", Vec::new()),
+    ]);
+
+    assert_eq!(
+      validate_cycles(&edges).unwrap_err().to_string(),
+      "dependency cycle includes alpha, zeta."
+    );
+  }
+
+  #[test]
+  fn discovered_project_root_cannot_leave_the_repository() {
+    let repository = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    fs::write(
+      repository.path().join(PROJECT_CONFIG_FILENAME),
+      "config_version = 1\n\n[project]\nroot = \"../outside\"\n",
+    )
+    .unwrap();
+
+    let error = resolve_project(repository.path(), None, false, Some(crate::VERSION)).unwrap_err();
+    assert!(
+      error
+        .to_string()
+        .contains("project.root must stay within the project")
+    );
+
+    let absolute = outside.path().to_string_lossy().replace('\\', "/");
+    fs::write(
+      repository.path().join(PROJECT_CONFIG_FILENAME),
+      format!("config_version = 1\n\n[project]\nroot = \"{absolute}\"\n"),
+    )
+    .unwrap();
+    let error = resolve_project(repository.path(), None, false, Some(crate::VERSION)).unwrap_err();
+    assert!(
+      error
+        .to_string()
+        .contains("project.root must stay within the project")
+    );
+  }
+
+  #[test]
+  fn discovered_project_root_cannot_leave_through_a_directory_link() {
+    let repository = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    let linked = repository.path().join("linked");
+    #[cfg(windows)]
+    junction::create(outside.path(), &linked).unwrap();
+    #[cfg(not(windows))]
+    std::os::unix::fs::symlink(outside.path(), &linked).unwrap();
+    fs::write(
+      repository.path().join(PROJECT_CONFIG_FILENAME),
+      "config_version = 1\n\n[project]\nroot = \"linked\"\n",
+    )
+    .unwrap();
+
+    let error = resolve_project(repository.path(), None, false, Some(crate::VERSION)).unwrap_err();
+    assert!(
+      error
+        .to_string()
+        .contains("project.root must stay within the project")
+    );
+  }
+
+  #[test]
+  fn discovered_configuration_cannot_leave_through_a_file_link() {
+    let repository = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    let external = outside.path().join(PROJECT_CONFIG_FILENAME);
+    fs::write(&external, "config_version = 1\n").unwrap();
+    let linked = repository.path().join(PROJECT_CONFIG_FILENAME);
+    #[cfg(windows)]
+    std::os::windows::fs::symlink_file(&external, &linked).unwrap();
+    #[cfg(not(windows))]
+    std::os::unix::fs::symlink(&external, &linked).unwrap();
+
+    let error = resolve_project(repository.path(), None, false, Some(crate::VERSION)).unwrap_err();
+    assert!(error.to_string().contains("trusted project read boundary"));
+  }
+
+  #[test]
+  fn explicit_external_config_can_select_an_external_root() {
+    let repository = tempfile::tempdir().unwrap();
+    let external = tempfile::tempdir().unwrap();
+    let config = external.path().join("external.toml");
+    let root = external.path().join("project");
+    fs::create_dir(&root).unwrap();
+    let root_value = root.to_string_lossy().replace('\\', "/");
+    fs::write(
+      &config,
+      format!("config_version = 1\n\n[project]\nroot = \"{root_value}\"\n"),
+    )
+    .unwrap();
+
+    let resolved = resolve_project(
+      repository.path(),
+      Some(&config),
+      false,
+      Some(crate::VERSION),
+    )
+    .unwrap();
+    assert_eq!(resolved.root, dunce::canonicalize(root).unwrap());
+    assert!(resolved.allow_external_paths);
+  }
+
+  #[test]
+  fn explicit_cwd_overrides_a_discovered_project_root() {
+    let repository = tempfile::tempdir().unwrap();
+    fs::write(
+      repository.path().join(PROJECT_CONFIG_FILENAME),
+      "config_version = 1\n\n[project]\nroot = \"../outside\"\n",
+    )
+    .unwrap();
+
+    let resolved = resolve_project(repository.path(), None, true, Some(crate::VERSION)).unwrap();
+    assert_eq!(
+      resolved.root,
+      dunce::canonicalize(repository.path()).unwrap()
     );
   }
 

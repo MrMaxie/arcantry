@@ -146,7 +146,7 @@ pub fn init(cwd: &Path, scope: Scope, compatibility: bool) -> Result<Vec<Reposit
   let mut changes = Vec::new();
   let config_relative = config_path(scope);
   let config_absolute = root.join(config_relative);
-  match read_optional(&config_absolute)? {
+  match read_project_optional(&root, &config_absolute)? {
     None => changes.push(PlannedChange {
       action: "create",
       path: config_absolute,
@@ -188,7 +188,7 @@ pub fn update(cwd: &Path, scope: Scope, compatibility: bool) -> Result<Vec<Repos
     enforce_private_local_policy(&root)?;
   }
   let config_relative = config_path(scope);
-  let Some(config) = read_optional(&root.join(config_relative))? else {
+  let Some(config) = read_project_optional(&root, &root.join(config_relative))? else {
     bail!("Run repo init --scope {} before repo update.", scope.name());
   };
   parse_project_config(&config, None, false)
@@ -222,7 +222,7 @@ pub fn remove(cwd: &Path, scope: Scope) -> Result<Vec<RepositoryChange>> {
   let mut changes = Vec::new();
   let config_relative = config_path(scope);
   let config_absolute = root.join(config_relative);
-  if let Some(content) = read_optional(&config_absolute)? {
+  if let Some(content) = read_project_optional(&root, &config_absolute)? {
     parse_project_config(&content, None, false)
       .context("Invalid configuration is preserved because ownership cannot be verified.")?;
     changes.push(PlannedChange {
@@ -317,7 +317,12 @@ fn apply_changes_with(
   ) -> Result<crate::project_plan::ApplyOutcome>,
 ) -> Result<Vec<RepositoryChange>> {
   for change in &changes {
-    if read_optional(&change.path)? != change.expected {
+    let current = if change.display_path == ".git/info/exclude" {
+      read_optional(&change.path)?
+    } else {
+      read_project_optional(root, &change.path)?
+    };
+    if current != change.expected {
       bail!(
         "Refusing to change {}; it changed after the plan was created.",
         change.display_path
@@ -377,7 +382,7 @@ fn plan_section(
   changes: &mut Vec<PlannedChange>,
 ) -> Result<()> {
   let path = root.join(relative);
-  let existing = read_optional(&path)?;
+  let existing = read_project_optional(root, &path)?;
   match upsert_managed_section(existing.as_deref().unwrap_or_default(), body) {
     ManagedSectionResult::Unchanged(_) => {}
     ManagedSectionResult::Changed(content) => changes.push(PlannedChange {
@@ -404,7 +409,7 @@ fn plan_section_removal(
   changes: &mut Vec<PlannedChange>,
 ) -> Result<()> {
   let path = root.join(relative);
-  let Some(existing) = read_optional(&path)? else {
+  let Some(existing) = read_project_optional(root, &path)? else {
     return Ok(());
   };
   match remove_managed_section(&existing) {
@@ -548,7 +553,7 @@ fn validate_section(
   doctor: bool,
   diagnostics: &mut Vec<RepositoryDiagnostic>,
 ) -> Result<()> {
-  let content = read_optional(&root.join(relative))?;
+  let content = read_project_optional(root, &root.join(relative))?;
   if content.as_deref().is_none_or(|content| {
     !matches!(
       upsert_managed_section(content, body),
@@ -572,7 +577,7 @@ fn validate_claude(
   diagnostics: &mut Vec<RepositoryDiagnostic>,
 ) -> Result<()> {
   let relative = claude_path(scope);
-  let content = read_optional(&root.join(relative))?;
+  let content = read_project_optional(root, &root.join(relative))?;
   if let Some(content) = content.filter(|content| contains_managed_section(content)) {
     let desired = format!("@{}", guidance_path(scope).replace('\\', "/"));
     if !matches!(
@@ -635,7 +640,7 @@ fn validate_git_exclude(
   };
   let content = read_optional(&path)?.unwrap_or_default();
   let lines: std::collections::BTreeSet<_> = content.lines().collect();
-  let private_claude = read_optional(&root.join(claude_path(Scope::Private)))?;
+  let private_claude = read_project_optional(root, &root.join(claude_path(Scope::Private)))?;
   let mut required = vec![".local/"];
   if private_claude.is_some_and(|content| contains_managed_section(&content)) {
     required.push("CLAUDE.local.md");
@@ -696,6 +701,15 @@ fn read_optional(path: &Path) -> Result<Option<String>> {
     Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
     Err(error) => Err(error.into()),
   }
+}
+
+fn read_project_optional(root: &Path, path: &Path) -> Result<Option<String>> {
+  if fs::symlink_metadata(path).is_err() {
+    return Ok(None);
+  }
+  Ok(Some(
+    crate::path_security::ReadAuthority::new(root)?.read_to_string(path)?,
+  ))
 }
 fn display_path(root: &Path, path: &Path) -> String {
   path.strip_prefix(root).map_or_else(

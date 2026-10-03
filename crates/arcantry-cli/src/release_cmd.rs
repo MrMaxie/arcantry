@@ -1,4 +1,5 @@
 use crate::ReleaseCommand;
+use crate::output::terminal_text;
 use crate::repo_cmd::handle_plan;
 use anyhow::Result;
 use arcantry_core::config::resolve_project;
@@ -31,20 +32,26 @@ pub fn execute(
         println!("{}", serde_json::to_string_pretty(&plan)?);
       } else {
         println!(
-          "Current: {}\nNext: {}\nImpact: {}",
-          plan.current, plan.next, plan.impact
+          "{}",
+          terminal_text(&format!(
+            "Current: {}\nNext: {}\nImpact: {}",
+            plan.current, plan.next, plan.impact
+          ))
         );
         println!(
           "{}",
-          if plan.changes.is_empty() {
+          terminal_text(&if plan.changes.is_empty() {
             "Changes: none".to_owned()
           } else {
             format!("Changes: {}", plan.changes.join(", "))
-          }
+          })
         );
         if let Some(unit) = &plan.unit {
-          println!("Unit: {unit}");
-          println!("Topology: {}", plan.topology.as_deref().unwrap_or("single"));
+          println!("Unit: {}", terminal_text(unit));
+          println!(
+            "Topology: {}",
+            terminal_text(plan.topology.as_deref().unwrap_or("single"))
+          );
           println!(
             "Ready: {}",
             if plan.ready == Some(true) {
@@ -65,11 +72,11 @@ pub fn execute(
             .unwrap_or_default();
           println!(
             "{}",
-            if pending.is_empty() {
+            terminal_text(&if pending.is_empty() {
               "Pending dependencies: none".to_owned()
             } else {
               format!("Pending dependencies: {}", pending.join(", "))
-            }
+            })
           );
         }
       }

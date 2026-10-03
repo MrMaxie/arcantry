@@ -1,5 +1,6 @@
 mod embedded;
 mod mcp;
+mod output;
 mod release_cmd;
 mod repo_cmd;
 mod skill_update;
@@ -12,6 +13,7 @@ pub(crate) use arcantry_cli::cli::{
   SkillStatusOptions, SkillUnlinkOptions, SkillUpdateOptions, SkillsCommand, TodoCommand,
 };
 use clap::{Parser, error::ErrorKind};
+use output::terminal_text;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -37,7 +39,7 @@ fn main() -> ExitCode {
     Ok(0) => ExitCode::SUCCESS,
     Ok(code) => ExitCode::from(code.clamp(1, u8::MAX.into()) as u8),
     Err(error) => {
-      eprintln!("Error: {error}");
+      eprintln!("Error: {}", terminal_text(&error.to_string()));
       ExitCode::FAILURE
     }
   }
@@ -119,29 +121,34 @@ fn execute(cli: Cli) -> Result<i32> {
         println!("{}", serde_json::to_string_pretty(&value)?);
       } else if let Some(format) = value["format"].as_str() {
         println!(
-          "{format}\n\nExample:\n{}",
-          value["example"].as_str().unwrap_or_default()
+          "{}\n\nExample:\n{}",
+          terminal_text(format),
+          terminal_text(value["example"].as_str().unwrap_or_default())
         );
         for source in value["projectSources"].as_array().into_iter().flatten() {
           println!(
             "\nProject source: {}\n{}",
-            source["source"].as_str().unwrap_or_default(),
-            source["content"].as_str().unwrap_or_default()
+            terminal_text(source["source"].as_str().unwrap_or_default()),
+            terminal_text(source["content"].as_str().unwrap_or_default())
           );
         }
         println!("\nRules: arcantry explain rules --detailed");
       } else if let Some(action) = value["action"].as_str() {
         println!(
-          "{action}\nNext: {}",
-          value["command"].as_str().unwrap_or_default()
+          "{}\nNext: {}",
+          terminal_text(action),
+          terminal_text(value["command"].as_str().unwrap_or_default())
         );
         for blocker in value["blockers"].as_array().into_iter().flatten() {
-          println!("Blocked: {}", blocker.as_str().unwrap_or_default());
+          println!(
+            "Blocked: {}",
+            terminal_text(blocker.as_str().unwrap_or_default())
+          );
         }
       } else {
         println!(
           "Project: {}\nMode: {}",
-          project.root.display(),
+          terminal_text(&project.root.display().to_string()),
           project.mode
         );
         for source in value["sources"]
@@ -152,8 +159,8 @@ fn execute(cli: Cli) -> Result<i32> {
         {
           println!(
             "Source: {} ({})",
-            source["path"].as_str().unwrap_or_default(),
-            source["visibility"].as_str().unwrap_or_default()
+            terminal_text(source["path"].as_str().unwrap_or_default()),
+            terminal_text(source["visibility"].as_str().unwrap_or_default())
           );
         }
         println!(

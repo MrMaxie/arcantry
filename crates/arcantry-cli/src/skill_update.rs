@@ -1,3 +1,4 @@
+use crate::output::terminal_text;
 use crate::{SkillStatusOptions, SkillUpdateOptions, embedded};
 use anyhow::{Context, Result, bail};
 use arcantry_core::catalog::{self, SkillPackageManifest};
@@ -145,21 +146,30 @@ pub fn status(
     println!("{}", serde_json::to_string_pretty(&records)?);
   } else {
     for record in records {
-      println!("{}\t{}", record.name, record.state);
+      println!(
+        "{}",
+        terminal_text(&format!("{}\t{}", record.name, record.state))
+      );
       if let Some(version) = record.version {
         println!(
-          "  installed: {version} {}",
-          record.digest.unwrap_or_default()
+          "{}",
+          terminal_text(&format!(
+            "  installed: {version} {}",
+            record.digest.unwrap_or_default()
+          ))
         );
       }
       if let Some(revision) = record.revision {
-        println!("  revision: {revision}");
+        println!("  revision: {}", terminal_text(&revision));
       }
       if let Some(available) = record.available_version {
         println!(
-          "  available: {available} {} ({})",
-          record.available_digest.unwrap_or_default(),
-          record.available_revision.unwrap_or_default()
+          "{}",
+          terminal_text(&format!(
+            "  available: {available} {} ({})",
+            record.available_digest.unwrap_or_default(),
+            record.available_revision.unwrap_or_default()
+          ))
         );
         println!(
           "  update: {}",
@@ -251,8 +261,11 @@ pub fn apply(cwd: &Path, plan_path: &str) -> Result<i32> {
   let _ = FileExt::unlock(&lock);
   result?;
   println!(
-    "Updated {} to {} at {} ({}).",
-    plan.name, plan.package.version, plan.source.revision, plan.package.digest
+    "{}",
+    terminal_text(&format!(
+      "Updated {} to {} at {} ({}).",
+      plan.name, plan.package.version, plan.source.revision, plan.package.digest
+    ))
   );
   Ok(0)
 }

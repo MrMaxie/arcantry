@@ -12,7 +12,6 @@ use arcantry_core::knowledge::{KnowledgeInspection, adapter_status};
 use arcantry_core::project_plan::{ProjectPlan, create_write_operation};
 use config::{SourceUpdate, add_configured_source};
 use files::*;
-use std::fs;
 use std::path::Path;
 
 pub(super) fn plan_transition(
@@ -130,7 +129,7 @@ pub(super) fn plan_transition(
           .push("Changelog cutover requires --managed-from <version>.".to_owned());
       }
       if plan.conflicts.is_empty() {
-        let current = fs::read_to_string(&source.absolute_path)?;
+        let current = inspection.read_source_to_string(&source)?;
         match arcantry_core::changelog::cutover(&current, managed_from.as_deref().unwrap()) {
           Ok(desired) if desired != current => plan.operations.push(create_write_operation(
             &inspection.root,
@@ -158,7 +157,7 @@ pub(super) fn plan_transition(
           .push(format!("Source {} does not exist.", source.id));
       }
       if plan.conflicts.is_empty() {
-        let current = fs::read_to_string(&source.absolute_path)?;
+        let current = inspection.read_source_to_string(&source)?;
         match arcantry_core::changelog::migrate_to_v2(&current) {
           Ok(desired) if desired != current => plan.operations.push(create_write_operation(
             &inspection.root,
@@ -174,6 +173,13 @@ pub(super) fn plan_transition(
     "relocate" => {
       if let Some(target_path) = to_path {
         let target = resolve_source_path(&inspection.root, &target_path);
+        if !Path::new(&target_path).is_absolute() {
+          arcantry_core::path_security::ensure_within(
+            &inspection.root,
+            &target,
+            "Relocate target",
+          )?;
+        }
         if same_path(&target, &source.absolute_path) {
           plan
             .conflicts
@@ -239,7 +245,7 @@ pub(super) fn plan_transition(
         );
       } else {
         let allow_absolute_paths = inspection.config_scope == Some("external");
-        let current = fs::read_to_string(config_path)?;
+        let current = inspection.read_authority.read_to_string(config_path)?;
         let updated = if source.origin == "configured" {
           patch_project_source(
             &current,

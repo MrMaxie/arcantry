@@ -1,6 +1,6 @@
 mod transition;
 
-use crate::RepoCommand;
+use crate::{RepoCommand, output::terminal_text};
 use anyhow::{Context, Result, bail};
 use arcantry_core::config::{Management, SourceKind, Visibility, resolve_project};
 use arcantry_core::knowledge::{KnowledgeInspection, inspect as inspect_knowledge};
@@ -57,7 +57,7 @@ pub fn execute(
       } else if json {
         print!("{}", serialize_plan(&plan)?);
       } else {
-        print!("{}", render_plan(&plan));
+        print!("{}", terminal_text(&render_plan(&plan)));
       }
       Ok(code)
     }
@@ -95,7 +95,11 @@ pub fn execute(
         println!("No file changes.");
       } else {
         for operation in outcome.operations {
-          println!("{}: {}", action_name(&operation.action), operation.path);
+          println!(
+            "{}: {}",
+            action_name(&operation.action),
+            terminal_text(&operation.path)
+          );
         }
       }
       Ok(0)
@@ -124,7 +128,7 @@ fn plan_detachment(inspection: &KnowledgeInspection, requested: &[String]) -> Re
     .config_path
     .as_ref()
     .context("Detachment requires explicit Arcantry repository configuration.")?;
-  let content = fs::read_to_string(config_path)?;
+  let content = inspection.read_authority.read_to_string(config_path)?;
   let config = arcantry_core::config::parse_project_config(
     &content,
     Some(arcantry_core::VERSION),
@@ -139,7 +143,9 @@ fn plan_detachment(inspection: &KnowledgeInspection, requested: &[String]) -> Re
     available.push("release-workflow".to_owned());
   }
   for (scope, path) in [("shared", "AGENTS.md"), ("private", ".local/AGENTS.md")] {
-    if fs::read_to_string(inspection.root.join(path))
+    if inspection
+      .read_authority
+      .read_to_string(&inspection.root.join(path))
       .ok()
       .is_some_and(|text| arcantry_core::managed_content::contains_managed_section(&text))
     {
@@ -252,7 +258,9 @@ fn plan_detachment(inspection: &KnowledgeInspection, requested: &[String]) -> Re
     if !selected.iter().any(|value| value == capability) {
       continue;
     }
-    let current = fs::read_to_string(inspection.root.join(path))?;
+    let current = inspection
+      .read_authority
+      .read_to_string(&inspection.root.join(path))?;
     match arcantry_core::managed_content::remove_managed_section(&current) {
       arcantry_core::managed_content::ManagedSectionResult::Changed(desired) => {
         plan.operations.push(create_write_operation(
@@ -370,7 +378,7 @@ pub fn handle_plan(
     if json {
       print!("{}", serialize_plan(&plan)?);
     } else {
-      print!("{}", render_plan(&plan));
+      print!("{}", terminal_text(&render_plan(&plan)));
       println!("Run the same command with --apply to write these changes.");
     }
     return Ok(i32::from(!plan.conflicts.is_empty()));
@@ -385,7 +393,11 @@ pub fn handle_plan(
     );
   } else {
     for operation in &outcome.operations {
-      println!("{}: {}", action_name(&operation.action), operation.path);
+      println!(
+        "{}: {}",
+        action_name(&operation.action),
+        terminal_text(&operation.path)
+      );
     }
     if outcome.operations.is_empty() {
       println!("No file changes.");
@@ -414,7 +426,7 @@ fn authority_for_generated_plan(plan: &ProjectPlan) -> Result<ApplyAuthority> {
 
 fn render_apply_warnings(outcome: &ApplyOutcome) {
   for warning in &outcome.warnings {
-    eprintln!("WARNING: {warning}");
+    eprintln!("WARNING: {}", terminal_text(warning));
   }
 }
 
@@ -462,21 +474,27 @@ pub(super) fn add_private_exclude_operation(
 }
 
 fn render_inspection(inspection: &KnowledgeInspection, detailed: bool) {
-  println!("Project: {}", inspection.root.display());
+  println!(
+    "Project: {}",
+    terminal_text(&inspection.root.display().to_string())
+  );
   println!("Mode: {}", inspection.mode);
   println!(
     "Config: {}",
-    inspection.config_path.as_ref().map_or_else(
+    terminal_text(&inspection.config_path.as_ref().map_or_else(
       || "none".to_owned(),
       |path| format!(
         "{} ({})",
         inspection.config_scope.unwrap_or("external"),
         path.display()
       )
-    )
+    ))
   );
   for path in &inspection.shadowed_config_paths {
-    println!("Shadowed config: {}", path.display());
+    println!(
+      "Shadowed config: {}",
+      terminal_text(&path.display().to_string())
+    );
   }
   let present = inspection
     .sources
@@ -489,90 +507,99 @@ fn render_inspection(inspection: &KnowledgeInspection, detailed: bool) {
   );
   println!(
     "Present: {}",
-    joined_ids(
+    terminal_text(&joined_ids(
       inspection
         .sources
         .iter()
         .filter(|source| source.exists)
         .map(|source| source.id.as_str())
-    )
+    ))
   );
   println!(
     "Absent: {}",
-    joined_ids(
+    terminal_text(&joined_ids(
       inspection
         .sources
         .iter()
         .filter(|source| !source.exists)
         .map(|source| source.id.as_str())
-    )
+    ))
   );
   println!(
     "Methodologies: {}",
-    joined_ids(
+    terminal_text(&joined_ids(
       inspection
         .methodologies
         .iter()
         .filter(|item| item.active)
         .map(|item| item.id)
-    )
+    ))
   );
   println!(".local: {}", inspection.local_boundary.status);
   if detailed {
     for source in &inspection.sources {
       println!(
-        "Source {}: kind={}, scope={}, visibility={}, management={}, adapter={}, status={}, state={}, origin={}, path={}, from={}",
-        source.id,
-        source.kind.name(),
-        source.scope,
-        source.visibility.name(),
-        source.management.name(),
-        source.adapter,
-        source.adapter_status,
-        if source.exists { "present" } else { "absent" },
-        source.origin,
-        source.path,
-        if source.from.is_empty() {
-          "none".to_owned()
-        } else {
-          source.from.join(",")
-        }
+        "{}",
+        terminal_text(&format!(
+          "Source {}: kind={}, scope={}, visibility={}, management={}, adapter={}, status={}, state={}, origin={}, path={}, from={}",
+          source.id,
+          source.kind.name(),
+          source.scope,
+          source.visibility.name(),
+          source.management.name(),
+          source.adapter,
+          source.adapter_status,
+          if source.exists { "present" } else { "absent" },
+          source.origin,
+          source.path,
+          if source.from.is_empty() {
+            "none".to_owned()
+          } else {
+            source.from.join(",")
+          }
+        ))
       );
     }
     for methodology in &inspection.methodologies {
       println!(
-        "Methodology {}: state={}, evidence={}",
-        methodology.id,
-        if methodology.active {
-          "active"
-        } else {
-          "absent"
-        },
-        if methodology.evidence.is_empty() {
-          "none".to_owned()
-        } else {
-          methodology.evidence.join(",")
-        }
+        "{}",
+        terminal_text(&format!(
+          "Methodology {}: state={}, evidence={}",
+          methodology.id,
+          if methodology.active {
+            "active"
+          } else {
+            "absent"
+          },
+          if methodology.evidence.is_empty() {
+            "none".to_owned()
+          } else {
+            methodology.evidence.join(",")
+          }
+        ))
       );
     }
     println!(
-      ".local details: git={}, exists={}, ignored={}, tracked={}, remote={}",
-      inspection.local_boundary.git_repository,
-      inspection.local_boundary.exists,
-      inspection
-        .local_boundary
-        .ignored
-        .map_or("n/a".to_owned(), |value| value.to_string()),
-      inspection.local_boundary.tracked,
-      inspection
-        .local_boundary
-        .remote_reference
-        .as_deref()
-        .unwrap_or("none")
+      "{}",
+      terminal_text(&format!(
+        ".local details: git={}, exists={}, ignored={}, tracked={}, remote={}",
+        inspection.local_boundary.git_repository,
+        inspection.local_boundary.exists,
+        inspection
+          .local_boundary
+          .ignored
+          .map_or("n/a".to_owned(), |value| value.to_string()),
+        inspection.local_boundary.tracked,
+        inspection
+          .local_boundary
+          .remote_reference
+          .as_deref()
+          .unwrap_or("none")
+      ))
     );
   }
   for diagnostic in &inspection.diagnostics {
-    println!("WARNING: {diagnostic}");
+    println!("WARNING: {}", terminal_text(diagnostic));
   }
 }
 
@@ -601,15 +628,15 @@ fn validate_repository_and_knowledge(
       diagnostic.message
     );
     if diagnostic.severity == "error" {
-      eprintln!("{line}");
+      eprintln!("{}", terminal_text(&line));
     } else {
-      println!("{line}");
+      println!("{}", terminal_text(&line));
     }
     if let Some(repair) = diagnostic.repair {
       if diagnostic.severity == "error" {
-        eprintln!("Repair: {repair}");
+        eprintln!("Repair: {}", terminal_text(&repair));
       } else {
-        println!("Repair: {repair}");
+        println!("Repair: {}", terminal_text(&repair));
       }
     }
   }
@@ -641,17 +668,26 @@ fn validate_repository_and_knowledge(
         )
       };
       if severity == "ERROR" {
-        eprintln!("{severity}: {}: {message}", source.id);
+        eprintln!(
+          "{}",
+          terminal_text(&format!("{severity}: {}: {message}", source.id))
+        );
       } else {
-        println!("{severity}: {}: {message}", source.id);
+        println!(
+          "{}",
+          terminal_text(&format!("{severity}: {}: {message}", source.id))
+        );
       }
     } else if !source.exists
       && matches!(source.management, Management::Validate | Management::Manage)
     {
       valid = false;
       eprintln!(
-        "ERROR: {}: Configured source is missing at {}.",
-        source.id, source.path
+        "{}",
+        terminal_text(&format!(
+          "ERROR: {}: Configured source is missing at {}.",
+          source.id, source.path
+        ))
       );
     } else if source.kind == SourceKind::Openspec
       && source.exists
@@ -659,7 +695,10 @@ fn validate_repository_and_knowledge(
       && !source.absolute_path.join("config.yaml").is_file()
     {
       valid = false;
-      eprintln!("ERROR: {}: OpenSpec config.yaml is missing.", source.id);
+      eprintln!(
+        "ERROR: {}: OpenSpec config.yaml is missing.",
+        terminal_text(&source.id)
+      );
     }
   }
   if valid {
@@ -684,7 +723,10 @@ fn render_repository_changes(changes: Vec<repository::RepositoryChange>) {
     println!("No changes required.");
   } else {
     for change in changes {
-      println!("{}: {}", change.action, change.path);
+      println!(
+        "{}",
+        terminal_text(&format!("{}: {}", change.action, change.path))
+      );
     }
   }
 }

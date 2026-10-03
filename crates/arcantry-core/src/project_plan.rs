@@ -99,10 +99,11 @@ impl ProjectPlan {
     if relative_path_escapes(path) {
       bail!("Plan input must stay within its source root.");
     }
-    self.inputs.insert(
-      path.to_owned(),
-      hash_path(&resolve_plan_path(&self.root, path))?,
-    );
+    let resolved = resolve_plan_path(&self.root, path);
+    if !Path::new(path).is_absolute() {
+      crate::path_security::ensure_within(&self.root, &resolved, "Plan input")?;
+    }
+    self.inputs.insert(path.to_owned(), hash_path(&resolved)?);
     Ok(())
   }
 }
@@ -113,10 +114,14 @@ pub fn create_write_operation(
   content: String,
   visibility: crate::config::Visibility,
 ) -> Result<PlanOperation> {
+  let resolved = resolve_plan_path(root, path);
+  if !Path::new(path).is_absolute() {
+    crate::path_security::ensure_within(root, &resolved, "Plan operation path")?;
+  }
   Ok(PlanOperation {
     action: Action::Write,
     path: path.to_owned(),
-    expected_hash: hash_path(&resolve_plan_path(root, path))?,
+    expected_hash: hash_path(&resolved)?,
     content_hash: Some(hash_content(&content)),
     content: Some(content),
     visibility,
@@ -127,10 +132,14 @@ pub fn create_delete_operation(
   path: &str,
   visibility: crate::config::Visibility,
 ) -> Result<PlanOperation> {
+  let resolved = resolve_plan_path(root, path);
+  if !Path::new(path).is_absolute() {
+    crate::path_security::ensure_within(root, &resolved, "Plan operation path")?;
+  }
   Ok(PlanOperation {
     action: Action::Delete,
     path: path.to_owned(),
-    expected_hash: hash_path(&resolve_plan_path(root, path))?,
+    expected_hash: hash_path(&resolved)?,
     content: None,
     content_hash: None,
     visibility,
@@ -141,10 +150,14 @@ pub fn create_delete_tree_operation(
   path: &str,
   visibility: crate::config::Visibility,
 ) -> Result<PlanOperation> {
+  let resolved = resolve_plan_path(root, path);
+  if !Path::new(path).is_absolute() {
+    crate::path_security::ensure_within(root, &resolved, "Plan operation path")?;
+  }
   Ok(PlanOperation {
     action: Action::DeleteTree,
     path: path.to_owned(),
-    expected_hash: hash_path(&resolve_plan_path(root, path))?,
+    expected_hash: hash_path(&resolved)?,
     content: None,
     content_hash: None,
     visibility,
@@ -991,11 +1004,11 @@ mod tests {
         )
         .unwrap(),
       );
+      let error = apply(&rejected_plan, &authority).unwrap_err();
       assert!(
-        apply(&rejected_plan, &authority)
-          .unwrap_err()
-          .to_string()
-          .contains("exact --allow-outside")
+        error.to_string().contains("exact --allow-outside"),
+        "unexpected error for {}: {error:#}",
+        rejected.display()
       );
     }
   }
@@ -1009,22 +1022,16 @@ mod tests {
     junction::create(outside.path(), &linked).unwrap();
     #[cfg(not(windows))]
     std::os::unix::fs::symlink(outside.path(), &linked).unwrap();
-    let mut plan = ProjectPlan::new(project.path().to_path_buf(), "test", "adopt", "test@1");
-    plan.operations.push(
+    assert!(
       create_write_operation(
         project.path(),
         "linked/escape.txt",
         "rejected\n".to_owned(),
         crate::config::Visibility::Shared,
       )
-      .unwrap(),
-    );
-
-    assert!(
-      apply(&plan, &ApplyAuthority::new(project.path()).unwrap())
-        .unwrap_err()
-        .to_string()
-        .contains("exact --allow-outside")
+      .unwrap_err()
+      .to_string()
+      .contains("must stay within the project")
     );
     assert!(!outside.path().join("escape.txt").exists());
   }

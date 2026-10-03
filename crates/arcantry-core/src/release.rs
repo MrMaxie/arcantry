@@ -2,6 +2,7 @@ use crate::config::{
   ProjectConfig, ReleaseConfig, ReleaseTopology, ReleaseUnitConfig, ReleaseUnitSelector,
   ResolvedProject, Visibility, effective_visibility, is_private_project_path,
 };
+use crate::path_security::ReadAuthority;
 use crate::project_plan::{ProjectPlan, create_write_operation};
 use crate::versioning::VersionStrategy;
 use anyhow::{Context, Result, bail};
@@ -9,7 +10,69 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
+
+const MAX_CHANGELOG_BYTES: usize = 1024 * 1024;
+
+struct LimitedOutput {
+  bytes: Vec<u8>,
+  limit: usize,
+  exceeded: bool,
+}
+
+impl LimitedOutput {
+  fn new(limit: usize) -> Self {
+    Self {
+      bytes: Vec::new(),
+      limit,
+      exceeded: false,
+    }
+  }
+
+  fn push_str(&mut self, value: &str) -> Result<()> {
+    self
+      .write_all(value.as_bytes())
+      .map_err(anyhow::Error::from)
+  }
+
+  fn push_line(&mut self, value: &str) -> Result<()> {
+    self.push_str(value)?;
+    self.push_str("\n")
+  }
+
+  fn finish(self) -> Result<String> {
+    if self.exceeded {
+      bail!("Generated changelog exceeds the 1 MiB output limit.");
+    }
+    Ok(String::from_utf8(self.bytes).expect("rendered changelog is UTF-8"))
+  }
+}
+
+impl Write for LimitedOutput {
+  fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
+    if self.bytes.len().saturating_add(buffer.len()) > self.limit {
+      self.exceeded = true;
+      return Err(io::Error::other(
+        "generated changelog exceeds the 1 MiB output limit",
+      ));
+    }
+    self.bytes.extend_from_slice(buffer);
+    Ok(buffer.len())
+  }
+
+  fn flush(&mut self) -> io::Result<()> {
+    Ok(())
+  }
+}
+
+fn bounded_changelog(parts: &[&str]) -> Result<String> {
+  let mut output = LimitedOutput::new(MAX_CHANGELOG_BYTES);
+  for part in parts {
+    output.push_str(part)?;
+  }
+  output.finish()
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReleaseManifest {
@@ -92,6 +155,7 @@ struct Configuration {
   repository_url: Option<String>,
   tag_prefix: String,
   version_sources: Vec<(String, String)>,
+  authority: ReadAuthority,
 }
 #[derive(Debug)]
 struct DependencyConfiguration {
@@ -223,7 +287,13 @@ pub fn cut(project: &ResolvedProject, date: &str, unit: Option<&str>) -> Result<
       path_visibility(&configuration.root, &configuration.releases),
     )?);
     for (path, adapter) in &configuration.version_sources {
-      let content = update_version(&configuration.root, path, adapter, &manifest.version)?;
+      let content = update_version(
+        &configuration.root,
+        &configuration.authority,
+        path,
+        adapter,
+        &manifest.version,
+      )?;
       plan.operations.push(create_write_operation(
         &configuration.root,
         path,
@@ -356,7 +426,9 @@ fn check_configuration(
         &manifest.version
       }),
   )?;
-  let changelog = fs::read_to_string(configuration.root.join(&configuration.changelog))
+  let changelog = configuration
+    .authority
+    .read_to_string(&configuration.root.join(&configuration.changelog))
     .context("CHANGELOG.md is missing")?;
   if changelog != render_changelog(configuration, &state)? {
     bail!("CHANGELOG.md is stale; run the configured release render command");
@@ -380,7 +452,9 @@ fn check_configuration(
       .openspec
       .iter()
       .flat_map(|(_, path)| {
-        fs::read_dir(configuration.root.join(path).join("changes"))
+        configuration
+          .authority
+          .read_dir(&configuration.root.join(path).join("changes"))
           .into_iter()
           .flatten()
           .flatten()
@@ -572,11 +646,12 @@ fn configuration(project: &ResolvedProject, unit: Option<&str>) -> Result<Config
         .with_context(|| format!("Release changelog dependency is not OpenSpec: {id}."))
     })
     .collect::<Result<Vec<_>>>()?;
+  let authority = ReadAuthority::for_project(project)?;
   if openspec
     .iter()
     .all(|(_, path)| project.root.join(path).join("config.yaml").is_file())
   {
-    validate_single_coverage(project, &openspec)?;
+    validate_single_coverage(project, &openspec, &authority)?;
   }
   Ok(Configuration {
     strategy: release.version_strategy,
@@ -608,6 +683,7 @@ fn configuration(project: &ResolvedProject, unit: Option<&str>) -> Result<Config
       .iter()
       .map(|source| (source.path.clone(), source.adapter.clone()))
       .collect(),
+    authority,
   })
 }
 
@@ -689,10 +765,12 @@ fn unit_configuration(
       .iter()
       .map(|source| (source.path.clone(), source.adapter.clone()))
       .collect(),
+    authority: ReadAuthority::for_project(project)?,
   })
 }
 
 fn validate_multi_coverage(project: &ResolvedProject, release: &ReleaseConfig) -> Result<()> {
+  let authority = ReadAuthority::for_project(project)?;
   let config = project
     .config
     .as_ref()
@@ -711,7 +789,7 @@ fn validate_multi_coverage(project: &ResolvedProject, release: &ReleaseConfig) -
     let openspec = project.root.join(path);
     let archive = openspec.join("changes/archive");
     if archive.exists() {
-      for entry in fs::read_dir(&archive)? {
+      for entry in authority.read_dir(&archive)? {
         let entry = entry?;
         if !entry.file_type()?.is_dir() {
           continue;
@@ -724,20 +802,24 @@ fn validate_multi_coverage(project: &ResolvedProject, release: &ReleaseConfig) -
         if archived.contains_key(&id) {
           bail!("duplicate archived change id: {id}");
         }
-        if let Some(artifact) = classify_change(&openspec, source_id, &entry.path(), &id)? {
+        if let Some(artifact) =
+          classify_change(&openspec, source_id, &entry.path(), &id, &authority)?
+        {
           archived.insert(id, artifact);
         }
       }
     }
     let active = openspec.join("changes");
     if active.exists() {
-      for entry in fs::read_dir(active)? {
+      for entry in authority.read_dir(&active)? {
         let entry = entry?;
         if !entry.file_type()?.is_dir() || entry.file_name() == "archive" {
           continue;
         }
         let id = entry.file_name().to_string_lossy().into_owned();
-        if let Some(artifact) = classify_change(&openspec, source_id, &entry.path(), &id)? {
+        if let Some(artifact) =
+          classify_change(&openspec, source_id, &entry.path(), &id, &authority)?
+        {
           validate_artifact_units(&id, &artifact, release)?;
         }
       }
@@ -794,12 +876,16 @@ fn validate_artifact_units(
   Ok(())
 }
 
-fn validate_single_coverage(project: &ResolvedProject, sources: &[(String, String)]) -> Result<()> {
+fn validate_single_coverage(
+  project: &ResolvedProject,
+  sources: &[(String, String)],
+  authority: &ReadAuthority,
+) -> Result<()> {
   for (source_id, path) in sources {
     let openspec = project.root.join(path);
     let archive = openspec.join("changes/archive");
     if archive.exists() {
-      for entry in fs::read_dir(&archive)? {
+      for entry in authority.read_dir(&archive)? {
         let entry = entry?;
         if !entry.file_type()?.is_dir() {
           continue;
@@ -808,18 +894,21 @@ fn validate_single_coverage(project: &ResolvedProject, sources: &[(String, Strin
         let id = directory
           .get(11..)
           .context(format!("invalid OpenSpec archive directory: {directory}"))?;
-        if let Some(artifact) = classify_change(&openspec, source_id, &entry.path(), id)? {
+        if let Some(artifact) = classify_change(&openspec, source_id, &entry.path(), id, authority)?
+        {
           validate_single_artifact(id, &artifact)?;
         }
       }
     }
     let active = openspec.join("changes");
     if active.exists() {
-      for entry in fs::read_dir(active)? {
+      for entry in authority.read_dir(&active)? {
         let entry = entry?;
         if entry.file_type()?.is_dir() && entry.file_name() != "archive" {
           let id = entry.file_name().to_string_lossy().into_owned();
-          if let Some(artifact) = classify_change(&openspec, source_id, &entry.path(), &id)? {
+          if let Some(artifact) =
+            classify_change(&openspec, source_id, &entry.path(), &id, authority)?
+          {
             validate_single_artifact(&id, &artifact)?;
           }
         }
@@ -978,7 +1067,7 @@ fn read_archived(configuration: &Configuration) -> Result<BTreeMap<String, Artif
     if !archive.exists() {
       continue;
     }
-    for entry in fs::read_dir(archive)? {
+    for entry in configuration.authority.read_dir(&archive)? {
       let entry = entry?;
       if !entry.file_type()?.is_dir() {
         continue;
@@ -997,10 +1086,13 @@ fn read_archived(configuration: &Configuration) -> Result<BTreeMap<String, Artif
           source_id,
           &entry.path(),
           &id,
+          &configuration.authority,
         )?
       } else {
         Some(parse_artifact(
-          &fs::read_to_string(entry.path().join("release.md"))
+          &configuration
+            .authority
+            .read_to_string(&entry.path().join("release.md"))
             .with_context(|| format!("archived change {id} has no release.md"))?,
           false,
         )?)
@@ -1039,7 +1131,10 @@ fn apply_projection_groups(
     if !groups.is_dir() {
       continue;
     }
-    let mut entries = fs::read_dir(groups)?.collect::<std::io::Result<Vec<_>>>()?;
+    let mut entries = configuration
+      .authority
+      .read_dir(&groups)?
+      .collect::<std::io::Result<Vec<_>>>()?;
     entries.sort_by_key(|entry| entry.file_name());
     for entry in entries {
       if entry.path().extension().and_then(|value| value.to_str()) != Some("yaml") {
@@ -1052,7 +1147,8 @@ fn apply_projection_groups(
         .filter(|value| valid_id(value))
         .context("release group filename must be a stable slug")?
         .to_owned();
-      let group: ProjectionGroup = serde_saphyr::from_str(&fs::read_to_string(entry.path())?)?;
+      let group: ProjectionGroup =
+        serde_saphyr::from_str(&configuration.authority.read_to_string(&entry.path())?)?;
       if !valid_category(&group.category)
         || group.audiences.is_empty()
         || group.audiences.iter().any(|value| !valid_id(value))
@@ -1425,16 +1521,21 @@ fn classify_change(
   source_id: &str,
   change: &Path,
   id: &str,
+  authority: &ReadAuthority,
 ) -> Result<Option<Artifact>> {
-  let schema = read_yaml_schema(&change.join(".openspec.yaml"))?
-    .or(read_yaml_schema(&openspec_root.join("config.yaml"))?)
+  let schema = read_yaml_schema(&change.join(".openspec.yaml"), authority)?
+    .or(read_yaml_schema(
+      &openspec_root.join("config.yaml"),
+      authority,
+    )?)
     .with_context(|| format!("OpenSpec change {id} has no resolvable schema"))?;
   let schema_path = openspec_root
     .join("schemas")
     .join(&schema)
     .join("schema.yaml");
   let definition: OpenSpecSchema = serde_saphyr::from_str(
-    &fs::read_to_string(&schema_path)
+    &authority
+      .read_to_string(&schema_path)
       .with_context(|| format!("OpenSpec change {id} references unknown schema: {schema}"))?,
   )?;
   let releases = definition
@@ -1458,16 +1559,16 @@ fn classify_change(
   if releases.len() != 1 || !release_path.exists() {
     bail!("release-bearing OpenSpec change {id} requires release.md");
   }
-  let mut artifact = parse_artifact(&fs::read_to_string(release_path)?, true)?;
+  let mut artifact = parse_artifact(&authority.read_to_string(&release_path)?, true)?;
   artifact.source_id = Some(source_id.to_owned());
   Ok(Some(artifact))
 }
 
-fn read_yaml_schema(path: &Path) -> Result<Option<String>> {
+fn read_yaml_schema(path: &Path, authority: &ReadAuthority) -> Result<Option<String>> {
   if !path.exists() {
     return Ok(None);
   }
-  let metadata: OpenSpecMetadata = serde_saphyr::from_str(&fs::read_to_string(path)?)?;
+  let metadata: OpenSpecMetadata = serde_saphyr::from_str(&authority.read_to_string(path)?)?;
   Ok(metadata.schema.filter(|schema| !schema.trim().is_empty()))
 }
 
@@ -1498,8 +1599,14 @@ fn active_matches(configuration: &Configuration, change: &Path) -> Result<bool> 
     .and_then(|value| value.to_str())
     .context("active OpenSpec change has invalid id")?;
   Ok(
-    classify_change(&configuration.root.join(source_path), source_id, change, id)?
-      .is_some_and(|artifact| artifact_matches(configuration, &artifact)),
+    classify_change(
+      &configuration.root.join(source_path),
+      source_id,
+      change,
+      id,
+      &configuration.authority,
+    )?
+    .is_some_and(|artifact| artifact_matches(configuration, &artifact)),
   )
 }
 
@@ -1541,13 +1648,24 @@ fn read_manifest_directory(
   if !directory.exists() {
     return Ok(Vec::new());
   }
+  let authority = configuration.map_or_else(
+    || {
+      ReadAuthority::new(
+        directory
+          .parent()
+          .context("Release manifest directory has no project root.")?,
+      )
+    },
+    |configuration| Ok(configuration.authority.clone()),
+  )?;
   let mut manifests = Vec::new();
-  for entry in fs::read_dir(directory)? {
+  for entry in authority.read_dir(directory)? {
     let entry = entry?;
     if entry.path().extension().and_then(|value| value.to_str()) != Some("yaml") {
       continue;
     }
-    let manifest: ReleaseManifest = serde_saphyr::from_str(&fs::read_to_string(entry.path())?)?;
+    let manifest: ReleaseManifest =
+      serde_saphyr::from_str(&authority.read_to_string(&entry.path())?)?;
     if entry.path().file_stem().and_then(|value| value.to_str()) != Some(&manifest.version) {
       bail!("release manifest filename must match version");
     }
@@ -1590,7 +1708,7 @@ fn read_manifest_directory(
           .join(&dependency_state.releases)
           .join(format!("{version}.yaml"));
         let candidate: ReleaseManifest =
-          serde_saphyr::from_str(&fs::read_to_string(path).with_context(|| {
+          serde_saphyr::from_str(&authority.read_to_string(&path).with_context(|| {
             format!(
               "release {} pins unknown {dependency} version {version}",
               manifest.version
@@ -1656,10 +1774,11 @@ fn render_changelog(configuration: &Configuration, state: &State) -> Result<Stri
 
   let rendered = if let Some(path) = &configuration.template {
     let path = configuration.root.join(path);
+    configuration.authority.authorize(&path)?;
     if fs::metadata(&path)?.len() > 32768 {
       bail!("Changelog template exceeds 32 KiB.");
     }
-    let template = fs::read_to_string(path)?;
+    let template = configuration.authority.read_to_string(&path)?;
     let releases: Vec<_> = state
       .manifests
       .iter()
@@ -1689,25 +1808,40 @@ fn render_changelog(configuration: &Configuration, state: &State) -> Result<Stri
     let mut environment = minijinja::Environment::new();
     environment.set_undefined_behavior(minijinja::UndefinedBehavior::Strict);
     environment.set_fuel(Some(100_000));
-    environment.render_str(&template, serde_json::json!({"releases":releases,"unit":configuration.unit,"strategy":configuration.strategy}))?
+    let template = environment.template_from_str(&template)?;
+    let mut output = LimitedOutput::new(MAX_CHANGELOG_BYTES);
+    if let Err(error) = template.render_captured_to(
+      serde_json::json!({"releases":releases,"unit":configuration.unit,"strategy":configuration.strategy}),
+      &mut output,
+    ) {
+      if output.exceeded {
+        bail!("Generated changelog exceeds the 1 MiB output limit.");
+      }
+      return Err(error.into());
+    }
+    output.finish()?
   } else {
-    render_preset_changelog(configuration, state)
+    render_preset_changelog(configuration, state)?
   };
-  let existing = match fs::read_to_string(configuration.root.join(&configuration.changelog)) {
-    Ok(text) => text,
-    Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
-    Err(error) => return Err(error.into()),
+  let changelog_path = configuration
+    .authority
+    .authorize(&configuration.root.join(&configuration.changelog))?;
+  let existing = if fs::symlink_metadata(&changelog_path).is_err() {
+    String::new()
+  } else {
+    let mut text = String::new();
+    fs::File::open(&changelog_path)?
+      .take(MAX_CHANGELOG_BYTES as u64 + 1)
+      .read_to_string(&mut text)?;
+    if text.len() > MAX_CHANGELOG_BYTES {
+      bail!("Generated changelog exceeds the 1 MiB output limit.");
+    }
+    text
   };
   let start = "<!-- arcantry:changelog:start -->";
   let end = "<!-- arcantry:changelog:end -->";
-  let block = format!(
-    "{start}\n{}{end}",
-    if rendered.ends_with('\n') {
-      rendered.clone()
-    } else {
-      format!("{rendered}\n")
-    }
-  );
+  let trailing_newline = if rendered.ends_with('\n') { "" } else { "\n" };
+  let block = bounded_changelog(&[start, "\n", &rendered, trailing_newline, end])?;
   if existing.contains(start) || existing.contains(end) {
     if existing.matches(start).count() != 1 || existing.matches(end).count() != 1 {
       bail!("Ambiguous managed changelog markers.");
@@ -1717,48 +1851,42 @@ fn render_changelog(configuration: &Configuration, state: &State) -> Result<Stri
     if first >= last {
       bail!("Invalid managed changelog marker order.");
     }
-    return Ok(format!(
-      "{}{}{}",
-      &existing[..first],
-      block,
-      &existing[last + end.len()..]
-    ));
+    return bounded_changelog(&[&existing[..first], &block, &existing[last + end.len()..]]);
   }
   let baseline = state
     .manifests
     .first()
     .is_some_and(|m| m.baseline == Some(true));
   if baseline && !existing.is_empty() && !existing.contains("<!-- Arcantry release baseline:") {
-    return Ok(format!("{block}\n\n{existing}"));
+    return bounded_changelog(&[&block, "\n\n", &existing]);
   }
   if configuration.template.is_some() || configuration.strategy != VersionStrategy::Semver {
-    return Ok(format!("{block}\n"));
+    return bounded_changelog(&[&block, "\n"]);
   }
-  Ok(rendered)
+  bounded_changelog(&[&rendered])
 }
 
-fn render_preset_changelog(configuration: &Configuration, state: &State) -> String {
+fn render_preset_changelog(configuration: &Configuration, state: &State) -> Result<String> {
   let preamble = "# Changelog\n\nAll notable changes to this project will be documented in this file.\n\nThe format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),\nand this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).";
-  let mut lines = vec![
-    if configuration.strategy == VersionStrategy::Semver {
-      preamble.to_owned()
-    } else {
-      "# Changelog".to_owned()
-    },
-    String::new(),
-    "## [Unreleased]".to_owned(),
-    String::new(),
-  ];
+  let mut output = LimitedOutput::new(MAX_CHANGELOG_BYTES);
+  output.push_line(if configuration.strategy == VersionStrategy::Semver {
+    preamble
+  } else {
+    "# Changelog"
+  })?;
+  output.push_line("")?;
+  output.push_line("## [Unreleased]")?;
+  output.push_line("")?;
   if let Some(baseline) = state
     .manifests
     .iter()
     .find(|manifest| manifest.baseline == Some(true))
   {
-    lines.push(format!(
+    output.push_line(&format!(
       "<!-- Arcantry release baseline: {} ({}). Earlier history is not reconstructed. -->",
       baseline.version, baseline.date
-    ));
-    lines.push(String::new());
+    ))?;
+    output.push_line("")?;
   }
   for manifest in state
     .manifests
@@ -1781,8 +1909,8 @@ fn render_preset_changelog(configuration: &Configuration, state: &State) -> Stri
     if grouped.is_empty() {
       continue;
     }
-    lines.push(format!("## [{}] - {}", manifest.version, manifest.date));
-    lines.push(String::new());
+    output.push_line(&format!("## [{}] - {}", manifest.version, manifest.date))?;
+    output.push_line("")?;
     for (category, heading) in [
       ("added", "Added"),
       ("changed", "Changed"),
@@ -1792,32 +1920,43 @@ fn render_preset_changelog(configuration: &Configuration, state: &State) -> Stri
       ("security", "Security"),
     ] {
       if let Some(entries) = grouped.get(category) {
-        lines.push(format!("### {heading}"));
-        lines.push(String::new());
+        output.push_line(&format!("### {heading}"))?;
+        output.push_line("")?;
         for (id, artifact, outcome) in entries {
           if artifact.projection_members.is_empty() {
-            lines.push(format!("<!-- openspec: {id} -->"));
+            output.push_line(&format!("<!-- openspec: {id} -->"))?;
           } else {
             for member in &artifact.projection_members {
-              lines.push(format!("<!-- openspec: {member} -->"));
+              output.push_line(&format!("<!-- openspec: {member} -->"))?;
             }
           }
-          lines.push(format!("#### {}", outcome.title));
-          lines.push(String::new());
-          lines.push(outcome.body.clone());
-          lines.push(String::new());
+          output.push_line(&format!("#### {}", outcome.title))?;
+          output.push_line("")?;
+          output.push_line(&outcome.body)?;
+          output.push_line("")?;
         }
       }
     }
   }
-  let mut result = format!("{}\n", lines.join("\n").trim_end());
+  let mut result = output.finish()?;
+  let trimmed = result.trim_end().len();
+  result.truncate(trimmed);
+  result.push('\n');
+  if result.len() > MAX_CHANGELOG_BYTES {
+    bail!("Generated changelog exceeds the 1 MiB output limit.");
+  }
   if let (Some(url), Some(latest)) = (&configuration.repository_url, state.manifests.last()) {
     let url = url.trim_end_matches('/');
-    result.push('\n');
-    result.push_str(&format!(
+    let mut links = LimitedOutput {
+      bytes: result.into_bytes(),
+      limit: MAX_CHANGELOG_BYTES,
+      exceeded: false,
+    };
+    links.push_str("\n")?;
+    links.push_str(&format!(
       "[Unreleased]: {}/compare/{}{}...HEAD\n",
       url, configuration.tag_prefix, latest.version
-    ));
+    ))?;
     for (index, manifest) in state.manifests.iter().enumerate() {
       if manifest.baseline == Some(true) {
         continue;
@@ -1826,7 +1965,7 @@ fn render_preset_changelog(configuration: &Configuration, state: &State) -> Stri
         .checked_sub(1)
         .and_then(|value| state.manifests.get(value))
       {
-        result.push_str(&format!(
+        links.push_str(&format!(
           "[{}]: {}/compare/{}{}...{}{}\n",
           manifest.version,
           url,
@@ -1834,20 +1973,26 @@ fn render_preset_changelog(configuration: &Configuration, state: &State) -> Stri
           previous.version,
           configuration.tag_prefix,
           manifest.version
-        ));
+        ))?;
       } else {
-        result.push_str(&format!(
+        links.push_str(&format!(
           "[{}]: {}/releases/tag/{}{}\n",
           manifest.version, url, configuration.tag_prefix, manifest.version
-        ));
+        ))?;
       }
     }
+    return links.finish();
   }
-  result
+  Ok(result)
 }
 
-fn read_version(root: &Path, path: &str, adapter: &str) -> Result<String> {
-  let content = fs::read_to_string(root.join(path))?;
+fn read_version(
+  root: &Path,
+  authority: &ReadAuthority,
+  path: &str,
+  adapter: &str,
+) -> Result<String> {
+  let content = authority.read_to_string(&root.join(path))?;
   if adapter == "text-version@1" {
     return Ok(content.trim().to_owned());
   }
@@ -1871,8 +2016,14 @@ fn read_version(root: &Path, path: &str, adapter: &str) -> Result<String> {
   }
   bail!("Unsupported release version adapter: {adapter}")
 }
-fn update_version(root: &Path, path: &str, adapter: &str, version: &str) -> Result<String> {
-  let content = fs::read_to_string(root.join(path))?;
+fn update_version(
+  root: &Path,
+  authority: &ReadAuthority,
+  path: &str,
+  adapter: &str,
+  version: &str,
+) -> Result<String> {
+  let content = authority.read_to_string(&root.join(path))?;
   if matches!(adapter, "json-package@1" | "cargo-workspace@1") {
     VersionStrategy::Semver.key(version)?;
   }
@@ -1921,7 +2072,7 @@ fn validate_versions(configuration: &Configuration, expected: &str) -> Result<()
     if matches!(adapter.as_str(), "json-package@1" | "cargo-workspace@1") {
       VersionStrategy::Semver.key(expected)?;
     }
-    let actual = read_version(&configuration.root, path, adapter)?;
+    let actual = read_version(&configuration.root, &configuration.authority, path, adapter)?;
     if actual != expected {
       bail!("Version source must match {expected}: {path} contains {actual}.");
     }
@@ -1964,12 +2115,13 @@ fn latest_dependency_version(configuration: &Configuration, dependency: &str) ->
   let directory = configuration.root.join(&state.releases);
   let mut versions = Vec::new();
   if directory.exists() {
-    for entry in fs::read_dir(directory)? {
+    for entry in configuration.authority.read_dir(&directory)? {
       let entry = entry?;
       if entry.path().extension().and_then(|value| value.to_str()) != Some("yaml") {
         continue;
       }
-      let manifest: ReleaseManifest = serde_saphyr::from_str(&fs::read_to_string(entry.path())?)?;
+      let manifest: ReleaseManifest =
+        serde_saphyr::from_str(&configuration.authority.read_to_string(&entry.path())?)?;
       if manifest.format == Some(2) && manifest.unit.as_deref() == Some(dependency) {
         versions.push((state.strategy.key(&manifest.version)?, manifest.version));
       }
@@ -1981,7 +2133,7 @@ fn latest_dependency_version(configuration: &Configuration, dependency: &str) ->
     .map(|(_, version)| version.clone())
     .with_context(|| format!("Release unit dependency has no manifest: {dependency}."))?;
   for (path, adapter) in &state.version_sources {
-    let actual = read_version(&configuration.root, path, adapter)?;
+    let actual = read_version(&configuration.root, &configuration.authority, path, adapter)?;
     if actual != latest {
       bail!("Dependency version source must match {latest}: {path} contains {actual}.");
     }
@@ -2053,6 +2205,7 @@ mod tests {
       repository_url: None,
       tag_prefix: "v".to_owned(),
       version_sources: Vec::new(),
+      authority: ReadAuthority::new(root).unwrap(),
     }
   }
 
@@ -2258,8 +2411,158 @@ mod tests {
     fs::write(root.join("package.json"), source).unwrap();
 
     assert_eq!(
-      update_version(root, "package.json", "json-package@1", "1.1.0").unwrap(),
+      update_version(
+        root,
+        &ReadAuthority::new(root).unwrap(),
+        "package.json",
+        "json-package@1",
+        "1.1.0",
+      )
+      .unwrap(),
       source.replace("\"1.0.0\"", "\"1.1.0\"")
+    );
+  }
+
+  #[test]
+  fn rejects_custom_template_output_over_one_mibibyte() {
+    let directory = tempfile::tempdir().unwrap();
+    let template =
+      "{% for item in range(100) %}{{ releases[0].changes[0].outcomes[0].body }}{% endfor %}";
+    fs::write(directory.path().join("template.j2"), template).unwrap();
+    let mut configuration = release_configuration(directory.path());
+    configuration.template = Some("template.j2".to_owned());
+    let state = State {
+      archived: BTreeMap::from([(
+        "large".to_owned(),
+        Artifact {
+          impact: "patch".to_owned(),
+          visibility: "public".to_owned(),
+          components: vec!["cli".to_owned()],
+          unit_impacts: BTreeMap::new(),
+          dependency_updates: BTreeMap::new(),
+          source_id: None,
+          outcomes: vec![ReleaseOutcome {
+            category: "security".to_owned(),
+            title: "Bound output".to_owned(),
+            body: "x".repeat(16 * 1024),
+          }],
+          projection_group: None,
+          projection_members: Vec::new(),
+          audiences: Vec::new(),
+          observable_impact: None,
+        },
+      )]),
+      manifests: vec![ReleaseManifest {
+        format: None,
+        unit: None,
+        version: "1.0.0".to_owned(),
+        date: "2026-10-03".to_owned(),
+        changes: vec!["large".to_owned()],
+        baseline: None,
+        dependencies: BTreeMap::new(),
+      }],
+      assigned: BTreeSet::from(["large".to_owned()]),
+    };
+
+    assert!(
+      render_changelog(&configuration, &state)
+        .unwrap_err()
+        .to_string()
+        .contains("1 MiB output limit")
+    );
+  }
+
+  #[test]
+  fn rejects_preset_output_over_one_mibibyte() {
+    let directory = tempfile::tempdir().unwrap();
+    let configuration = release_configuration(directory.path());
+    let state = State {
+      archived: BTreeMap::from([(
+        "large".to_owned(),
+        Artifact {
+          impact: "patch".to_owned(),
+          visibility: "public".to_owned(),
+          components: vec!["cli".to_owned()],
+          unit_impacts: BTreeMap::new(),
+          dependency_updates: BTreeMap::new(),
+          source_id: None,
+          outcomes: vec![ReleaseOutcome {
+            category: "security".to_owned(),
+            title: "Bound output".to_owned(),
+            body: "x".repeat(MAX_CHANGELOG_BYTES),
+          }],
+          projection_group: None,
+          projection_members: Vec::new(),
+          audiences: Vec::new(),
+          observable_impact: None,
+        },
+      )]),
+      manifests: vec![ReleaseManifest {
+        format: None,
+        unit: None,
+        version: "1.0.0".to_owned(),
+        date: "2026-10-03".to_owned(),
+        changes: vec!["large".to_owned()],
+        baseline: None,
+        dependencies: BTreeMap::new(),
+      }],
+      assigned: BTreeSet::from(["large".to_owned()]),
+    };
+
+    assert!(
+      render_changelog(&configuration, &state)
+        .unwrap_err()
+        .to_string()
+        .contains("1 MiB output limit")
+    );
+  }
+
+  #[test]
+  fn rejects_managed_changelog_result_over_one_mibibyte() {
+    let directory = tempfile::tempdir().unwrap();
+    fs::write(directory.path().join("template.j2"), "x".repeat(1024)).unwrap();
+    let mut configuration = release_configuration(directory.path());
+    configuration.template = Some("template.j2".to_owned());
+    let start = "<!-- arcantry:changelog:start -->";
+    let end = "<!-- arcantry:changelog:end -->";
+    let prefix = format!("{start}\nold\n{end}");
+    let existing = format!("{prefix}{}", "x".repeat(MAX_CHANGELOG_BYTES - prefix.len()));
+    fs::write(directory.path().join("CHANGELOG.md"), existing).unwrap();
+    let state = State {
+      archived: BTreeMap::new(),
+      manifests: Vec::new(),
+      assigned: BTreeSet::new(),
+    };
+
+    assert!(
+      render_changelog(&configuration, &state)
+        .unwrap_err()
+        .to_string()
+        .contains("1 MiB output limit")
+    );
+  }
+
+  #[test]
+  fn rejects_release_manifests_linked_outside_the_project() {
+    let directory = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    fs::write(
+      outside.path().join("1.0.0.yaml"),
+      "version: 1.0.0\ndate: 2026-10-03\nchanges:\n  - secret\n",
+    )
+    .unwrap();
+    let linked = directory.path().join("releases");
+    #[cfg(windows)]
+    junction::create(outside.path(), &linked).unwrap();
+    #[cfg(not(windows))]
+    std::os::unix::fs::symlink(outside.path(), &linked).unwrap();
+    let configuration = release_configuration(directory.path());
+
+    assert!(
+      read_manifests(&configuration)
+        .unwrap_err()
+        .to_string()
+        .contains("trusted project read boundary")
     );
   }
 
