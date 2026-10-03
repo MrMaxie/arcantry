@@ -106,7 +106,7 @@ package-check:
 [private]
 package-target-smoke target:
   cargo run -p xtask -- prepare-package
-  cargo run -p xtask -- package-smoke --target {{ quote(target) }}
+  cargo run -p xtask -- package-smoke --target {{ quote(target) }} --native-only
 
 [private]
 package-release artifacts output:

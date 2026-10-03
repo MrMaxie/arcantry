@@ -167,6 +167,19 @@ mod tests {
       .unwrap()
       .to_owned();
     assert!(native_recipe.contains("mise exec cargo:cargo-dist -- dist build"));
+    assert!(native_recipe.contains("just package-target-smoke {{ quote(target) }}"));
     assert!(!native_recipe.contains("mise exec -- dist build"));
+
+    let justfile = justfile();
+    let package_target_recipe = justfile
+      .split("\npackage-target-smoke target:\n")
+      .nth(1)
+      .unwrap()
+      .split("\npackage-release artifacts output:\n")
+      .next()
+      .unwrap();
+    assert!(
+      package_target_recipe.contains("package-smoke --target {{ quote(target) }} --native-only")
+    );
   }
 }
