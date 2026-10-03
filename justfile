@@ -69,7 +69,7 @@ native-conformance:
 
 native-target-check target tag:
   cargo test --workspace
-  mise exec -- dist build --artifacts=local --target={{ quote(target) }} --tag={{ quote(tag) }} --allow-dirty
+  mise exec cargo:cargo-dist -- dist build --artifacts=local --target={{ quote(target) }} --tag={{ quote(tag) }} --allow-dirty
   cargo run -p xtask -- smoke-target --target {{ quote(target) }}
   just package-target-smoke {{ quote(target) }}
 
