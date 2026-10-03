@@ -67,7 +67,7 @@ mod tests {
 
   fn justfile() -> String {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-    std::fs::read_to_string(root.join("Justfile"))
+    std::fs::read_to_string(root.join("justfile"))
       .unwrap()
       .replace("\r\n", "\n")
   }

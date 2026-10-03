@@ -590,7 +590,7 @@ mod tests {
     assert!(workflow.contains("name: release-${{ github.ref_name }}"));
     assert!(!workflow.contains("release-v1.0.0"));
     assert!(workflow.contains(
-      "run: mise exec -- just native-target-check \"${{ matrix.target }}\" \"${{ github.ref_name }}\""
+      "run: just native-target-check \"${{ matrix.target }}\" \"${{ github.ref_name }}\""
     ));
     assert!(
       workflow.contains("draft-release:\n    needs:\n      - assemble\n      - installer-smoke")
