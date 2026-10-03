@@ -58,6 +58,13 @@ mod tests {
       .replace("\r\n", "\n")
   }
 
+  fn release_workflow() -> String {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    std::fs::read_to_string(root.join(".github/workflows/release.yml"))
+      .unwrap()
+      .replace("\r\n", "\n")
+  }
+
   #[test]
   fn appends_the_node_directory_to_github_path() {
     let root = tempfile::tempdir().unwrap();
@@ -116,5 +123,30 @@ mod tests {
     assert!(required_check.contains("timeout-minutes: 5"));
     assert!(required_check.contains("needs.host.result"));
     assert!(required_check.contains("needs.linux-system-test.result"));
+  }
+
+  #[test]
+  fn release_native_jobs_install_only_required_tools() {
+    let workflow = release_workflow();
+    let native_job = workflow
+      .split("\n  native:\n")
+      .nth(1)
+      .unwrap()
+      .split("\n  assemble:\n")
+      .next()
+      .unwrap();
+
+    assert!(native_job.contains("install_args: just nub rust cargo:cargo-dist"));
+    for unused in [
+      "pnpm",
+      "aqua:oven-sh/bun",
+      "cargo:cargo-deny",
+      "cargo:cargo-llvm-cov",
+    ] {
+      assert!(
+        !native_job.contains(unused),
+        "native release bootstrap installs {unused}"
+      );
+    }
   }
 }
