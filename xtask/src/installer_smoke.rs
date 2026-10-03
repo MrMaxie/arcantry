@@ -165,6 +165,10 @@ impl Execution {
 }
 
 fn installer_commands(artifacts: &Path) -> Vec<(OsString, Vec<OsString>)> {
+  installer_commands_for_host(artifacts, cfg!(windows))
+}
+
+fn installer_commands_for_host(artifacts: &Path, windows: bool) -> Vec<(OsString, Vec<OsString>)> {
   let powershell = (
     OsString::from("pwsh"),
     vec![
@@ -174,19 +178,16 @@ fn installer_commands(artifacts: &Path) -> Vec<(OsString, Vec<OsString>)> {
       OsString::from("-NoModifyPath"),
     ],
   );
-  if cfg!(windows) {
+  if windows {
     vec![powershell]
   } else {
-    vec![
-      (
-        OsString::from("bash"),
-        vec![
-          artifacts.join("arcantry-installer.sh").into_os_string(),
-          OsString::from("--no-modify-path"),
-        ],
-      ),
-      powershell,
-    ]
+    vec![(
+      OsString::from("bash"),
+      vec![
+        artifacts.join("arcantry-installer.sh").into_os_string(),
+        OsString::from("--no-modify-path"),
+      ],
+    )]
   }
 }
 
@@ -311,15 +312,13 @@ mod tests {
   }
 
   #[test]
-  fn selects_the_native_installers_for_the_host() {
-    let commands = installer_commands(Path::new("artifacts"));
-    if cfg!(windows) {
-      assert_eq!(commands.len(), 1);
-      assert_eq!(commands[0].0, "pwsh");
-    } else {
-      assert_eq!(commands.len(), 2);
-      assert_eq!(commands[0].0, "bash");
-      assert_eq!(commands[1].0, "pwsh");
-    }
+  fn selects_only_the_native_installer_for_the_host() {
+    let windows = installer_commands_for_host(Path::new("artifacts"), true);
+    assert_eq!(windows.len(), 1);
+    assert_eq!(windows[0].0, "pwsh");
+
+    let unix = installer_commands_for_host(Path::new("artifacts"), false);
+    assert_eq!(unix.len(), 1);
+    assert_eq!(unix[0].0, "bash");
   }
 }
