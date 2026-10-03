@@ -59,7 +59,16 @@ jobs:
         run: mise exec -- just native-target-check "${{ matrix.target }}" "${{ github.ref_name }}"
       - name: Smoke static Linux executable on Alpine musl
         if: runner.os == 'Linux'
-        run: docker run --rm -v "$PWD:/work" -w /work alpine:3.23 "/work/target/${{ matrix.target }}/dist/arcantry" --version
+        run: >-
+          docker run --rm
+          --read-only
+          --network none
+          --cap-drop ALL
+          --security-opt no-new-privileges
+          --mount type=bind,src="$PWD",dst=/work,readonly
+          -w /work
+          alpine:3.23@sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8c010a0
+          "/work/target/${{ matrix.target }}/dist/arcantry" --version
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: native-${{ matrix.target }}

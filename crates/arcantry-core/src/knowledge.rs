@@ -2,11 +2,11 @@ use crate::config::{
   Management, RawSourceConfig, ResolvedProject, SourceKind, Visibility, effective_visibility,
   normalize_path_lexically,
 };
+use crate::path_security::ReadAuthority;
 use crate::repository::{LocalBoundaryInspection, inspect_local_boundary};
 use anyhow::Result;
 use serde::Serialize;
 use std::collections::BTreeSet;
-use std::fs;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize)]
@@ -42,6 +42,14 @@ pub struct KnowledgeInspection {
   pub methodologies: Vec<MethodologyInspection>,
   pub local_boundary: LocalBoundaryInspection,
   pub diagnostics: Vec<String>,
+  #[serde(skip_serializing)]
+  pub read_authority: ReadAuthority,
+}
+
+impl KnowledgeInspection {
+  pub fn read_source_to_string(&self, source: &ProjectSource) -> Result<String> {
+    self.read_authority.read_to_string(&source.absolute_path)
+  }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -53,6 +61,7 @@ pub struct MethodologyInspection {
 }
 
 pub fn inspect(project: &ResolvedProject) -> Result<KnowledgeInspection> {
+  let read_authority = ReadAuthority::for_project(project)?;
   let mut sources = Vec::new();
   let mut diagnostics = Vec::new();
   let mut configured_paths = BTreeSet::new();
@@ -60,6 +69,9 @@ pub fn inspect(project: &ResolvedProject) -> Result<KnowledgeInspection> {
     for (id, source) in &config.sources {
       let absolute_path = resolve_source(&project.root, &source.path);
       configured_paths.insert(normalize(&absolute_path));
+      if absolute_path.exists() {
+        read_authority.authorize(&absolute_path)?;
+      }
       let item = finalize(
         id,
         source,
@@ -148,7 +160,8 @@ pub fn inspect(project: &ResolvedProject) -> Result<KnowledgeInspection> {
       absolute.is_file()
     };
     let (adapter, confidence) = if exists {
-      detect_adapter(&kind, &absolute)?
+      read_authority.authorize(&absolute)?;
+      detect_adapter(&kind, &absolute, &read_authority)?
     } else {
       (default_adapter.to_owned(), "none")
     };
@@ -187,6 +200,7 @@ pub fn inspect(project: &ResolvedProject) -> Result<KnowledgeInspection> {
     methodologies,
     local_boundary: inspect_local_boundary(&project.root)?,
     diagnostics,
+    read_authority,
   })
 }
 
@@ -281,13 +295,18 @@ fn append_diagnostic(source: &ProjectSource, diagnostics: &mut Vec<String>) {
   }
 }
 
-fn detect_adapter(kind: &SourceKind, path: &Path) -> Result<(String, &'static str)> {
+fn detect_adapter(
+  kind: &SourceKind,
+  path: &Path,
+  read_authority: &ReadAuthority,
+) -> Result<(String, &'static str)> {
   match kind {
     SourceKind::Openspec => Ok(("openspec@1".to_owned(), "high")),
     SourceKind::EnvironmentSchema => Ok(("env-spec@1".to_owned(), "high")),
     SourceKind::TodoTxt => Ok(("todo-txt@1".to_owned(), "high")),
     SourceKind::Changelog => {
-      let content = fs::read_to_string(path)?
+      let content = read_authority
+        .read_to_string(path)?
         .trim_start_matches('\u{feff}')
         .to_owned();
       if content.contains("keepachangelog.com/en/2.0.0") {
@@ -342,6 +361,9 @@ fn normalize(path: &Path) -> String {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::config::{PROJECT_CONFIG_VERSION, ProjectConfig};
+  use std::collections::BTreeMap;
+  use std::fs;
 
   #[test]
   fn reports_absent_standard_sources_and_bounded_methodologies() {
@@ -354,6 +376,7 @@ mod tests {
       mode: "wild",
       scope: None,
       shadowed_config_paths: Vec::new(),
+      allow_external_paths: false,
     };
 
     let inspection = inspect(&project).unwrap();
@@ -383,6 +406,7 @@ mod tests {
       mode: "wild",
       scope: None,
       shadowed_config_paths: Vec::new(),
+      allow_external_paths: false,
     };
 
     let inspection = inspect(&project).unwrap();
@@ -400,6 +424,85 @@ mod tests {
         .sources
         .iter()
         .all(|source| source.path != "unrelated.txt")
+    );
+  }
+
+  #[test]
+  fn rejects_standard_sources_linked_outside_the_project() {
+    let directory = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    fs::write(outside.path().join("todo.txt"), "host secret\n").unwrap();
+    let linked = directory.path().join("todo.txt");
+    #[cfg(windows)]
+    std::os::windows::fs::symlink_file(outside.path().join("todo.txt"), &linked).unwrap();
+    #[cfg(not(windows))]
+    std::os::unix::fs::symlink(outside.path().join("todo.txt"), &linked).unwrap();
+    let project = ResolvedProject {
+      root: directory.path().to_path_buf(),
+      config_path: None,
+      config: None,
+      mode: "wild",
+      scope: None,
+      shadowed_config_paths: Vec::new(),
+      allow_external_paths: false,
+    };
+
+    assert!(
+      inspect(&project)
+        .unwrap_err()
+        .to_string()
+        .contains("trusted project read boundary")
+    );
+  }
+
+  #[test]
+  fn allows_explicit_external_sources() {
+    let directory = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    let external = outside.path().join("todo.txt");
+    fs::write(&external, "authorized external task\n").unwrap();
+    let config = ProjectConfig {
+      config_version: PROJECT_CONFIG_VERSION,
+      workflow: None,
+      context: None,
+      schema_reference: None,
+      tool: None,
+      project: None,
+      sources: BTreeMap::from([(
+        "external-todo".to_owned(),
+        RawSourceConfig {
+          kind: SourceKind::TodoTxt,
+          path: external.to_string_lossy().into_owned(),
+          management: Management::Observe,
+          adapter: "todo-txt@1".to_owned(),
+          from: Vec::new(),
+          managed_from: None,
+          visibility: Some(Visibility::Private),
+          scope: ".".to_owned(),
+        },
+      )]),
+      release: None,
+      extra: BTreeMap::new(),
+    };
+    let project = ResolvedProject {
+      root: directory.path().to_path_buf(),
+      config_path: Some(outside.path().join("external.toml")),
+      config: Some(config),
+      mode: "configured",
+      scope: Some("external"),
+      shadowed_config_paths: Vec::new(),
+      allow_external_paths: true,
+    };
+
+    let inspection = inspect(&project).unwrap();
+    let source = inspection
+      .sources
+      .iter()
+      .find(|source| source.id == "external-todo")
+      .unwrap();
+    assert_eq!(
+      inspection.read_source_to_string(source).unwrap(),
+      "authorized external task\n"
     );
   }
 }

@@ -1,37 +1,26 @@
 //! Read-only, bounded project answers shared by the CLI and MCP.
 use crate::config::{ResolvedProject, SourceKind};
+use crate::path_security::ReadAuthority;
 use anyhow::{Context, Result, bail};
 use chrono::Local;
 use serde_json::{Value, json};
-use std::{fs, io::Read, path::Path};
+use std::path::Path;
 
 const LIMIT: u64 = 32 * 1024;
 
-fn read(path: &Path) -> Result<Option<String>> {
-  if !path.exists() {
-    return Ok(None);
-  }
-  let mut text = String::new();
-  fs::File::open(path)?
-    .take(LIMIT + 1)
-    .read_to_string(&mut text)?;
-  if text.len() as u64 > LIMIT {
-    bail!(
-      "{} exceeds the contextual read limit of {LIMIT} bytes.",
-      path.display()
-    );
-  }
-  Ok(Some(text))
+fn read(authority: &ReadAuthority, path: &Path) -> Result<Option<String>> {
+  authority.read_to_string_bounded(path, LIMIT)
 }
 
 pub fn context(project: &ResolvedProject) -> Result<Value> {
   let inspection = crate::knowledge::inspect(project)?;
+  let authority = &inspection.read_authority;
   let profile = project.config.as_ref().and_then(|c| c.context.as_ref());
   let mut changes = Vec::new();
   let mut archived = Vec::new();
   let mut rules = Vec::new();
   for relative in ["AGENTS.md", ".local/AGENTS.md"] {
-    if let Some(content) = read(&project.root.join(relative))? {
+    if let Some(content) = read(authority, &project.root.join(relative))? {
       rules.push(json!({"source":relative,"content":content,"authority":"project guidance; conversation overrides are unknown"}));
     }
   }
@@ -43,7 +32,7 @@ pub fn context(project: &ResolvedProject) -> Result<Value> {
       continue;
     }
     let directory = source.absolute_path.join("changes");
-    if let Ok(entries) = fs::read_dir(directory.join("archive")) {
+    if let Ok(entries) = authority.read_dir(&directory.join("archive")) {
       for entry in entries {
         let entry = entry?;
         if entry.file_type()?.is_dir() {
@@ -60,7 +49,9 @@ pub fn context(project: &ResolvedProject) -> Result<Value> {
     if !directory.is_dir() {
       continue;
     }
-    let mut entries = fs::read_dir(directory)?.collect::<std::io::Result<Vec<_>>>()?;
+    let mut entries = authority
+      .read_dir(&directory)?
+      .collect::<std::io::Result<Vec<_>>>()?;
     entries.sort_by_key(|entry| entry.file_name());
     for entry in entries {
       if entry.file_name() == "archive" || !entry.file_type()?.is_dir() {
@@ -78,7 +69,7 @@ pub fn context(project: &ResolvedProject) -> Result<Value> {
       }) {
         continue;
       }
-      let tasks = read(&entry.path().join("tasks.md"))?.unwrap_or_default();
+      let tasks = read(authority, &entry.path().join("tasks.md"))?.unwrap_or_default();
       let pending: Vec<_> = tasks
         .lines()
         .filter_map(|line| line.trim().strip_prefix("- [ ] "))
@@ -172,7 +163,7 @@ pub fn next(project: &ResolvedProject, selected: Option<&str>) -> Result<Value> 
       .iter()
       .filter(|source| source.kind == SourceKind::TodoTxt && source.exists)
     {
-      let content = read(&source.absolute_path)?.unwrap_or_default();
+      let content = read(&inspection.read_authority, &source.absolute_path)?.unwrap_or_default();
       if let Some(task) = crate::todo::inspect_tasks(&content)
         .into_iter()
         .find(|task| !task.is_deferred_on(today))
@@ -274,6 +265,7 @@ pub fn explain(project: &ResolvedProject, topic: &str) -> Result<Value> {
     ),
   };
   let state = context(project)?;
+  let authority = ReadAuthority::for_project(project)?;
   let mut sources = Vec::new();
   for source in state["sources"]
     .as_array()
@@ -282,7 +274,7 @@ pub fn explain(project: &ResolvedProject, topic: &str) -> Result<Value> {
     .filter(|s| s["kind"] == "openspec" && s["exists"] == true && s["management"] != "ignore")
   {
     let base = Path::new(source["absolutePath"].as_str().unwrap_or_default());
-    if let Some(content) = read(&base.join("config.yaml"))? {
+    if let Some(content) = read(&authority, &base.join("config.yaml"))? {
       let config: Value = serde_saphyr::from_str(&content)?;
       sources.push(json!({"source":format!("{}/config.yaml",source["path"].as_str().unwrap_or_default()),"content":content}));
       if let Some(schema) = config["schema"]
@@ -294,7 +286,7 @@ pub fn explain(project: &ResolvedProject, topic: &str) -> Result<Value> {
           .join(schema)
           .join("templates")
           .join(format!("{topic}.md"));
-        if let Some(content) = read(&template)? {
+        if let Some(content) = read(&authority, &template)? {
           sources.push(json!({"source":template,"content":content}));
         }
       }
@@ -330,4 +322,39 @@ pub fn diagnostics(cwd: &Path, config: Option<&Path>, explicit: bool) -> Value {
     "sources":inspection.as_ref().map(|i| i.sources.iter().map(|s| json!({"kind":s.kind,"management":s.management,"visibility":s.visibility,"exists":s.exists,"adapterStatus":s.adapter_status})).collect::<Vec<_>>()).unwrap_or_default(),
     "tools":(["git","cargo","just","openspec","varlock"].map(|name| json!({"name":name,"available":on_path(name)}))),
     "privacy":"Allowlisted metadata only. No paths, source contents, environment values or automatic upload."})
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::config::ResolvedProject;
+  use std::fs;
+
+  #[test]
+  fn context_rejects_guidance_linked_outside_the_project() {
+    let project_root = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    fs::write(outside.path().join("AGENTS.md"), "host secret\n").unwrap();
+    let linked = project_root.path().join("AGENTS.md");
+    #[cfg(windows)]
+    std::os::windows::fs::symlink_file(outside.path().join("AGENTS.md"), &linked).unwrap();
+    #[cfg(not(windows))]
+    std::os::unix::fs::symlink(outside.path().join("AGENTS.md"), &linked).unwrap();
+    let project = ResolvedProject {
+      root: project_root.path().to_path_buf(),
+      config_path: None,
+      config: None,
+      mode: "wild",
+      scope: None,
+      shadowed_config_paths: Vec::new(),
+      allow_external_paths: false,
+    };
+
+    assert!(
+      context(&project)
+        .unwrap_err()
+        .to_string()
+        .contains("trusted project read boundary")
+    );
+  }
 }

@@ -1,3 +1,4 @@
+use crate::output::terminal_text;
 use crate::{
   SkillDoctorOptions, SkillLinkOptions, SkillUnlinkOptions, SkillsCommand, embedded, skill_update,
 };
@@ -17,7 +18,10 @@ pub fn execute(command: SkillsCommand, cwd: &Path, output: Option<&Path>) -> Res
       if scope == "private" {
         let root = repository::resolve_repository_root(cwd)?;
         for skill in catalog::list_private(&root)? {
-          println!("{}\tprivate\t{}", skill.name, skill.description);
+          println!(
+            "{}",
+            terminal_text(&format!("{}\tprivate\t{}", skill.name, skill.description))
+          );
         }
       } else if scope == "public" {
         let entries = if let Some(root) = catalog_root {
@@ -34,10 +38,13 @@ pub fn execute(command: SkillsCommand, cwd: &Path, output: Option<&Path>) -> Res
         };
         for entry in entries {
           println!(
-            "{}\t{}\t{}",
-            entry.name,
-            entry.family,
-            entry.tags.join(", ")
+            "{}",
+            terminal_text(&format!(
+              "{}\t{}\t{}",
+              entry.name,
+              entry.family,
+              entry.tags.join(", ")
+            ))
           );
         }
       } else {
@@ -53,10 +60,13 @@ pub fn execute(command: SkillsCommand, cwd: &Path, output: Option<&Path>) -> Res
       if scope == "private" {
         let skill = catalog::inspect_private(&repository::resolve_repository_root(cwd)?, &name)?;
         println!(
-          "{}\n{}\nVisibility: private\nSource: {}",
-          skill.name,
-          skill.description,
-          skill.directory.display()
+          "{}",
+          terminal_text(&format!(
+            "{}\n{}\nVisibility: private\nSource: {}",
+            skill.name,
+            skill.description,
+            skill.directory.display()
+          ))
         );
       } else if scope == "public" {
         let (entry, metadata) = if let Some(root) = catalog_root {
@@ -76,14 +86,20 @@ pub fn execute(command: SkillsCommand, cwd: &Path, output: Option<&Path>) -> Res
           embedded::public_skill(&name)?
         };
         println!(
-          "{}\n{}\nFamily: {}\nTags: {}",
-          entry.name,
-          metadata.summary,
-          entry.family,
-          entry.tags.join(", ")
+          "{}",
+          terminal_text(&format!(
+            "{}\n{}\nFamily: {}\nTags: {}",
+            entry.name,
+            metadata.summary,
+            entry.family,
+            entry.tags.join(", ")
+          ))
         );
         for scenario in metadata.scenarios {
-          println!("- {}: {}", scenario.title, scenario.outcome);
+          println!(
+            "{}",
+            terminal_text(&format!("- {}: {}", scenario.title, scenario.outcome))
+          );
         }
       } else {
         bail!("--scope must be public or private.");
@@ -105,6 +121,9 @@ pub fn execute(command: SkillsCommand, cwd: &Path, output: Option<&Path>) -> Res
     } => {
       let options = SkillOptions::from(options);
       let operation = operation(cwd, &name, &options)?;
+      if let Some(boundary) = &operation.repository_boundary {
+        catalog::ensure_repository_targets(boundary, &operation.targets)?;
+      }
       let results = catalog::link(&operation.source, &name, &operation.targets, replace)?;
       if let Some(root) = operation.private_root
         && let Err(error) = exclude_private_links(&root, &name, &operation.targets)
@@ -117,16 +136,22 @@ pub fn execute(command: SkillsCommand, cwd: &Path, output: Option<&Path>) -> Res
         return Err(error);
       }
       println!(
-        "{}: {name}",
-        if results.iter().all(|result| result.status == "unchanged") {
-          "Already linked"
-        } else {
-          "Linked"
-        }
+        "{}",
+        terminal_text(&format!(
+          "{}: {name}",
+          if results.iter().all(|result| result.status == "unchanged") {
+            "Already linked"
+          } else {
+            "Linked"
+          }
+        ))
       );
       for result in results {
         if let Some(backup) = result.backup {
-          println!("Backup: {}", backup.display());
+          println!(
+            "{}",
+            terminal_text(&format!("Backup: {}", backup.display()))
+          );
         }
       }
       Ok(0)
@@ -134,14 +159,20 @@ pub fn execute(command: SkillsCommand, cwd: &Path, output: Option<&Path>) -> Res
     SkillsCommand::Unlink { name, options } => {
       let options = SkillOptions::from(options);
       let operation = operation(cwd, &name, &options)?;
+      if let Some(boundary) = &operation.repository_boundary {
+        catalog::ensure_repository_targets(boundary, &operation.targets)?;
+      }
       let results = catalog::unlink(&operation.source, &name, &operation.targets)?;
       println!(
-        "{}: {name}",
-        if results.iter().all(|result| result.status == "unchanged") {
-          "Already unlinked"
-        } else {
-          "Unlinked"
-        }
+        "{}",
+        terminal_text(&format!(
+          "{}: {name}",
+          if results.iter().all(|result| result.status == "unchanged") {
+            "Already unlinked"
+          } else {
+            "Unlinked"
+          }
+        ))
       );
       Ok(0)
     }
@@ -196,7 +227,7 @@ fn doctor(cwd: &Path, options: SkillOptions) -> Result<i32> {
       }
     }
     for error in &errors {
-      eprintln!("ERROR: {error}");
+      eprintln!("ERROR: {}", terminal_text(error));
     }
     if errors.is_empty() {
       println!("Skill catalog is valid.");
@@ -208,7 +239,7 @@ fn doctor(cwd: &Path, options: SkillOptions) -> Result<i32> {
     let root = resolve_catalog_root(cwd, options.catalog_root)?;
     let (valid, errors, _) = catalog::validate(&root);
     for error in errors {
-      eprintln!("ERROR: {error}");
+      eprintln!("ERROR: {}", terminal_text(&error));
     }
     if valid {
       println!("Skill catalog is valid.");
@@ -223,6 +254,7 @@ struct Operation {
   source: PathBuf,
   targets: Vec<PathBuf>,
   private_root: Option<PathBuf>,
+  repository_boundary: Option<PathBuf>,
 }
 
 fn operation(cwd: &Path, name: &str, options: &SkillOptions) -> Result<Operation> {
@@ -253,6 +285,9 @@ fn operation(cwd: &Path, name: &str, options: &SkillOptions) -> Result<Operation
     }
     (catalog::inspect(&catalog_root, name)?.directory, None)
   };
+  let repository_boundary = matches!(options.scope.as_deref(), Some("repo" | "private"))
+    .then(|| repository_root.clone())
+    .flatten();
   let targets = if let Some(target) = &options.target {
     vec![if target.is_absolute() {
       target.clone()
@@ -284,6 +319,7 @@ fn operation(cwd: &Path, name: &str, options: &SkillOptions) -> Result<Operation
     source,
     targets,
     private_root,
+    repository_boundary,
   })
 }
 
@@ -378,7 +414,7 @@ fn exclude_private_links(root: &Path, name: &str, targets: &[PathBuf]) -> Result
     }
     let outcome = project_plan::apply(&plan, &authority)?;
     for warning in outcome.warnings {
-      eprintln!("WARNING: {warning}");
+      eprintln!("WARNING: {}", terminal_text(&warning));
     }
   }
   Ok(())

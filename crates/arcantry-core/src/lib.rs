@@ -3,6 +3,7 @@ pub mod changelog;
 pub mod config;
 pub mod knowledge;
 pub mod managed_content;
+pub mod path_security;
 pub mod project_plan;
 pub mod release;
 pub mod repository;

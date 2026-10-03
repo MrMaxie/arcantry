@@ -799,6 +799,13 @@ pub fn repo_claude_target(root: &Path) -> PathBuf {
   root.join(".claude").join("skills")
 }
 
+pub fn ensure_repository_targets(root: &Path, targets: &[PathBuf]) -> Result<()> {
+  for target in targets {
+    crate::path_security::ensure_within(root, target, "Repository skill target")?;
+  }
+  Ok(())
+}
+
 fn validate_source(source: &Path, name: &str) -> Result<()> {
   let skill = source.join("SKILL.md");
   if !skill.is_file() {
@@ -1011,6 +1018,23 @@ mod tests {
     )
     .unwrap();
     fixture
+  }
+
+  #[test]
+  fn repository_targets_cannot_escape_through_a_linked_ancestor() {
+    let repository = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    let linked = repository.path().join(".agents");
+    #[cfg(windows)]
+    junction::create(outside.path(), &linked).unwrap();
+    #[cfg(not(windows))]
+    std::os::unix::fs::symlink(outside.path(), &linked).unwrap();
+
+    let target = repo_target(repository.path());
+    let error = ensure_repository_targets(repository.path(), &[target]).unwrap_err();
+
+    assert!(error.to_string().contains("must stay within the project"));
+    assert!(!outside.path().join("skills").exists());
   }
 
   #[test]

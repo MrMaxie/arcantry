@@ -23,6 +23,7 @@ fn legacy_configuration(root: &Path) -> Configuration {
     repository_url: None,
     tag_prefix: "v".to_owned(),
     version_sources: Vec::new(),
+    authority: ReadAuthority::new(root).unwrap(),
   }
 }
 

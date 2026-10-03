@@ -1,4 +1,5 @@
 use crate::TodoCommand;
+use crate::output::terminal_text;
 use crate::repo_cmd::{add_private_exclude_operation, handle_plan, project_inspection};
 use anyhow::{Context, Result, bail};
 use arcantry_core::config::{Management, SourceKind, Visibility};
@@ -6,7 +7,6 @@ use arcantry_core::knowledge::{KnowledgeInspection, ProjectSource};
 use arcantry_core::project_plan::{ProjectPlan, create_write_operation};
 use arcantry_core::todo;
 use chrono::Local;
-use std::fs;
 use std::path::Path;
 
 pub fn execute(
@@ -33,7 +33,7 @@ pub fn execute(
         let snapshot = sources
           .iter()
           .map(|source| {
-            let content = fs::read_to_string(&source.absolute_path)?;
+            let content = inspection.read_source_to_string(source)?;
             Ok(serde_json::json!({
               "source": source.id,
               "visibility": source.visibility,
@@ -56,9 +56,9 @@ pub fn execute(
         println!("No todo.txt tasks.");
       }
       for source in sources {
-        println!("[{}]", source.id);
-        for task in todo::inspect_tasks(&fs::read_to_string(source.absolute_path)?) {
-          println!("{}\t{}", task.line, task.raw);
+        println!("[{}]", terminal_text(&source.id));
+        for task in todo::inspect_tasks(&inspection.read_source_to_string(&source)?) {
+          println!("{}\t{}", task.line, terminal_text(&task.raw));
         }
       }
       Ok(0)
@@ -70,7 +70,7 @@ pub fn execute(
     } => {
       let source = select_source(&inspection, source.as_deref(), true)?;
       let current = if source.exists {
-        fs::read_to_string(&source.absolute_path)?
+        inspection.read_source_to_string(&source)?
       } else {
         String::new()
       };
@@ -94,7 +94,7 @@ pub fn execute(
       apply,
     } => {
       let source = select_source(&inspection, source.as_deref(), false)?;
-      let current = fs::read_to_string(&source.absolute_path)?;
+      let current = inspection.read_source_to_string(&source)?;
       let date = date.unwrap_or_else(|| Local::now().format("%Y-%m-%d").to_string());
       let desired = todo::complete_task(&current, parse_line(&line)?, &date)?;
       let mut plan = ProjectPlan::new(inspection.root.clone(), &source.id, "adopt", "todo-txt@1");
@@ -122,9 +122,9 @@ pub fn execute(
       if source.id == target.id {
         bail!("Todo move source and target must differ.");
       }
-      let source_content = fs::read_to_string(&source.absolute_path)?;
+      let source_content = inspection.read_source_to_string(&source)?;
       let target_content = if target.exists {
-        fs::read_to_string(&target.absolute_path)?
+        inspection.read_source_to_string(&target)?
       } else {
         String::new()
       };
@@ -162,7 +162,7 @@ pub fn execute(
       apply,
     } => {
       let source = resolve_source(&inspection, &source, false)?;
-      let current = fs::read_to_string(&source.absolute_path)?;
+      let current = inspection.read_source_to_string(&source)?;
       let desired = todo::defer_task(
         &current,
         parse_line(&line)?,
@@ -185,7 +185,7 @@ pub fn execute(
       apply,
     } => {
       let source = resolve_source(&inspection, &source, false)?;
-      let current = fs::read_to_string(&source.absolute_path)?;
+      let current = inspection.read_source_to_string(&source)?;
       let desired = todo::resume_task(&current, parse_line(&line)?)?;
       todo_write_plan(
         &inspection,

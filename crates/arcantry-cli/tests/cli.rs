@@ -106,6 +106,98 @@ fn native_binary_runs_without_language_runtimes_on_path() {
 }
 
 #[test]
+fn human_guidance_and_todo_output_escape_terminal_controls() {
+  let repository = repository();
+  let change = repository.path().join("openspec/changes/escape-output");
+  fs::create_dir_all(&change).unwrap();
+  fs::write(
+    change.join("tasks.md"),
+    "- [ ] Show safe \u{1b}]8;;https://example.test\u{7}output\r\n",
+  )
+  .unwrap();
+  fs::write(
+    repository.path().join("todo.txt"),
+    "Review \u{1b}[31munsafe\u{7} task\r\n",
+  )
+  .unwrap();
+
+  let next = arcantry()
+    .args(["--cwd", repository.path().to_str().unwrap(), "next"])
+    .output()
+    .unwrap();
+  assert!(next.status.success());
+  assert!(!next.stdout.contains(&0x1b));
+  assert!(!next.stdout.contains(&0x07));
+  assert!(!next.stdout.contains(&0x0d));
+  let next_text = String::from_utf8(next.stdout).unwrap();
+  assert!(next_text.contains("\\u{1b}"));
+  assert!(next_text.contains("\\u{7}"));
+
+  let schema = repository.path().join("openspec/schemas/test/templates");
+  fs::create_dir_all(&schema).unwrap();
+  fs::write(
+    repository.path().join("openspec/config.yaml"),
+    "schema: test\n",
+  )
+  .unwrap();
+  fs::write(
+    schema.join("tasks.md"),
+    "Template \u{1b}]8;;https://example.test\u{7}text\r\n",
+  )
+  .unwrap();
+  let explain = arcantry()
+    .args([
+      "--cwd",
+      repository.path().to_str().unwrap(),
+      "explain",
+      "tasks",
+    ])
+    .output()
+    .unwrap();
+  assert!(explain.status.success());
+  assert!(!explain.stdout.contains(&0x1b));
+  assert!(!explain.stdout.contains(&0x07));
+  assert!(!explain.stdout.contains(&0x0d));
+  assert!(
+    String::from_utf8(explain.stdout)
+      .unwrap()
+      .contains("\\u{1b}")
+  );
+
+  fs::remove_dir_all(repository.path().join("openspec")).unwrap();
+  let todo = arcantry()
+    .args(["--cwd", repository.path().to_str().unwrap(), "todo", "list"])
+    .output()
+    .unwrap();
+  assert!(todo.status.success());
+  assert!(!todo.stdout.contains(&0x1b));
+  assert!(!todo.stdout.contains(&0x07));
+  assert!(!todo.stdout.contains(&0x0d));
+  assert!(String::from_utf8(todo.stdout).unwrap().contains("\\u{1b}"));
+}
+
+#[test]
+fn json_guidance_preserves_repository_values() {
+  let repository = repository();
+  let change = repository.path().join("openspec/changes/escape-output");
+  fs::create_dir_all(&change).unwrap();
+  fs::write(change.join("tasks.md"), "- [ ] Keep \u{1b} exact\n").unwrap();
+
+  let output = arcantry()
+    .args([
+      "--cwd",
+      repository.path().to_str().unwrap(),
+      "next",
+      "--json",
+    ])
+    .output()
+    .unwrap();
+  assert!(output.status.success());
+  let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+  assert_eq!(value["change"]["pending"][0], "Keep \u{1b} exact");
+}
+
+#[test]
 fn initializes_validates_updates_and_removes_private_repository_state() {
   let repository = repository();
   arcantry()
@@ -325,6 +417,38 @@ fn rejects_directory_relocation_that_would_drop_an_empty_directory() {
   assert!(String::from_utf8_lossy(&output.stdout).contains("empty directory"));
   assert!(repository.path().join("openspec/empty").is_dir());
   assert!(!repository.path().join("moved").exists());
+}
+
+#[test]
+fn rejects_relative_relocation_target_linked_outside_the_repository() {
+  let repository = repository();
+  let outside = tempfile::tempdir().unwrap();
+  fs::write(repository.path().join("todo.txt"), "Keep this task\n").unwrap();
+  let linked = repository.path().join("linked");
+  #[cfg(windows)]
+  junction::create(outside.path(), &linked).unwrap();
+  #[cfg(not(windows))]
+  std::os::unix::fs::symlink(outside.path(), &linked).unwrap();
+
+  let output = arcantry()
+    .args([
+      "--cwd",
+      repository.path().to_str().unwrap(),
+      "repo",
+      "plan",
+      "--source",
+      "todo-root",
+      "--transition",
+      "relocate",
+      "--to-path",
+      "linked/copied.txt",
+    ])
+    .output()
+    .unwrap();
+
+  assert!(!output.status.success());
+  assert!(String::from_utf8_lossy(&output.stderr).contains("Relocate target"));
+  assert!(!outside.path().join("copied.txt").exists());
 }
 
 #[cfg(unix)]
